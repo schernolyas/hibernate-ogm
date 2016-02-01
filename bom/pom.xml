@@ -92,6 +92,8 @@
         <lettuceCommonsPoolVersion>2.4.2</lettuceCommonsPoolVersion>
         <lettuceGuavaVersion>18.0</lettuceGuavaVersion> <!-- Currently in sync with the version of Wildfly -->
 
+        <!-- OrientDB -->
+        <orientdbVersion>2.1.9</orientdbVersion>
     </properties>
 
     <inceptionYear>2010</inceptionYear>
@@ -632,6 +634,18 @@
                 <groupId>biz.paluch.redis</groupId>
                 <artifactId>lettuce</artifactId>
                 <version>${lettuceVersion}</version>
+            </dependency>
+
+            <!-- OrientDB -->
+            <dependency>
+                <groupId>com.orientechnologies</groupId>
+                <artifactId>orientdb-core</artifactId>
+                <version>${orientdbVersion}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.orientechnologies</groupId>
+                <artifactId>orientdb-jdbc</artifactId>
+                <version>${orientdbVersion}</version>
             </dependency>
 
             <!-- RESTEasy for accessing CouchDB -->
