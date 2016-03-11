@@ -410,6 +410,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		if ( IdSourceType.SEQUENCE.equals( type ) ) {
 			String seqName = request.getKey().getMetadata().getName();
 			nextValue = SequenceUtil.getSequence( provider.getConnection(), seqName );
+			log.debugf( "nextValue: %s", nextValue );
 		}
 		else {
 			throw new UnsupportedOperationException( "Not supported yet!" );

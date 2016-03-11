@@ -14,6 +14,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.extensions.cpsuite.ClasspathSuite;
 import org.junit.runner.RunWith;
+import org.jboss.logging.Logger;
+import org.junit.After;
+import org.junit.Before;
 
 /**
  * Helper class allowing you to run all or any specified subset of test available on the classpath. This method is for
@@ -25,16 +28,28 @@ import org.junit.runner.RunWith;
 // @ClasspathSuite.ClassnameFilters({ "org.hibernate.ogm.backendtck.*" })
 @ClasspathSuite.ClassnameFilters({ ".*BuiltInTypeTest" })
 public class OrientDBBackendTckHelper {
-
-
+        private static final Logger log = Logger.getLogger( OrientDBBackendTckHelper.class.getName() );
+        
 	@BeforeClass
 	public static void setUpClass() {
-		MemoryDBUtil.createDbFactory( MEMORY_TEST );
-		BasicConfigurator.configure();
+                log.info("setUpClass");
+		MemoryDBUtil.createDbFactory( MEMORY_TEST );		
 	}
 
 	@AfterClass
 	public static void tearDownClass() {
+                log.info("tearDownClass");
 		MemoryDBUtil.recrateInMemoryDn( MEMORY_TEST );
 	}
+        
+        @Before
+        public void setUp() {
+             log.info("setUp");
+        }
+        
+        @After
+	public static void tearDown() {
+                log.info("tearDown");
+	}
+        
 }

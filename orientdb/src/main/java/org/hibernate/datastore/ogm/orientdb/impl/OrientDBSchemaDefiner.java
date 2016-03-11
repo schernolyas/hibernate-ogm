@@ -7,6 +7,7 @@
 
 package org.hibernate.datastore.ogm.orientdb.impl;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -20,11 +21,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.hibernate.HibernateException;
 
 import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.datastore.ogm.orientdb.utils.SequenceUtil;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.PrimaryKey;
@@ -159,23 +162,30 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	private String createClassQuery(Table table) {
-		return MessageFormat.format( "create class {0} extends V", table.getName() );
+		return String.format( "create class %s extends V", table.getName() );
 	}
 
 	private void createEntities(SchemaDefinitionContext context) {
+		// check exists sequence
 		try {
-			provider.getConnection().createStatement().execute( "CREATE SEQUENCE HIBERNATE_SEQUENCE TYPE ORDERED START 1" );
+			log.debugf( "default hibernate sequence value: %s", SequenceUtil.getSequence( provider.getConnection(), "hibernate_sequence" ) );
 		}
-		catch (SQLException e) {
-			throw log.cannotGenerateSequence( "HIBERNATE_SEQUENCE", e );
+		catch (HibernateException he) {
+			// no sequence. try to create it
+			try {
+				provider.getConnection().createStatement().execute( "CREATE SEQUENCE hibernate_sequence TYPE ORDERED START 0" );
+			}
+			catch (SQLException e) {
+				throw log.cannotGenerateSequence( "hibernate_sequence", e );
+			}
 		}
 
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			for ( Table table : namespace.getTables() ) {
-				log.debug( "table: " + table );
+				log.debugf( "table: %s", table );
 				boolean isMappingTable = isMapingTable( table );
 				String classQuery = createClassQuery( table );
-				log.debug( "create class query: " + classQuery );
+				log.debugf( "create class query: %s", classQuery );
 				try {
 					provider.getConnection().createStatement().execute( classQuery );
 				}
@@ -186,23 +196,22 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 				while ( columnIterator.hasNext() ) {
 					Column column = columnIterator.next();
-					log.debug( "relation type: " + column.getValue().getType().getClass() );
-					log.debug( "column.getName(): " + column.getName() );
+					log.debugf( "relation type: %s", column.getValue().getType().getClass() );
+					log.debugf( "column.getName(): %s ", column.getName() );
 					if ( OrientDBConstant.SYSTEM_FIELDS.contains( column.getName() ) ) {
 						continue;
 					}
 					else if ( RELATIONS_TYPES.contains( column.getValue().getType().getClass() ) ) {
 						// @TODO refactor it
 						Value value = column.getValue();
-						log.debug( "column name:" + column.getName() + "; column.getCanonicalName():" + column.getCanonicalName() );
-
+						log.debugf( "column name: %s ; column.getCanonicalName(): %s", column.getName(), column.getCanonicalName() );
 						if ( isEmbeddedColumn( column ) ) {
 
 						}
 						else {
 							Class mappedByClass = searchMappedByReturnedClass( context, namespace.getTables(), (EntityType) value.getType(), column );
 							String propertyQuery = createValueProperyQuery( table, column, RETURNED_CLASS_TYPE_MAPPING.get( mappedByClass ) );
-							log.debug( "create foreign key property query: " + propertyQuery );
+							log.debugf( "create foreign key property query: %s", propertyQuery );
 							try {
 								provider.getConnection().createStatement().execute( propertyQuery );
 							}
@@ -227,26 +236,11 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 				if ( !isMappingTable ) {
 					PrimaryKey primaryKey = table.getPrimaryKey();
 					if ( primaryKey != null ) {
-						log.debug( "primaryKey: " + primaryKey );
-						for ( String primaryKeyQuery : createPrimaryKey( primaryKey ) ) {
-							log.debug( "primary key query: " + primaryKeyQuery );
-							try {
-								provider.getConnection().createStatement().execute( primaryKeyQuery );
-							}
-							catch (SQLException e) {
-								if ( primaryKeyQuery.contains( "INDEX" ) ) {
-									throw log.cannotGenerateIndex( primaryKey.getColumn( 0 ).getName(), table.getName(), e );
-								}
-								else {
-									throw log.cannotGenerateSequence(
-											generateSeqName( primaryKey.getTable().getName(), primaryKey.getColumns().get( 0 ).getName() ),
-											e );
-								}
-							}
-						}
+						log.debugf( "primaryKey: %s ", primaryKey );
+						createPrimaryKey( provider.getConnection(), primaryKey );
 					}
 					else {
-						log.debug( "Table " + table.getName() + " has not primary key" );
+						log.debugf( "Table %s has not primary key", table.getName() );
 					}
 				}
 			}
@@ -254,9 +248,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 	}
 
-	private List<String> createPrimaryKey(PrimaryKey primaryKey) {
-		List<String> queries = new ArrayList<>( 2 );
-
+	private void createPrimaryKey(Connection connection, PrimaryKey primaryKey) {
 		String table = primaryKey.getTable().getName();
 		StringBuilder columns = new StringBuilder();
 		StringBuilder uniqueIndexQuery = new StringBuilder( 100 );
@@ -268,17 +260,27 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 		columns.setLength( columns.length() - 1 );
 		uniqueIndexQuery.append( firstColumn ).append( "_pk ON " ).append( table ).append( " (" ).append( columns ).append( ") UNIQUE" );
-		queries.add( uniqueIndexQuery.toString() );
 
-		log.debug( "primaryKey.getColumns().get(0).getValue().getType().getClass(): " + primaryKey.getColumns().get( 0 ).getValue().getType().getClass() );
+		try {
+			log.debugf( "query: %s", uniqueIndexQuery );
+			connection.createStatement().execute( uniqueIndexQuery.toString() );
+		}
+		catch (SQLException e) {
+			throw log.cannotExecuteQuery( uniqueIndexQuery.toString(), e );
+		}
+		StringBuilder seq = new StringBuilder( 100 );
 		if ( primaryKey.getColumns().size() == 1 && SEQ_TYPES.contains( primaryKey.getColumns().get( 0 ).getValue().getType().getClass() ) ) {
-			StringBuilder seq = new StringBuilder( 100 );
 			seq.append( "CREATE SEQUENCE " );
 			seq.append( generateSeqName( primaryKey.getTable().getName(), primaryKey.getColumns().get( 0 ).getName() ) );
-			seq.append( " TYPE ORDERED START 1" );
-			queries.add( seq.toString() );
+			seq.append( " TYPE ORDERED START 0" );
+			try {
+				log.debugf( "query: %s", seq );
+				connection.createStatement().execute( seq.toString() );
+			}
+			catch (SQLException e) {
+				throw log.cannotExecuteQuery( seq.toString(), e );
+			}
 		}
-		return queries;
 	}
 
 	private String createValueProperyQuery(Table table, Column column) {
@@ -289,7 +291,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	private String createValueProperyQuery(Table table, Column column, Class targetTypeClass) {
 
 		Value value = column.getValue();
-		log.debug( "1.Column " + column.getName() + " :" + targetTypeClass );
+		log.debugf( "1.Column: %s, targetTypeClass: %s ", column.getName(), targetTypeClass );
 		String query = null;
 
 		if ( targetTypeClass.equals( CustomType.class ) ) {
@@ -318,14 +320,6 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 	}
 
-	@Override
-	public void initializeSchema(SchemaDefinitionContext context) {
-		SessionFactoryImplementor sessionFactoryImplementor = context.getSessionFactory();
-		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
-		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
-		createEntities( context );
-	}
-
 	private boolean isEmbeddedColumn(Column column) {
 		return column.getValue().getType().getClass().equals( ManyToOneType.class ) && column.getName().contains( "." );
 	}
@@ -334,10 +328,8 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		int tableColumns = 0;
 		for ( Iterator iterator = table.getColumnIterator(); iterator.hasNext(); ) {
 			Object next = iterator.next();
-			log.debug( "column: " + next );
 			tableColumns++;
 		}
-		log.debug( "table columns: " + tableColumns );
 		return table.getPrimaryKey() == null && tableColumns == 2;
 	}
 
@@ -381,9 +373,18 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	@Override
+	public void initializeSchema(SchemaDefinitionContext context) {
+		log.debug( "initializeSchema" );
+		SessionFactoryImplementor sessionFactoryImplementor = context.getSessionFactory();
+		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
+		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
+		createEntities( context );
+	}
+
+	@Override
 	public void validateMapping(SchemaDefinitionContext context) {
-		log.debug( "start" );
-		super.validateMapping( context ); // To change body of generated methods, choose Tools | Templates.
+		log.debug( "validateMapping" );
+		super.validateMapping( context );
 	}
 
 	public static String generateSeqName(String tableName, String primaryKeyName) {

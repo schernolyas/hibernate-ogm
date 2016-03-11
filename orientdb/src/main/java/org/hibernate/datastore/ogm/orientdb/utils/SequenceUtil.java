@@ -24,12 +24,16 @@ public class SequenceUtil {
 
 	public static Number getSequence(Connection connection, String seqName) {
 		Number nextValue = null;
-		String query = MessageFormat.format( "select sequence(''{0}'').next()", seqName );
+		String query = String.format( "select sequence('%s').next()", seqName );
 		try {
 			Statement stmt = connection.createStatement();
 			ResultSet rs = stmt.executeQuery( query );
 			if ( rs.next() ) {
 				nextValue = rs.getLong( "sequence" );
+				if ( nextValue.intValue() == 0 ) {
+					throw log.cannotExecuteQuery( query, new SQLException( String.format( "Sequence %s not found in the database!", seqName ) ) );
+
+				}
 			}
 		}
 		catch (SQLException sqle) {

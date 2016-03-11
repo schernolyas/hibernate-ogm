@@ -139,7 +139,7 @@ public class OrientDBSimpleTest {
 		log.debug( "start" );
 		try {
 			em.getTransaction().begin();
-			Customer customer = em.find( Customer.class, 2L );
+			Customer customer = em.find( Customer.class, 1L );
 			em.refresh( customer );
 			log.debug( "read entity properties:" );
 			log.debug( "customer.getbKey():" + customer.getbKey() );
@@ -147,7 +147,7 @@ public class OrientDBSimpleTest {
 			log.debug( "customer.getRid(): " + customer.getRid() );
 			log.debug( "customer.isBlocked(): " + customer.isBlocked() );
 			log.debug( "customer.getCreatedDate(): " + customer.getCreatedDate() );
-			assertEquals( Long.valueOf( 2L ), customer.getbKey() );
+			assertEquals( Long.valueOf( 1L ), customer.getbKey() );
 			assertNotNull( customer.getRid() );
 		}
 		finally {
@@ -160,13 +160,13 @@ public class OrientDBSimpleTest {
 		log.debug( "start" );
 		try {
 			em.getTransaction().begin();
-			Pizza pizza = em.find( Pizza.class, 2L );
+			Pizza pizza = em.find( Pizza.class, 1L );
 			em.refresh( pizza );
 			log.debug( "read entity properties:" );
 			log.debug( "pizza.getBKey():" + pizza.getbKey() );
 			log.debug( "pizza.getName(): " + pizza.getName() );
 			log.debug( "pizza.getbKey(): {0}" + pizza.getbKey() );
-			assertEquals( Long.valueOf( 2L ), pizza.getbKey() );
+			assertEquals( Long.valueOf( 1L ), pizza.getbKey() );
 			assertNotNull( pizza.getRid() );
 		}
 		finally {
@@ -184,7 +184,7 @@ public class OrientDBSimpleTest {
 			Query query = em.createNativeQuery( "select from Customer", Customer.class );
 			List<Customer> customers = query.getResultList();
 			assertFalse( "Customers must be", customers.isEmpty() );
-			assertEquals( Long.valueOf( 2L ), customers.get( 0 ).getbKey() );
+			assertEquals( Long.valueOf( 1L ), customers.get( 0 ).getbKey() );
 
 			log.debug( "query: select from " + customers.get( 0 ).getRid().toString() );
 			query = em.createNativeQuery( "select from " + customers.get( 0 ).getRid().toString(), Customer.class );
@@ -214,7 +214,7 @@ public class OrientDBSimpleTest {
 		log.debug( "start" );
 		try {
 			em.getTransaction().begin();
-			Long id = 2L;
+			Long id = 1L;
 			Customer customer = em.find( Customer.class, id );
 			customer.setName( "Ivahoe" );
 			int oldVersion = customer.getVersion();
@@ -242,7 +242,7 @@ public class OrientDBSimpleTest {
 		log.debug( "start" );
 		try {
 			em.getTransaction().begin();
-			Long id = 2L;
+			Long id = 1L;
 			Customer customer = em.find( Customer.class, id );
 			log.debug( "old rid:{0}" + customer.getRid() );
 			ORecordId oldRid = customer.getRid();
@@ -269,7 +269,7 @@ public class OrientDBSimpleTest {
 		log.debug( "start" );
 		try {
 			em.getTransaction().begin();
-			Long id = 2L;
+			Long id = 1L;
 			Customer customer = em.find( Customer.class, id );
 			em.remove( customer );
 			em.flush();

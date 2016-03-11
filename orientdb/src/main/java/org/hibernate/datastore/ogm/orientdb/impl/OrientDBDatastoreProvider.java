@@ -36,7 +36,7 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 public class OrientDBDatastoreProvider extends BaseDatastoreProvider
-implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
+		implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	private static boolean isInmemoryDB = false;
 	private static Log log = LoggerFactory.getLogger();
@@ -66,7 +66,7 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 				info.put( "user", propertyReader.property( "javax.persistence.jdbc.user", String.class ).getValue() );
 				info.put( "password", propertyReader.property( "javax.persistence.jdbc.password", String.class ).getValue() );
 
-				createInMemoryDB( jdbcUrl );
+				createInMemoryDB();
 
 				connection = DriverManager.getConnection( jdbcUrl, info );
 				setDateFormats( connection );
@@ -91,11 +91,20 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 		}
 	}
 
-	private static void createInMemoryDB(String jdbcUrl) {
-		String orientDbUrl = jdbcUrl.substring( "jdbc:orient:".length() );
+	private void createInMemoryDB() {
+
+		String orientDbUrl = propertyReader.property( "javax.persistence.jdbc.url", String.class ).getValue().substring( "jdbc:orient:".length() );
+		Boolean restart = propertyReader.property( "restart.inmemorydb", Boolean.class ).withDefault( Boolean.FALSE ).getValue();
 
 		if ( orientDbUrl.startsWith( "memory" ) ) {
 			isInmemoryDB = true;
+			log.debugf( "in-memory database exists: %b ",
+					( MemoryDBUtil.getOrientGraphFactory() != null ? MemoryDBUtil.getOrientGraphFactory().exists() : false ) );
+			if ( ( MemoryDBUtil.getOrientGraphFactory() != null ? MemoryDBUtil.getOrientGraphFactory().exists() : false ) && restart ) {
+				log.debugf( "try to recreate in-memory database %s", orientDbUrl );
+				MemoryDBUtil.getOrientGraphFactory().close();
+				MemoryDBUtil.getOrientGraphFactory().drop();
+			}
 			MemoryDBUtil.createDbFactory( orientDbUrl );
 		}
 
