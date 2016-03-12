@@ -31,7 +31,7 @@ public enum GridDialectType {
 	CASSANDRA("org.hibernate.ogm.datastore.cassandra.CassandraDialect", false, false),
 
 	REDIS("org.hibernate.ogm.datastore.redis.RedisDialect", false, false),
-        
+
 	REDIS_JSON( "org.hibernate.ogm.datastore.redis.RedisJsonDialect", false, false ),
 
 	REDIS_HASH( "org.hibernate.ogm.datastore.redis.RedisHashDialect", false, false ),
@@ -55,7 +55,7 @@ public enum GridDialectType {
 
 	/**
 	 * Whether this store is a document store or not.
-	 * 
+	 *
 	 * @return {@code true} if this is a document store, {@code false} otherwise.
 	 */
 	public boolean isDocumentStore() {

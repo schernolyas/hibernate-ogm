@@ -37,6 +37,7 @@ import org.junit.Test;
  * @author Hardy Ferentschik
  */
 public class BuiltInTypeTest extends OgmTestCase {
+
 	private static final Random RANDOM = new Random();
 	private static TimeZone originalTimeZone = null;
 
@@ -160,7 +161,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 	}
 
 	// byte arrays
-        @SkipByGridDialect(GridDialectType.ORIENTDB)
+	@SkipByGridDialect(GridDialectType.ORIENTDB)
 	@Test
 	public void testByteArrayAsLobSupport() throws Exception {
 		byte[] testData = new byte[200];
@@ -171,7 +172,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertArrayEquals( "Original and loaded data do not match!", testData, loadedBookmark.getLob() );
 	}
 
-        @SkipByGridDialect(GridDialectType.ORIENTDB)
+	@SkipByGridDialect(GridDialectType.ORIENTDB)
 	@Test
 	public void testLongAsLobSupport() throws Exception {
 		bookmark.setLobWithLong( Long.MIN_VALUE );
@@ -180,7 +181,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "Original and loaded data do not match!", (Long) Long.MIN_VALUE, (Long) loadedBookmark.getLobWithLong() );
 	}
 
-        @SkipByGridDialect(GridDialectType.ORIENTDB)
+	@SkipByGridDialect(GridDialectType.ORIENTDB)
 	@Test
 	public void testStringAsLobSupport() throws Exception {
 		String text = "Very long text ...";
@@ -190,7 +191,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "Original and loaded data do not match!", text, loadedBookmark.getLobWithString() );
 	}
 
-        @SkipByGridDialect(GridDialectType.ORIENTDB)
+	@SkipByGridDialect(GridDialectType.ORIENTDB)
 	@Test
 	public void testByteArraySupport() throws Exception {
 		byte[] testData = new byte[200];
@@ -208,8 +209,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 
 		Bookmark loadedBookmark = saveAndGet( bookmark );
 		assertEquals(
-				"String mapped enum value does not match", bookmark.getClassifier(), loadedBookmark.getClassifier()
-		);
+				"String mapped enum value does not match", bookmark.getClassifier(), loadedBookmark.getClassifier() );
 	}
 
 	@Test
@@ -219,8 +219,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		Bookmark loadedBookmark = saveAndGet( bookmark );
 		assertEquals(
 				"Ordinal mapped enum value does not match", bookmark.getClassifierAsOrdinal(),
-				loadedBookmark.getClassifierAsOrdinal()
-		);
+				loadedBookmark.getClassifierAsOrdinal() );
 	}
 
 	// Date/time types
@@ -249,6 +248,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "Time zones doe not match", expectedTimeZoneOffset, actualTimeZoneOffset );
 	}
 
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Time is not supports in DB")
 	@Test
 	public void testDatePersistedAsTemporalTypeTimeSupport() throws Exception {
 		Date updateTime = new Date();
@@ -276,13 +276,13 @@ public class BuiltInTypeTest extends OgmTestCase {
 
 	@Test
 	public void testDatePersistedAsTemporalTypeTimestampSupport() throws Exception {
-		Calendar destructionDate = Calendar.getInstance();                
+		Calendar destructionDate = Calendar.getInstance();
 		bookmark.setDestructionDate( destructionDate.getTime() );
-		Bookmark loadedBookmark = saveAndGet( bookmark );                
-                
-                Calendar c2 = Calendar.getInstance();
-                c2.setTime( loadedBookmark.getDestructionDate() );
-		assertEquals( "Year value does not match",destructionDate.get( Calendar.YEAR ), c2.get( Calendar.YEAR ) );
+		Bookmark loadedBookmark = saveAndGet( bookmark );
+
+		Calendar c2 = Calendar.getInstance();
+		c2.setTime( loadedBookmark.getDestructionDate() );
+		assertEquals( "Year value does not match", destructionDate.get( Calendar.YEAR ), c2.get( Calendar.YEAR ) );
 	}
 
 	@Test
@@ -293,8 +293,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 
 		assertEquals(
 				"Calendar value does not match", bookmark.getDestructionCalendar().getTime(),
-				loadedBookmark.getDestructionCalendar().getTime()
-		);
+				loadedBookmark.getDestructionCalendar().getTime() );
 	}
 
 	@Test
@@ -347,7 +346,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "BigDecimal value does not match", bookmark.getSiteWeight(), loadedBookmark.getSiteWeight() );
 	}
 
-        @SkipByGridDialect(value = { GridDialectType.ORIENTDB},comment = "see issue https://github.com/orientechnologies/orientdb/issues/5753")
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "see issue https://github.com/orientechnologies/orientdb/issues/5753")
 	@Test
 	public void testBigIntegerSupport() throws Exception {
 		bookmark.setVisitCount( new BigInteger( "444" ) );
@@ -374,7 +373,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] {
+		return new Class<?>[]{
 				Bookmark.class
 		};
 	}
