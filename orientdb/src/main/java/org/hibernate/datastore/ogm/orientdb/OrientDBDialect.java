@@ -158,6 +158,10 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 				queryBuffer.append( "?" );
 				preparedStatementParams.add( tuple.get( columnName ) );
 			}
+			else if ( tuple.get( columnName ) instanceof String ) {
+				queryBuffer.append( "?" );
+				preparedStatementParams.add( tuple.get( columnName ) );
+			}
 			else {
 				EntityKeyUtil.setFieldValue( queryBuffer, tuple.get( columnName ) );
 			}
@@ -357,7 +361,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	@Override
 	public void insertOrUpdateAssociation(AssociationKey key, Association association, AssociationContext associationContext) {
 		log.debugf( "insertOrUpdateAssociation: AssociationKey: %s ; AssociationContext: %s ; association: %s", key, associationContext, association );
-		throw new UnsupportedOperationException( "Not supported yet!" );
+		//throw new UnsupportedOperationException( "Not supported yet!" );
 
 		/*
 		 * Tuple outEntityTuple = associationContext.getEntityTuple(); String inClassName = key.getTable(); String
