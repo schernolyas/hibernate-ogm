@@ -27,41 +27,59 @@ import org.hibernate.ogm.model.spi.TupleSnapshot;
 import org.hibernate.ogm.utils.GridDialectOperationContexts;
 import org.hibernate.ogm.utils.TestHelper;
 import org.hibernate.ogm.utils.TestableGridDialect;
-import org.jboss.logging.Logger;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
+import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 public class OrientDBTestHelper implements TestableGridDialect {
 
-	private static final Logger LOG = Logger.getLogger( OrientDBTestHelper.class.getName() );
+	private static final Log log = LoggerFactory.getLogger();
 
 	private static final String JDBC_URL = "jdbc:orient:".concat( OrientDBSimpleTest.MEMORY_TEST );
 	private static OrientGraphNoTx graphNoTx;
 
 	public OrientDBTestHelper() {
-		LOG.info( "call me" );
+		log.info( "call me" );
 		// create OrientDB in memory
 		graphNoTx = MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
 
 	}
 
 	@Override
-	public long getNumberOfEntities(SessionFactory sessionFactory) {
-		return TestHelper.getNumberOfEntities( sessionFactory );
+	public long getNumberOfEntities(SessionFactory sessionFactory) {            
+                OrientDBDatastoreProvider provider = getProvider(sessionFactory);
+                Connection connection = provider.getConnection();
+                long result = -1;
+                try {
+                    ResultSet rs = connection.createStatement().executeQuery("select count(@rid) as all_rows from V");
+                    if (rs.next()) {
+                        result = rs.getLong(1);
+                        log.infof( "Vertex number %d",result );
+                    }                    
+                }catch (SQLException e) {
+                    log.cannotExecuteQuery("select count(@rid) as all_rows from V", e);
+                }
+		return result;
 	}
 
 	@Override
 	public long getNumberOfAssociations(SessionFactory sessionFactory) {
-		return TestHelper.getNumberOfAssociations( sessionFactory );
+		//return TestHelper.getNumberOfAssociations( sessionFactory );
+                return 0;
 
 	}
 
 	@Override
 	public long getNumberOfAssociations(SessionFactory sessionFactory, AssociationStorageType type) {
-		return TestHelper.getNumberOfAssociations( sessionFactory, type );
+		//return TestHelper.getNumberOfAssociations( sessionFactory, type );
+                return 0;
 
 	}
 
@@ -83,10 +101,10 @@ public class OrientDBTestHelper implements TestableGridDialect {
 
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
-		LOG.info( "call dropSchemaAndDatabase! vertices: " + graphNoTx.countVertices() );
-		if ( graphNoTx.countVertices() > 0 ) {
+		log.infof( "call dropSchemaAndDatabase! db closed: %b " + graphNoTx.isClosed() );
+		/*if ( graphNoTx.countVertices() > 0 ) {
 			MemoryDBUtil.recrateInMemoryDn( OrientDBSimpleTest.MEMORY_TEST );
-		}
+		}*/
 
 	}
 
@@ -102,7 +120,7 @@ public class OrientDBTestHelper implements TestableGridDialect {
 			Map<String, String> props = new HashMap<>();
 			for ( Map.Entry<Object, Object> entry : hibProperties.entrySet() ) {
 				props.put( String.valueOf( entry.getKey() ), String.valueOf( entry.getValue() ) );
-				LOG.info( entry.toString() );
+				log.info( entry.toString() );
 			}
 			return Collections.unmodifiableMap( props );
 		}

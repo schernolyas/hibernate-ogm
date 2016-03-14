@@ -361,7 +361,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	@Override
 	public void insertOrUpdateAssociation(AssociationKey key, Association association, AssociationContext associationContext) {
 		log.debugf( "insertOrUpdateAssociation: AssociationKey: %s ; AssociationContext: %s ; association: %s", key, associationContext, association );
-		//throw new UnsupportedOperationException( "Not supported yet!" );
+		// throw new UnsupportedOperationException( "Not supported yet!" );
 
 		/*
 		 * Tuple outEntityTuple = associationContext.getEntityTuple(); String inClassName = key.getTable(); String
@@ -438,7 +438,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
 				String key = entry.getKey();
 				TypedGridValue value = entry.getValue();
-				log.debugf( "key:%s ; type: %s ; value: %s ", key, value.getType().getName(), value.getValue() );
+				log.debugf( "key: %s ; type: %s ; value: %s ", key, value.getType().getName(), value.getValue() );
 				try {
 					// @todo move to Map
 					if ( value.getType().getName().equals( "string" ) ) {
@@ -552,14 +552,12 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	public GridType overrideType(Type type) {
 		log.debugf( "overrideType: %s ; ReturnedClass: %s", type.getName(), type.getReturnedClass() );
 		GridType gridType = null;
+		// @TODO change from name to class
 
-		if ( type.getName().equals( ORecordId.class.getName() ) ) {
+		if ( type.getReturnedClass().equals( ORecordId.class ) ) {
 			gridType = ORecordIdGridType.INSTANCE;
 		}
-		else if ( type.getName().equals( ORidBag.class.getName() ) ) {
-			gridType = ORidBagGridType.INSTANCE;
-		}
-		else if ( type.getName().equals( ORidBag.class.getName() ) ) {
+		else if ( type.getReturnedClass().equals( ORidBag.class ) ) {
 			gridType = ORidBagGridType.INSTANCE;
 		} // persist calendars as ISO8601 strings, including TZ info
 		/*
