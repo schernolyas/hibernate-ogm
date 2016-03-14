@@ -7,6 +7,9 @@
 package org.hibernate.datastore.ogm.orientdb.utils;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +20,8 @@ import org.hibernate.datastore.ogm.orientdb.OrientDB;
 import org.hibernate.datastore.ogm.orientdb.OrientDBDialect;
 import org.hibernate.datastore.ogm.orientdb.OrientDBSimpleTest;
 import org.hibernate.datastore.ogm.orientdb.impl.OrientDBDatastoreProvider;
+import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
+import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.ogm.datastore.document.options.AssociationStorageType;
 import org.hibernate.ogm.datastore.spi.DatastoreConfiguration;
@@ -25,15 +30,9 @@ import org.hibernate.ogm.dialect.spi.GridDialect;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
 import org.hibernate.ogm.utils.GridDialectOperationContexts;
-import org.hibernate.ogm.utils.TestHelper;
 import org.hibernate.ogm.utils.TestableGridDialect;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
-import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -53,33 +52,34 @@ public class OrientDBTestHelper implements TestableGridDialect {
 	}
 
 	@Override
-	public long getNumberOfEntities(SessionFactory sessionFactory) {            
-                OrientDBDatastoreProvider provider = getProvider(sessionFactory);
-                Connection connection = provider.getConnection();
-                long result = -1;
-                try {
-                    ResultSet rs = connection.createStatement().executeQuery("select count(@rid) as all_rows from V");
-                    if (rs.next()) {
-                        result = rs.getLong(1);
-                        log.infof( "Vertex number %d",result );
-                    }                    
-                }catch (SQLException e) {
-                    log.cannotExecuteQuery("select count(@rid) as all_rows from V", e);
-                }
+	public long getNumberOfEntities(SessionFactory sessionFactory) {
+		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
+		Connection connection = provider.getConnection();
+		long result = -1;
+		try {
+			ResultSet rs = connection.createStatement().executeQuery( "select count(@rid) as all_rows from V" );
+			if ( rs.next() ) {
+				result = rs.getLong( 1 );
+				log.infof( "Vertex number %d", result );
+			}
+		}
+		catch (SQLException e) {
+			log.cannotExecuteQuery( "select count(@rid) as all_rows from V", e );
+		}
 		return result;
 	}
 
 	@Override
 	public long getNumberOfAssociations(SessionFactory sessionFactory) {
-		//return TestHelper.getNumberOfAssociations( sessionFactory );
-                return 0;
+		// return TestHelper.getNumberOfAssociations( sessionFactory );
+		return 0;
 
 	}
 
 	@Override
 	public long getNumberOfAssociations(SessionFactory sessionFactory, AssociationStorageType type) {
-		//return TestHelper.getNumberOfAssociations( sessionFactory, type );
-                return 0;
+		// return TestHelper.getNumberOfAssociations( sessionFactory, type );
+		return 0;
 
 	}
 
@@ -102,9 +102,9 @@ public class OrientDBTestHelper implements TestableGridDialect {
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
 		log.infof( "call dropSchemaAndDatabase! db closed: %b " + graphNoTx.isClosed() );
-		/*if ( graphNoTx.countVertices() > 0 ) {
-			MemoryDBUtil.recrateInMemoryDn( OrientDBSimpleTest.MEMORY_TEST );
-		}*/
+		/*
+		 * if ( graphNoTx.countVertices() > 0 ) { MemoryDBUtil.recrateInMemoryDn( OrientDBSimpleTest.MEMORY_TEST ); }
+		 */
 
 	}
 
