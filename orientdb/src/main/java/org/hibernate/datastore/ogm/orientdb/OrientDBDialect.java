@@ -75,6 +75,11 @@ import org.hibernate.type.Type;
 
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.id.ORecordId;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Set;
+import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
+import org.json.simple.JSONObject;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -135,6 +140,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	 */
 
 	private List<Object> addTupleFields(StringBuilder queryBuffer, Tuple tuple, String primaryKeyName, boolean forInsert) {
+		Map<String, JSONObject> embeddedColumnValues = new HashMap<>();
 		LinkedList<Object> preparedStatementParams = new LinkedList<>();
 		for ( String columnName : tuple.getColumnNames() ) {
 			if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) ||
@@ -142,30 +148,51 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 				continue;
 			}
 			log.debugf( "addTupleFields: Set value for column %s ", columnName );
-			if ( !forInsert ) {
-				queryBuffer.append( columnName ).append( "=" );
-			}
-			if ( tuple.get( columnName ) instanceof byte[] ) {
-				queryBuffer.append( "?" );
-				preparedStatementParams.add( tuple.get( columnName ) );
-			}
-			else if ( tuple.get( columnName ) instanceof BigInteger ) {
-				queryBuffer.append( "?" );
-				BigInteger bi = (BigInteger) tuple.get( columnName );
-				preparedStatementParams.add( bi.toByteArray() );
-			}
-			else if ( tuple.get( columnName ) instanceof BigDecimal ) {
-				queryBuffer.append( "?" );
-				preparedStatementParams.add( tuple.get( columnName ) );
-			}
-			else if ( tuple.get( columnName ) instanceof String ) {
-				queryBuffer.append( "?" );
-				preparedStatementParams.add( tuple.get( columnName ) );
+
+			if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
+				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
+				if ( !forInsert ) {
+					queryBuffer.append( ec.getClassName() ).append( "=" );
+				}
+				if ( !embeddedColumnValues.containsKey( ec.getClassName() ) ) {
+					embeddedColumnValues.put( ec.getClassName(), new JSONObject() );
+					queryBuffer.append( "? ," );
+				}
+				log.debugf( "addTupleFields: embeddedColumnValue keys %s ", embeddedColumnValues.get( ec.getClassName() ).keySet() );
+				if ( !embeddedColumnValues.get( ec.getClassName() ).isEmpty() ) {
+					preparedStatementParams.removeLast();
+				}
+				embeddedColumnValues.get( ec.getClassName() ).put( ec.getPropertyName(), tuple.get( columnName ) );
+				preparedStatementParams.add( embeddedColumnValues.get( ec.getClassName() ).toJSONString() );
+
 			}
 			else {
-				EntityKeyUtil.setFieldValue( queryBuffer, tuple.get( columnName ) );
+				if ( !forInsert ) {
+					queryBuffer.append( columnName ).append( "=" );
+				}
+				if ( tuple.get( columnName ) instanceof byte[] ) {
+					queryBuffer.append( "?" );
+					preparedStatementParams.add( tuple.get( columnName ) );
+				}
+				else if ( tuple.get( columnName ) instanceof BigInteger ) {
+					queryBuffer.append( "?" );
+					BigInteger bi = (BigInteger) tuple.get( columnName );
+					preparedStatementParams.add( bi.toByteArray() );
+				}
+				else if ( tuple.get( columnName ) instanceof BigDecimal ) {
+					queryBuffer.append( "?" );
+					preparedStatementParams.add( tuple.get( columnName ) );
+				}
+				else if ( tuple.get( columnName ) instanceof String ) {
+					queryBuffer.append( "?" );
+					preparedStatementParams.add( tuple.get( columnName ) );
+				}
+				else {
+					EntityKeyUtil.setFieldValue( queryBuffer, tuple.get( columnName ) );
+				}
+				queryBuffer.append( " ," );
 			}
-			queryBuffer.append( " ," );
+
 		}
 		if ( forInsert ) {
 			queryBuffer.setLength( queryBuffer.length() - 1 );
@@ -253,11 +280,22 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			dbKeyValue = (Long) SequenceUtil.getSequence( connection, seqName );
 			tuple.put( dbKeyName, dbKeyValue );
 		}
+
+		Set<String> embeddedColumns = new HashSet<>();
 		for ( String columnName : tuple.getColumnNames() ) {
 			if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) ) {
 				continue;
 			}
-			insertQuery.append( columnName ).append( "," );
+			else if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
+				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
+				if ( !embeddedColumns.contains( ec.getClassName() ) ) {
+					insertQuery.append( ec.getClassName() ).append( "," );
+					embeddedColumns.add( ec.getClassName() );
+				}
+			}
+			else {
+				insertQuery.append( columnName ).append( "," );
+			}
 		}
 		insertQuery.setLength( insertQuery.length() - 1 );
 		insertQuery.append( ") values (" );

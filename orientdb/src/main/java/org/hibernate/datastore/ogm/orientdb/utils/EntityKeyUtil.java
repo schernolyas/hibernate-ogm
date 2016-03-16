@@ -22,6 +22,7 @@ import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 
 import com.orientechnologies.orient.core.id.ORecordId;
+import org.hibernate.mapping.Column;
 
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
@@ -30,6 +31,14 @@ import com.orientechnologies.orient.core.id.ORecordId;
 public class EntityKeyUtil {
 
 	private static final Log log = LoggerFactory.getLogger();
+
+	public static boolean isEmbeddedColumn(Column column) {
+		return isEmbeddedColumn( column.getName() );
+	}
+
+	public static boolean isEmbeddedColumn(String column) {
+		return column.contains( "." );
+	}
 
 	public static void setFieldValue(StringBuilder queryBuffer, Object dbKeyValue) {
 		if ( dbKeyValue != null ) {
@@ -65,7 +74,7 @@ public class EntityKeyUtil {
 			Object columnValue = key.getColumnValues()[i];
 			log.debug( "EntityKey: columnName: " + columnName + ";columnValue: " + columnValue + " (class:" + columnValue.getClass().getName() + ");" );
 			if ( key.getMetadata().isKeyColumn( columnName ) ) {
-				log.debug( "EntityKey: columnName: " + columnName + " is primary key!" );
+				log.debugf( "EntityKey: columnName: $s is primary key!", columnName );
 				dbKeyValue = columnValue;
 			}
 		}
@@ -76,7 +85,7 @@ public class EntityKeyUtil {
 		for ( int i = 0; i < key.getColumnNames().length; i++ ) {
 			String columnName = key.getColumnNames()[i];
 			if ( key.getMetadata().isKeyColumn( columnName ) ) {
-				log.debug( "EntityKey: columnName: " + columnName + " is primary key!" );
+				log.debugf( "EntityKey: columnName: %s  is primary key!", columnName );
 				return columnName;
 			}
 		}
@@ -97,7 +106,7 @@ public class EntityKeyUtil {
 			ResultSet rs = stmt.executeQuery( buffer.toString() );
 			if ( rs.next() ) {
 				long count = rs.getLong( 1 );
-				log.debug( "existsPrimaryKeyInDB:Key:" + dbKeyName + " ; count:" + count );
+				log.debugf( "existsPrimaryKeyInDB:Key: %s ; count: %d", dbKeyName, count );
 				exists = count > 0;
 			}
 		}

@@ -17,14 +17,15 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.hibernate.HibernateException;
 import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
+import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.datastore.ogm.orientdb.utils.EntityKeyUtil;
 import org.hibernate.datastore.ogm.orientdb.utils.SequenceUtil;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.Column;
@@ -72,26 +73,6 @@ import org.hibernate.usertype.UserType;
  */
 
 public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
-
-	private class EmbedColumnName {
-
-		private String emdeddedFieldName;
-		private String mainFieldName;
-
-		public EmbedColumnName(String mainFieldName, String emdeddedFieldName) {
-			this.mainFieldName = mainFieldName;
-			this.emdeddedFieldName = emdeddedFieldName;
-		}
-
-		public String getEmdeddedFieldName() {
-			return emdeddedFieldName;
-		}
-
-		public String getMainFieldName() {
-			return mainFieldName;
-		}
-
-	}
 
 	private static final String CREATE_PROPERTY_TEMPLATE = "create property {0}.{1} {2}";
 	private static final Log log = LoggerFactory.getLogger();
@@ -159,8 +140,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 	}
 
+	private String createClassQuery(String tableName) {
+		return String.format( "create class %s extends V", tableName );
+	}
+
 	private String createClassQuery(Table table) {
-		return String.format( "create class %s extends V", table.getName() );
+		return createClassQuery( table.getName() );
 	}
 
 	private void createEntities(SchemaDefinitionContext context) {
@@ -191,11 +176,13 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					throw log.cannotGenerateVertexClass( table.getName(), e );
 				}
 				Iterator<Column> columnIterator = table.getColumnIterator();
+				Set<String> embeddedClassNames = new HashSet<>();
 
 				while ( columnIterator.hasNext() ) {
 					Column column = columnIterator.next();
+					log.debugf( "column: %s ", column );
 					log.debugf( "relation type: %s", column.getValue().getType().getClass() );
-					log.debugf( "column.getName(): %s ", column.getName() );
+
 					if ( OrientDBConstant.SYSTEM_FIELDS.contains( column.getName() ) ) {
 						continue;
 					}
@@ -203,7 +190,9 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						// @TODO refactor it
 						Value value = column.getValue();
 						log.debugf( "column name: %s ; column.getCanonicalName(): %s", column.getName(), column.getCanonicalName() );
-						if ( isEmbeddedColumn( column ) ) {
+						if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
+							EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
+							log.debugf( "embedded column. class: %s ; property: %s", ec.getClassName(), ec.getPropertyName() );
 
 						}
 						else {
@@ -218,6 +207,41 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 							}
 						}
 						// @TODO use Links as foreign keys. see http://orientdb.com/docs/last/SQL-Create-Link.html
+
+					}
+					else if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
+						EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
+						log.debugf( "embedded column. class: %s ; property: %s", ec.getClassName(), ec.getPropertyName() );
+						if ( embeddedClassNames.contains( ec.getClassName() ) ) {
+							// update embedded class
+							String propertyQuery = createValueProperyQuery( table, column );
+							log.debug( "create embedded property query: " + propertyQuery );
+							try {
+								provider.getConnection().createStatement().execute( propertyQuery );
+							}
+							catch (SQLException e) {
+								throw log.cannotGenerateProperty( ec.getPropertyName(), ec.getClassName(), e );
+							}
+						}
+						else {
+							String embeddedClassQuery = createClassQuery( ec.getClassName() ).toUpperCase();
+							embeddedClassNames.add( ec.getClassName() );
+							log.debugf( "create embedded class query: %s", embeddedClassQuery );
+							try {
+								provider.getConnection().createStatement().execute( embeddedClassQuery );
+							}
+							catch (SQLException e) {
+								throw log.cannotGenerateVertexClass( embeddedClassQuery, e );
+							}
+							String propertyQuery = createValueProperyQuery( table, column );
+							log.debug( "create embedded property query: " + propertyQuery );
+							try {
+								provider.getConnection().createStatement().execute( propertyQuery );
+							}
+							catch (SQLException e) {
+								throw log.cannotGenerateProperty( ec.getPropertyName(), ec.getClassName(), e );
+							}
+						}
 
 					}
 					else {
@@ -311,15 +335,19 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			if ( orientDbTypeName == null ) {
 				throw new UnsupportedOperationException( "Unsupported type: " + targetTypeClass );
 			}
-			query = MessageFormat.format( CREATE_PROPERTY_TEMPLATE,
-					table.getName(), column.getName(), orientDbTypeName );
+			if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
+				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
+				query = MessageFormat.format( CREATE_PROPERTY_TEMPLATE,
+						ec.getClassName(), ec.getPropertyName(), orientDbTypeName );
+			}
+			else {
+				query = MessageFormat.format( CREATE_PROPERTY_TEMPLATE,
+						table.getName(), column.getName(), orientDbTypeName );
+			}
+
 		}
 		return query;
 
-	}
-
-	private boolean isEmbeddedColumn(Column column) {
-		return column.getValue().getType().getClass().equals( ManyToOneType.class ) && column.getName().contains( "." );
 	}
 
 	private boolean isMapingTable(Table table) {
@@ -331,17 +359,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return table.getPrimaryKey() == null && tableColumns == 2;
 	}
 
-	private EmbedColumnName prepareColumnNames(Column column) {
-		EmbedColumnName names = null;
-		String columnName = column.getName();
-		Matcher matcher = PATTERN.matcher( columnName );
-		if ( matcher.find() ) {
-			String mainFieldName = matcher.group( 1 );
-			String emdeddedFieldName = matcher.group( 2 );
-			names = new EmbedColumnName( mainFieldName, emdeddedFieldName );
-		}
-		return names;
-	}
+	/*
+	 * private EmbedColumnName prepareColumnNames(Column column) { EmbedColumnName names = null; String columnName =
+	 * column.getName(); Matcher matcher = PATTERN.matcher( columnName ); if ( matcher.find() ) { String mainFieldName =
+	 * matcher.group( 1 ); String emdeddedFieldName = matcher.group( 2 ); names = new EmbedColumnName( mainFieldName,
+	 * emdeddedFieldName ); } return names; }
+	 */
 
 	private String searchMappedByName(SchemaDefinitionContext context, Collection<Table> tables, EntityType type, Column currentColumn) {
 		String columnName = currentColumn.getName();

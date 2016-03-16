@@ -74,7 +74,11 @@
             <groupId>org.parboiled</groupId>
             <artifactId>parboiled-java</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.googlecode.json-simple</groupId>
+            <artifactId>json-simple</artifactId>
+            <version>1.1</version>
+        </dependency>
         <!-- Testing -->
         <dependency>
             <groupId>junit</groupId>

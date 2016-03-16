@@ -51,4 +51,7 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 
 	@Message(id = 1710, value = "Cannot set value for parameter %d")
 	HibernateException cannotSetValueForParameter(Integer paramNum, @Cause Exception cause);
+
+	@Message(id = 1711, value = "Cannot parse embedded class for column %s. JSON %s")
+	HibernateException cannotParseEmbeddedClass(String column, String json, @Cause Exception cause);
 }

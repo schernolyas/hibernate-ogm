@@ -10,13 +10,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
+import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
 
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.datastore.ogm.orientdb.utils.AssociationUtil;
+import org.hibernate.datastore.ogm.orientdb.utils.EntityKeyUtil;
 import org.hibernate.ogm.model.key.spi.AssociatedEntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -38,30 +43,43 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		this.associatedEntityKeyMetadata = associatedEntityKeyMetadata;
 		this.rolesByColumn = rolesByColumn;
 		this.entityKeyMetadata = entityKeyMetadata;
-		log.debug( "1.dbNameValueMap:" + dbNameValueMap );
-		log.debug( "1.associatedEntityKeyMetadata:" + associatedEntityKeyMetadata );
-		log.debug( "1.rolesByColumn:" + rolesByColumn );
+		log.debugf( "1.dbNameValueMap: %s" ,dbNameValueMap );
+		log.debugf( "1.associatedEntityKeyMetadata: %s" ,associatedEntityKeyMetadata );
+		log.debugf( "1.rolesByColumn: %s" , rolesByColumn );
 	}
 
 	public OrientDBTupleSnapshot(Map<String, AssociatedEntityKeyMetadata> associatedEntityKeyMetadata,
 			Map<String, String> rolesByColumn,
 			EntityKeyMetadata entityKeyMetadata) {
 		this( new HashMap<String, Object>(), associatedEntityKeyMetadata, rolesByColumn, entityKeyMetadata );
-		log.debug( "2.dbNameValueMap:" + dbNameValueMap );
-		log.debug( "2.associatedEntityKeyMetadata:" + associatedEntityKeyMetadata );
-		log.debug( "2.rolesByColumn:" + rolesByColumn );
+		log.debugf( "2.dbNameValueMap: %s" , dbNameValueMap );
+		log.debugf( "2.associatedEntityKeyMetadata: %s" , associatedEntityKeyMetadata );
+		log.debugf( "2.rolesByColumn: %s" , rolesByColumn );
 	}
 
 	@Override
 	public Object get(String targetColumnName) {
-		log.debug( "targetColumnName: " + targetColumnName );
+		log.debugf( "targetColumnName: %s" ,targetColumnName );
 		Object value = null;
 		if ( targetColumnName.equals( OrientDBConstant.SYSTEM_VERSION ) && value == null ) {
 			value = Integer.valueOf( 0 );
-		}
+		} else if (EntityKeyUtil.isEmbeddedColumn( targetColumnName )) {
+                    //@TODO think about optimization
+                    EmbeddedColumnInfo ec = new EmbeddedColumnInfo(targetColumnName);
+                    log.debugf( "embedded column. class: %s ; property: %s", ec.getClassName(), ec.getPropertyName() );
+                    JSONParser parser = new JSONParser();
+                     try {
+                        JSONObject jsonObj = (JSONObject) parser.parse((String) dbNameValueMap.get( ec.getClassName() ));
+                        value = jsonObj.get(ec.getPropertyName());
+                        log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName,value,( value != null ? value.getClass() : null ) );
+                    } catch (ParseException pe) {
+                        throw log.cannotParseEmbeddedClass(targetColumnName,(String) dbNameValueMap.get( ec.getClassName() ), pe);
+                    }
+                    
+                }
 		else {
 			value = dbNameValueMap.get( targetColumnName );
-			log.debug( "targetColumnName: " + targetColumnName + "; value: " + value + "; class :" + ( value != null ? value.getClass() : null ) );
+			log.debugf( "targetColumnName: %s ; value: %s; class : ", targetColumnName,value,( value != null ? value.getClass() : null ) );
 		}
 		return value;
 	}
