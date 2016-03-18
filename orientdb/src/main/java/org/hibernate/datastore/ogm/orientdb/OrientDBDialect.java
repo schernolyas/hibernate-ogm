@@ -76,7 +76,6 @@ import org.hibernate.type.Type;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.id.ORecordId;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Set;
 import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
 import org.json.simple.JSONObject;
@@ -85,7 +84,7 @@ import org.json.simple.JSONObject;
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>,
-		ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -142,6 +141,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	private List<Object> addTupleFields(StringBuilder queryBuffer, Tuple tuple, String primaryKeyName, boolean forInsert) {
 		Map<String, JSONObject> embeddedColumnValues = new HashMap<>();
 		LinkedList<Object> preparedStatementParams = new LinkedList<>();
+		int currentBufferLenght = -1;
 		for ( String columnName : tuple.getColumnNames() ) {
 			if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) ||
 					( primaryKeyName != null && columnName.equals( primaryKeyName ) ) ) {
@@ -155,16 +155,18 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 					queryBuffer.append( ec.getClassName() ).append( "=" );
 				}
 				if ( !embeddedColumnValues.containsKey( ec.getClassName() ) ) {
-					embeddedColumnValues.put( ec.getClassName(), new JSONObject() );
-					queryBuffer.append( "? ," );
+					JSONObject embeddedFieldValue = new JSONObject();
+					embeddedFieldValue.put( "@type", "d" );
+					embeddedFieldValue.put( "@class", ec.getClassName() );
+					embeddedColumnValues.put( ec.getClassName(), embeddedFieldValue );
+					currentBufferLenght = queryBuffer.length();
+				}
+				else {
+					queryBuffer.setLength( currentBufferLenght );
 				}
 				log.debugf( "addTupleFields: embeddedColumnValue keys %s ", embeddedColumnValues.get( ec.getClassName() ).keySet() );
-				if ( !embeddedColumnValues.get( ec.getClassName() ).isEmpty() ) {
-					preparedStatementParams.removeLast();
-				}
 				embeddedColumnValues.get( ec.getClassName() ).put( ec.getPropertyName(), tuple.get( columnName ) );
-				preparedStatementParams.add( embeddedColumnValues.get( ec.getClassName() ).toJSONString() );
-
+				queryBuffer.append( embeddedColumnValues.get( ec.getClassName() ).toJSONString() ).append( " ," );
 			}
 			else {
 				if ( !forInsert ) {

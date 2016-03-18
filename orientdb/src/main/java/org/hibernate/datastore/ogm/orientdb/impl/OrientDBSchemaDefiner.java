@@ -75,6 +75,7 @@ import org.hibernate.usertype.UserType;
 public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 	private static final String CREATE_PROPERTY_TEMPLATE = "create property {0}.{1} {2}";
+	private static final String CREATE_EMBEDDED_PROPERTY_TEMPLATE = "create property {0}.{1} {2} {3}";
 	private static final Log log = LoggerFactory.getLogger();
 	private static final Pattern PATTERN = Pattern.compile( "directed([a-zA-Z_0-9])\\.(.+)" );
 	private static final Set<Class> RELATIONS_TYPES;
@@ -224,22 +225,21 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 							}
 						}
 						else {
-							String embeddedClassQuery = createClassQuery( ec.getClassName() ).toUpperCase();
-							embeddedClassNames.add( ec.getClassName() );
-							log.debugf( "create embedded class query: %s", embeddedClassQuery );
+							String executedQuery = null;
 							try {
-								provider.getConnection().createStatement().execute( embeddedClassQuery );
+								executedQuery = createClassQuery( ec.getClassName() );
+								embeddedClassNames.add( ec.getClassName() );
+								log.debugf( "create embedded class query: %s", executedQuery );
+								provider.getConnection().createStatement().execute( executedQuery );
+								executedQuery = createEmbeddedProperyQuery( table, column );
+								log.debugf( "create property for embedded class query: %s", executedQuery );
+								provider.getConnection().createStatement().execute( executedQuery );
+								executedQuery = createValueProperyQuery( table, column );
+								log.debug( "create embedded property query: " + executedQuery );
+								provider.getConnection().createStatement().execute( executedQuery );
 							}
 							catch (SQLException e) {
-								throw log.cannotGenerateVertexClass( embeddedClassQuery, e );
-							}
-							String propertyQuery = createValueProperyQuery( table, column );
-							log.debug( "create embedded property query: " + propertyQuery );
-							try {
-								provider.getConnection().createStatement().execute( propertyQuery );
-							}
-							catch (SQLException e) {
-								throw log.cannotGenerateProperty( ec.getPropertyName(), ec.getClassName(), e );
+								throw log.cannotGenerateVertexClass( executedQuery, e );
 							}
 						}
 
@@ -308,6 +308,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	private String createValueProperyQuery(Table table, Column column) {
 		SimpleValue simpleValue = (SimpleValue) column.getValue();
 		return createValueProperyQuery( table, column, simpleValue.getType().getClass() );
+	}
+
+	private String createEmbeddedProperyQuery(Table table, Column column) {
+		EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
+		return MessageFormat.format( CREATE_EMBEDDED_PROPERTY_TEMPLATE,
+				table.getName(), ec.getClassName(), "embedded", ec.getClassName() );
 	}
 
 	private String createValueProperyQuery(Table table, Column column, Class targetTypeClass) {
