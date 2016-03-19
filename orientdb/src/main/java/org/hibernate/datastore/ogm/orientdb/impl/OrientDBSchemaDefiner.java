@@ -272,16 +272,10 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 	private void createPrimaryKey(Connection connection, PrimaryKey primaryKey) {
 		String table = primaryKey.getTable().getName();
-		StringBuilder columns = new StringBuilder();
 		StringBuilder uniqueIndexQuery = new StringBuilder( 100 );
 		uniqueIndexQuery.append( "CREATE INDEX " ).append( table ).append( "_" );
 		String firstColumn = primaryKey.getColumn( 0 ).getName();
-		for ( Iterator<Column> iterator = primaryKey.getColumnIterator(); iterator.hasNext(); ) {
-			Column indexColumn = iterator.next();
-			columns.append( indexColumn.getName() ).append( "," );
-		}
-		columns.setLength( columns.length() - 1 );
-		uniqueIndexQuery.append( firstColumn ).append( "_pk ON " ).append( table ).append( " (" ).append( columns ).append( ") UNIQUE" );
+		uniqueIndexQuery.append( firstColumn ).append( "_pk ON " ).append( table ).append( " (" ).append( firstColumn ).append( ") UNIQUE" );
 
 		try {
 			log.debugf( "query: %s", uniqueIndexQuery );

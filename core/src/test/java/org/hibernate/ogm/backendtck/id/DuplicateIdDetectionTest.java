@@ -12,9 +12,10 @@ import javax.persistence.PersistenceException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
+import org.hibernate.ogm.dialect.spi.GridDialect;
 import org.hibernate.ogm.utils.GridDialectType;
 import org.hibernate.ogm.utils.SkipByGridDialect;
+import org.hibernate.ogm.utils.TestHelper;
 import org.hibernate.ogm.utils.jpa.JpaTestCase;
 
 import static org.fest.assertions.Assertions.assertThat;
@@ -25,11 +26,10 @@ import static org.junit.Assert.fail;
  *
  * @author Gunnar Morling
  */
-@SkipByGridDialect(
-		value = { GridDialectType.CASSANDRA },
-		comment = "Cassandra always upserts, doesn't read-lock before write, doesn't support uniq constraint even on primary key except by explicit/slow CAS use"
-)
+@SkipByGridDialect(value = {
+		GridDialectType.CASSANDRA }, comment = "Cassandra always upserts, doesn't read-lock before write, doesn't support uniq constraint even on primary key except by explicit/slow CAS use")
 public class DuplicateIdDetectionTest extends JpaTestCase {
+
 	EntityManager em;
 
 	@Before
@@ -63,7 +63,7 @@ public class DuplicateIdDetectionTest extends JpaTestCase {
 			em.getTransaction().commit();
 			fail( "Expected exception wasn't raised" );
 		}
-		catch ( Exception e ) {
+		catch (Exception e) {
 			// then
 			assertThat( e.getCause() ).isExactlyInstanceOf( PersistenceException.class );
 			assertThat( e.getCause().getMessage() ).matches( ".*OGM000067.*" );
@@ -81,14 +81,14 @@ public class DuplicateIdDetectionTest extends JpaTestCase {
 		em.getTransaction().commit();
 	}
 
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Composite keys is not supported!")
 	@Test
 	public void cannotInsertSameEntityUsingCompositeKeyTwice() throws Exception {
 		em.getTransaction().begin();
 
 		// given
 		MakeupArtistWithCompositeKey wibke = new MakeupArtistWithCompositeKey(
-				new MakeUpArtistId( "fancy-film", "wibke" ), "halloween"
-		);
+				new MakeUpArtistId( "fancy-film", "wibke" ), "halloween" );
 		em.persist( wibke );
 
 		em.getTransaction().commit();
@@ -97,15 +97,14 @@ public class DuplicateIdDetectionTest extends JpaTestCase {
 
 		// when
 		MakeupArtistWithCompositeKey notWibke = new MakeupArtistWithCompositeKey(
-				new MakeUpArtistId( "fancy-film", "wibke" ), "glamorous"
-		);
+				new MakeUpArtistId( "fancy-film", "wibke" ), "glamorous" );
 		em.persist( notWibke );
 
 		try {
 			em.getTransaction().commit();
 			fail( "Expected exception wasn't raised" );
 		}
-		catch ( Exception e ) {
+		catch (Exception e) {
 			// then
 			assertThat( e.getCause().getMessage() ).matches( ".*OGM000067.*" );
 		}
@@ -114,8 +113,7 @@ public class DuplicateIdDetectionTest extends JpaTestCase {
 		em.getTransaction().begin();
 
 		MakeupArtistWithCompositeKey loadedMakeupArtist = em.find(
-				MakeupArtistWithCompositeKey.class, new MakeUpArtistId( "fancy-film", "wibke" )
-		);
+				MakeupArtistWithCompositeKey.class, new MakeUpArtistId( "fancy-film", "wibke" ) );
 		assertThat( loadedMakeupArtist ).isNotNull();
 		assertThat( loadedMakeupArtist.getFavoriteStyle() ).describedAs( "Second insert should not be applied" )
 				.isEqualTo( "halloween" );
@@ -126,6 +124,10 @@ public class DuplicateIdDetectionTest extends JpaTestCase {
 
 	@Override
 	public Class<?>[] getEntities() {
-		return new Class<?>[] { MakeupArtist.class, MakeupArtistWithCompositeKey.class };
+		Class<? extends GridDialect> actualGridDialectClass = TestHelper.getCurrentGridDialect();
+		if ( GridDialectType.ORIENTDB.loadGridDialectClass().isAssignableFrom( actualGridDialectClass ) ) {
+			return new Class<?>[]{ MakeupArtist.class };
+		}
+		return new Class<?>[]{ MakeupArtist.class, MakeupArtistWithCompositeKey.class };
 	}
 }
