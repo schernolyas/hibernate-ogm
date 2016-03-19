@@ -6,20 +6,19 @@
  */
 package org.hibernate.ogm.backendtck.id;
 
+import static org.fest.assertions.Assertions.assertThat;
+import static org.junit.Assert.fail;
+
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 
+import org.hibernate.ogm.utils.GridDialectType;
+import org.hibernate.ogm.utils.SkipByGridDialect;
+import org.hibernate.ogm.utils.SkipByHelper;
+import org.hibernate.ogm.utils.jpa.JpaTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.hibernate.ogm.dialect.spi.GridDialect;
-import org.hibernate.ogm.utils.GridDialectType;
-import org.hibernate.ogm.utils.SkipByGridDialect;
-import org.hibernate.ogm.utils.TestHelper;
-import org.hibernate.ogm.utils.jpa.JpaTestCase;
-
-import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.fail;
 
 /**
  * Tests that the insertion of a record with an already existing primary key is prevented.
@@ -124,8 +123,7 @@ public class DuplicateIdDetectionTest extends JpaTestCase {
 
 	@Override
 	public Class<?>[] getEntities() {
-		Class<? extends GridDialect> actualGridDialectClass = TestHelper.getCurrentGridDialect();
-		if ( GridDialectType.ORIENTDB.loadGridDialectClass().isAssignableFrom( actualGridDialectClass ) ) {
+		if ( SkipByHelper.skipForGridDialect( GridDialectType.ORIENTDB) ) {
 			return new Class<?>[]{ MakeupArtist.class };
 		}
 		return new Class<?>[]{ MakeupArtist.class, MakeupArtistWithCompositeKey.class };
