@@ -193,7 +193,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						log.debugf( "column name: %s ; column.getCanonicalName(): %s", column.getName(), column.getCanonicalName() );
 						if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
 							EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
-							log.debugf( "embedded column. class: %s ; property: %s", ec.getClassName(), ec.getPropertyName() );
+							log.debugf( "embedded column. class: %s ; property: %s", ec.getClassNames().get( 0 ), ec.getPropertyName() );
 
 						}
 						else {
@@ -212,8 +212,8 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					}
 					else if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
 						EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
-						log.debugf( "embedded column. class: %s ; property: %s", ec.getClassName(), ec.getPropertyName() );
-						if ( embeddedClassNames.contains( ec.getClassName() ) ) {
+						log.debugf( "embedded column. class: %s ; property: %s", ec.getClassNames().get( 0 ), ec.getPropertyName() );
+						if ( embeddedClassNames.contains( ec.getClassNames().get( 0 ) ) ) {
 							// update embedded class
 							String propertyQuery = createValueProperyQuery( table, column );
 							log.debug( "create embedded property query: " + propertyQuery );
@@ -221,16 +221,19 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 								provider.getConnection().createStatement().execute( propertyQuery );
 							}
 							catch (SQLException e) {
-								throw log.cannotGenerateProperty( ec.getPropertyName(), ec.getClassName(), e );
+								throw log.cannotGenerateProperty( ec.getPropertyName(), ec.getClassNames().toString(), e );
 							}
 						}
 						else {
 							String executedQuery = null;
 							try {
-								executedQuery = createClassQuery( ec.getClassName() );
-								embeddedClassNames.add( ec.getClassName() );
-								log.debugf( "create embedded class query: %s", executedQuery );
-								provider.getConnection().createStatement().execute( executedQuery );
+								for ( String className : ec.getClassNames() ) {
+									executedQuery = createClassQuery( className );
+									embeddedClassNames.add( className );
+									log.debugf( "create embedded class query: %s", executedQuery );
+									provider.getConnection().createStatement().execute( executedQuery );
+								}
+
 								executedQuery = createEmbeddedProperyQuery( table, column );
 								log.debugf( "create property for embedded class query: %s", executedQuery );
 								provider.getConnection().createStatement().execute( executedQuery );
@@ -307,7 +310,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	private String createEmbeddedProperyQuery(Table table, Column column) {
 		EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
 		return MessageFormat.format( CREATE_EMBEDDED_PROPERTY_TEMPLATE,
-				table.getName(), ec.getClassName(), "embedded", ec.getClassName() );
+				table.getName(), ec.getClassNames().get( 0 ), "embedded", ec.getClassNames().get( 0 ) );
 	}
 
 	private String createValueProperyQuery(Table table, Column column, Class targetTypeClass) {
@@ -338,7 +341,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
 				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
 				query = MessageFormat.format( CREATE_PROPERTY_TEMPLATE,
-						ec.getClassName(), ec.getPropertyName(), orientDbTypeName );
+						ec.getClassNames().get( 0 ), ec.getPropertyName(), orientDbTypeName );
 			}
 			else {
 				query = MessageFormat.format( CREATE_PROPERTY_TEMPLATE,

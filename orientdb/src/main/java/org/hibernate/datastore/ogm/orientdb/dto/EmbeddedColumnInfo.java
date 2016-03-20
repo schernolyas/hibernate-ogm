@@ -6,34 +6,33 @@
  */
 package org.hibernate.datastore.ogm.orientdb.dto;
 
+import java.util.LinkedList;
+import java.util.List;
+
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
  */
 public class EmbeddedColumnInfo {
 
-	private String className;
+	private LinkedList<String> classNames;
 	private String propertyName;
 
 	public EmbeddedColumnInfo(String fullPropertyName) {
-		int pos = fullPropertyName.indexOf( "." );
-		className = fullPropertyName.substring( 0, pos );
-		propertyName = fullPropertyName.substring( pos + 1 );
+		String[] parts = fullPropertyName.split( "\\." );
+		classNames = new LinkedList<>();
+		for ( String part : parts ) {
+			classNames.add( part );
+		}
+		propertyName = classNames.getLast();
+		classNames.removeLast();
 	}
 
-	public String getClassName() {
-		return className;
-	}
-
-	public void setClassName(String className) {
-		this.className = className;
+	public List<String> getClassNames() {
+		return classNames;
 	}
 
 	public String getPropertyName() {
 		return propertyName;
-	}
-
-	public void setPropertyName(String propertyName) {
-		this.propertyName = propertyName;
 	}
 
 }

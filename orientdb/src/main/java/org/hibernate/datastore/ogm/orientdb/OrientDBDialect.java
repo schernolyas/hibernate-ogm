@@ -152,21 +152,21 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 			if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
 				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
 				if ( !forInsert ) {
-					queryBuffer.append( ec.getClassName() ).append( "=" );
+					queryBuffer.append( ec.getClassNames().get( 0 ) ).append( "=" );
 				}
-				if ( !embeddedColumnValues.containsKey( ec.getClassName() ) ) {
+				if ( !embeddedColumnValues.containsKey( ec.getClassNames().get( 0 ) ) ) {
 					JSONObject embeddedFieldValue = new JSONObject();
 					embeddedFieldValue.put( "@type", "d" );
-					embeddedFieldValue.put( "@class", ec.getClassName() );
-					embeddedColumnValues.put( ec.getClassName(), embeddedFieldValue );
+					embeddedFieldValue.put( "@class", ec.getClassNames().get( 0 ) );
+					embeddedColumnValues.put( ec.getClassNames().get( 0 ), embeddedFieldValue );
 					currentBufferLenght = queryBuffer.length();
 				}
 				else {
 					queryBuffer.setLength( currentBufferLenght );
 				}
-				log.debugf( "addTupleFields: embeddedColumnValue keys %s ", embeddedColumnValues.get( ec.getClassName() ).keySet() );
-				embeddedColumnValues.get( ec.getClassName() ).put( ec.getPropertyName(), tuple.get( columnName ) );
-				queryBuffer.append( embeddedColumnValues.get( ec.getClassName() ).toJSONString() ).append( " ," );
+				log.debugf( "addTupleFields: embeddedColumnValue keys %s ", embeddedColumnValues.get( ec.getClassNames().get( 0 ) ).keySet() );
+				embeddedColumnValues.get( ec.getClassNames().get( 0 ) ).put( ec.getPropertyName(), tuple.get( columnName ) );
+				queryBuffer.append( embeddedColumnValues.get( ec.getClassNames().get( 0 ) ).toJSONString() ).append( " ," );
 			}
 			else {
 				if ( !forInsert ) {
@@ -290,9 +290,9 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 			}
 			else if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
 				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
-				if ( !embeddedColumns.contains( ec.getClassName() ) ) {
-					insertQuery.append( ec.getClassName() ).append( "," );
-					embeddedColumns.add( ec.getClassName() );
+				if ( !embeddedColumns.contains( ec.getClassNames().get( 0 ) ) ) {
+					insertQuery.append( ec.getClassNames().get( 0 ) ).append( "," );
+					embeddedColumns.add( ec.getClassNames().get( 0 ) );
 				}
 			}
 			else {
