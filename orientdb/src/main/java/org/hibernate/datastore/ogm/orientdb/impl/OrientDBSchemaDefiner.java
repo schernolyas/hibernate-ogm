@@ -165,6 +165,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
+			Set<String> embeddedClassNames = new HashSet<>();
 			for ( Table table : namespace.getTables() ) {
 				log.debugf( "table: %s", table );
 				boolean isMappingTable = isMapingTable( table );
@@ -176,8 +177,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 				catch (SQLException e) {
 					throw log.cannotGenerateVertexClass( table.getName(), e );
 				}
-				Iterator<Column> columnIterator = table.getColumnIterator();
-				Set<String> embeddedClassNames = new HashSet<>();
+				Iterator<Column> columnIterator = table.getColumnIterator();				
 
 				while ( columnIterator.hasNext() ) {
 					Column column = columnIterator.next();
@@ -212,7 +212,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					}
 					else if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
 						EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
-						log.debugf( "embedded column. class: %s ; property: %s", ec.getClassNames().get( 0 ), ec.getPropertyName() );
+						log.debugf( "embedded column. class: %s ; property: %s", ec.getClassNames(), ec.getPropertyName() );
 						if ( embeddedClassNames.contains( ec.getClassNames().get( 0 ) ) ) {
 							// update embedded class
 							String propertyQuery = createValueProperyQuery( table, column );
@@ -227,19 +227,27 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						else {
 							String executedQuery = null;
 							try {
+								int embeddedClassIndex = 0;
 								for ( String className : ec.getClassNames() ) {
-									executedQuery = createClassQuery( className );
-									embeddedClassNames.add( className );
-									log.debugf( "create embedded class query: %s", executedQuery );
-									provider.getConnection().createStatement().execute( executedQuery );
+									// check unique name
+									if ( !embeddedClassNames.contains( className ) ) {
+										executedQuery = createClassQuery( className );
+										embeddedClassNames.add( className );
+										log.debugf( "create embedded class query: %s", executedQuery );
+										provider.getConnection().createStatement().execute( executedQuery );
+										embeddedClassNames.add( className );
+										executedQuery = createEmbeddedProperyQuery( table, column,embeddedClassIndex );
+										log.debugf( "create property for embedded class query: %s", executedQuery );
+										provider.getConnection().createStatement().execute( executedQuery );
+										executedQuery = createValueProperyQuery( table, column );
+										log.debug( "create embedded property query: " + executedQuery );
+										provider.getConnection().createStatement().execute( executedQuery );
+									}
+									else {
+										log.debugf( "embedded class %s exists already!", className );
+									}
+									embeddedClassIndex++;
 								}
-
-								executedQuery = createEmbeddedProperyQuery( table, column );
-								log.debugf( "create property for embedded class query: %s", executedQuery );
-								provider.getConnection().createStatement().execute( executedQuery );
-								executedQuery = createValueProperyQuery( table, column );
-								log.debug( "create embedded property query: " + executedQuery );
-								provider.getConnection().createStatement().execute( executedQuery );
 							}
 							catch (SQLException e) {
 								throw log.cannotGenerateVertexClass( executedQuery, e );
@@ -307,10 +315,10 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return createValueProperyQuery( table, column, simpleValue.getType().getClass() );
 	}
 
-	private String createEmbeddedProperyQuery(Table table, Column column) {
+	private String createEmbeddedProperyQuery(Table table, Column column, int embeddedClassIndex) {
 		EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
 		return MessageFormat.format( CREATE_EMBEDDED_PROPERTY_TEMPLATE,
-				table.getName(), ec.getClassNames().get( 0 ), "embedded", ec.getClassNames().get( 0 ) );
+				table.getName(), ec.getClassNames().get( embeddedClassIndex ), "embedded", ec.getClassNames().get( embeddedClassIndex ) );
 	}
 
 	private String createValueProperyQuery(Table table, Column column, Class targetTypeClass) {
