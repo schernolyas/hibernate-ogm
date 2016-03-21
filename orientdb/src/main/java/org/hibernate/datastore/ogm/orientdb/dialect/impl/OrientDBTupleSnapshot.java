@@ -65,9 +65,9 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		else if ( EntityKeyUtil.isEmbeddedColumn( targetColumnName ) ) {
 			// @TODO think about optimization
 			EmbeddedColumnInfo ec = new EmbeddedColumnInfo( targetColumnName );
-			log.debugf( "embedded column. class: %s ; property: %s", ec.getClassNames().get( 0 ), ec.getPropertyName() );
-			ODocument embeddedField = (ODocument) dbNameValueMap.get( ec.getClassNames().get( 0 ) );
-			value = embeddedField.field( ec.getPropertyName() );
+                        ODocument targetDocument = findEmbeddedClass((ODocument) dbNameValueMap.get( ec.getClassNames().get( 0 ) ),ec);
+			log.debugf( "embedded column. class: %s ; property: %s", targetDocument.getClassName(), ec.getPropertyName() );			
+			value = targetDocument.field( ec.getPropertyName() );
 			log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );
 		}
 		else {
@@ -76,6 +76,19 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		}
 		return value;
 	}
+        
+        private ODocument findEmbeddedClass(ODocument doc,EmbeddedColumnInfo ec ) {
+            ODocument targetDocument = doc;
+            if (ec.getClassNames().size()>1) {
+                for (int i = 1; i < ec.getClassNames().size(); i++) {
+                    String className = ec.getClassNames().get(i);
+                    targetDocument = targetDocument.field(className);
+                }
+            }
+            
+            return targetDocument;
+        }
+        
 
 	private Map<String, Object> loadAssociatedEntity(AssociatedEntityKeyMetadata associatedEntityKeyMetadata, String targetColumnName) {
 		String mappedByName = AssociationUtil.getMappedByFieldName( associatedEntityKeyMetadata );

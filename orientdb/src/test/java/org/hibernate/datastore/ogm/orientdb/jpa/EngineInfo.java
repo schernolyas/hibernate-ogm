@@ -7,6 +7,7 @@
 package org.hibernate.datastore.ogm.orientdb.jpa;
 
 import javax.persistence.Embeddable;
+import javax.persistence.Embedded;
 
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
@@ -18,6 +19,8 @@ public class EngineInfo {
 	private int power;
 	private short cylinders;
 	private long price;
+        @Embedded
+        private Producer producer;
 
 	public String getTitle() {
 		return title;
@@ -50,5 +53,13 @@ public class EngineInfo {
 	public void setPrice(long price) {
 		this.price = price;
 	}
+
+        public Producer getProducer() {
+                return producer;
+        }
+
+        public void setProducer(Producer producer) {
+            this.producer = producer;
+        }        
 
 }

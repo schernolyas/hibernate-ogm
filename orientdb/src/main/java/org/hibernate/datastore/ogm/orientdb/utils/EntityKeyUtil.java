@@ -43,7 +43,7 @@ public class EntityKeyUtil {
 	public static void setFieldValue(StringBuilder queryBuffer, Object dbKeyValue) {
 		if ( dbKeyValue != null ) {
 			// @TODO not forget remove the code!
-			log.debug( "dbKeyValue class:" + dbKeyValue + "; class :" + dbKeyValue.getClass() );
+			log.debugf( "dbKeyValue class: %s ; class: %s " ,dbKeyValue , dbKeyValue.getClass() );
 		}
 		if ( dbKeyValue instanceof String || dbKeyValue instanceof UUID || dbKeyValue instanceof Character ) {
 			queryBuffer.append( "'" ).append( dbKeyValue ).append( "'" );
@@ -72,9 +72,9 @@ public class EntityKeyUtil {
 		for ( int i = 0; i < key.getColumnNames().length; i++ ) {
 			String columnName = key.getColumnNames()[i];
 			Object columnValue = key.getColumnValues()[i];
-			log.debug( "EntityKey: columnName: " + columnName + ";columnValue: " + columnValue + " (class:" + columnValue.getClass().getName() + ");" );
+			log.debugf( "EntityKey: columnName: %s ;columnValue: %s (class:%s)",columnName ,columnValue, columnValue.getClass().getName());
 			if ( key.getMetadata().isKeyColumn( columnName ) ) {
-				log.debugf( "EntityKey: columnName: $s is primary key!", columnName );
+				log.debugf( "EntityKey: columnName: %s is primary key!", columnName );
 				dbKeyValue = columnValue;
 			}
 		}
@@ -85,7 +85,7 @@ public class EntityKeyUtil {
 		for ( int i = 0; i < key.getColumnNames().length; i++ ) {
 			String columnName = key.getColumnNames()[i];
 			if ( key.getMetadata().isKeyColumn( columnName ) ) {
-				log.debugf( "EntityKey: columnName: %s  is primary key!", columnName );
+				log.debugf( "EntityKey: columnName: %s is primary key!", columnName );
 				return columnName;
 			}
 		}

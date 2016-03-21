@@ -19,7 +19,8 @@ import java.util.Set;
 public class OrientDBConstant {
 
 	public static final String DATE_FORMAT = "yyyy-MM-dd'Z'";
-	public static final String DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+	//public static final String DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+        public static final String DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 	public static final Set<String> LINK_FIELDS;
 	public static final Set<String> SYSTEM_FIELDS;
 

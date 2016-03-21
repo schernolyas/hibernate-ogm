@@ -15,9 +15,11 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBAssociationQueries;
@@ -26,6 +28,7 @@ import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBEntityQueries;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBTupleAssociationSnapshot;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBTupleSnapshot;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.ResultSetTupleIterator;
+import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
 import org.hibernate.datastore.ogm.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.datastore.ogm.orientdb.impl.OrientDBSchemaDefiner;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
@@ -72,13 +75,10 @@ import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.type.SerializableToBlobType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
+import org.json.simple.JSONObject;
 
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.id.ORecordId;
-import java.util.HashSet;
-import java.util.Set;
-import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
-import org.json.simple.JSONObject;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -128,6 +128,24 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 		return new Tuple( new OrientDBTupleSnapshot( tupleContext.getAllAssociatedEntityKeyMetadata(), tupleContext.getAllRoles(), entityKeyMetadata ) );
 	}
 
+	private JSONObject getDefaultEmbeddedRow(String className) {
+		JSONObject embeddedFieldValue = new JSONObject();
+		embeddedFieldValue.put( "@type", "d" );
+		embeddedFieldValue.put( "@class", className );
+		return embeddedFieldValue;
+	}
+
+	private void setJsonValue(Map<String, JSONObject> embeddedColumnValues, EmbeddedColumnInfo ec, Object value) {
+		JSONObject json = embeddedColumnValues.get( ec.getClassNames().get( 0 ) );
+		for ( int i = 1; i < ec.getClassNames().size(); i++ ) {
+			if ( !json.containsKey( ec.getClassNames().get( i ) ) ) {
+				json.put( ec.getClassNames().get( i ), getDefaultEmbeddedRow( ec.getClassNames().get( i ) ) );
+			}
+			json = (JSONObject) json.get( ec.getClassNames().get( i ) );
+		}
+		json.put( ec.getPropertyName(), value );
+	}
+
 	/**
 	 * util method for settings Tuple's keys to query. If primaryKeyName has value then all columns will add to buffer
 	 * except primaryKeyColumn
@@ -137,7 +155,6 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	 * @param primaryKeyName primary key column name
 	 * @return list of query parameters
 	 */
-
 	private List<Object> addTupleFields(StringBuilder queryBuffer, Tuple tuple, String primaryKeyName, boolean forInsert) {
 		Map<String, JSONObject> embeddedColumnValues = new HashMap<>();
 		LinkedList<Object> preparedStatementParams = new LinkedList<>();
@@ -154,18 +171,20 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 				if ( !forInsert ) {
 					queryBuffer.append( ec.getClassNames().get( 0 ) ).append( "=" );
 				}
-				if ( !embeddedColumnValues.containsKey( ec.getClassNames().get( 0 ) ) ) {
-					JSONObject embeddedFieldValue = new JSONObject();
-					embeddedFieldValue.put( "@type", "d" );
-					embeddedFieldValue.put( "@class", ec.getClassNames().get( 0 ) );
-					embeddedColumnValues.put( ec.getClassNames().get( 0 ), embeddedFieldValue );
+
+				String className = ec.getClassNames().get( 0 );
+				if ( !embeddedColumnValues.containsKey( className ) ) {
+					JSONObject embeddedFieldValue = getDefaultEmbeddedRow( className );
+					embeddedColumnValues.put( className, embeddedFieldValue );
 					currentBufferLenght = queryBuffer.length();
 				}
-				else {
-					queryBuffer.setLength( currentBufferLenght );
-				}
-				log.debugf( "addTupleFields: embeddedColumnValue keys %s ", embeddedColumnValues.get( ec.getClassNames().get( 0 ) ).keySet() );
-				embeddedColumnValues.get( ec.getClassNames().get( 0 ) ).put( ec.getPropertyName(), tuple.get( columnName ) );
+
+				queryBuffer.setLength( currentBufferLenght );
+
+				// embeddedColumnValues.get( ec.getClassNames().get( 0 ) ).put( ec.getPropertyName(), tuple.get(
+				// columnName ) );
+				setJsonValue( embeddedColumnValues, ec, tuple.get( columnName ) );
+
 				queryBuffer.append( embeddedColumnValues.get( ec.getClassNames().get( 0 ) ).toJSONString() ).append( " ," );
 			}
 			else {

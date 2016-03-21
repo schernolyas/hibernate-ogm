@@ -26,6 +26,8 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
+import org.hibernate.datastore.ogm.orientdb.jpa.Producer;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
@@ -75,12 +77,18 @@ public class OrientDbEmbeddedTest {
 		log.debug( "start" );
 		try {
 			em.getTransaction().begin();
+			Producer producer = new Producer();
+			producer.setCountry( "RU" );
+			producer.setTitle( "Rostech" );
+			producer.setPhone( "+74956667788" );
+
 			Car newCar = new Car();
 			EngineInfo engineInfo = new EngineInfo();
 			engineInfo.setTitle( "E6GV" );
 			engineInfo.setCylinders( (short) 6 );
 			engineInfo.setPower( 100 );
 			engineInfo.setPrice( 1000000 );
+			engineInfo.setProducer( producer );
 			newCar.setEngineInfo( engineInfo );
 			em.persist( newCar );
 			em.getTransaction().commit();
@@ -90,6 +98,9 @@ public class OrientDbEmbeddedTest {
 			Car car = em.find( Car.class, 1l );
 			assertNotNull( "Car must be saved!", car );
 			assertNotNull( "Engine info of saved Car must be saved!", car.getEngineInfo() );
+                        assertEquals( "E6GV",car.getEngineInfo().getTitle() );
+			assertNotNull( "Producer of Engine info of saved Car must be saved!", car.getEngineInfo().getProducer() );
+                        assertEquals( "+74956667788",car.getEngineInfo().getProducer().getPhone() );
 			em.getTransaction().commit();
 		}
 		catch (Exception e) {
