@@ -6,13 +6,17 @@
  */
 package org.hibernate.datastore.ogm.orientdb.jpa;
 
+import java.util.List;
 import java.util.Objects;
+
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+
 import org.hibernate.search.annotations.Indexed;
 
 /**
@@ -29,6 +33,9 @@ public class Car {
 	@Embedded
 	private EngineInfo engineInfo;
 
+	@ElementCollection
+	private List<CarOwner> owners;
+
 	public Long getbKey() {
 		return bKey;
 	}
@@ -43,6 +50,14 @@ public class Car {
 
 	public void setEngineInfo(EngineInfo engineInfo) {
 		this.engineInfo = engineInfo;
+	}
+
+	public List<CarOwner> getOwners() {
+		return owners;
+	}
+
+	public void setOwners(List<CarOwner> owners) {
+		this.owners = owners;
 	}
 
 	@Override

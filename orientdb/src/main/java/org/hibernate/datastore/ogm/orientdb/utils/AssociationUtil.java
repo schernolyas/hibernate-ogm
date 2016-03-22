@@ -6,13 +6,15 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
-import com.orientechnologies.orient.core.id.ORecordId;
 import java.sql.Connection;
 import java.sql.SQLException;
+
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.model.key.spi.AssociatedEntityKeyMetadata;
+
+import com.orientechnologies.orient.core.id.ORecordId;
 
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>

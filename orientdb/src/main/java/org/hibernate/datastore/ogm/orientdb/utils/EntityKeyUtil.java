@@ -19,10 +19,10 @@ import java.util.UUID;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.mapping.Column;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 
 import com.orientechnologies.orient.core.id.ORecordId;
-import org.hibernate.mapping.Column;
 
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
@@ -43,7 +43,7 @@ public class EntityKeyUtil {
 	public static void setFieldValue(StringBuilder queryBuffer, Object dbKeyValue) {
 		if ( dbKeyValue != null ) {
 			// @TODO not forget remove the code!
-			log.debugf( "dbKeyValue class: %s ; class: %s " ,dbKeyValue , dbKeyValue.getClass() );
+			log.debugf( "dbKeyValue class: %s ; class: %s ", dbKeyValue, dbKeyValue.getClass() );
 		}
 		if ( dbKeyValue instanceof String || dbKeyValue instanceof UUID || dbKeyValue instanceof Character ) {
 			queryBuffer.append( "'" ).append( dbKeyValue ).append( "'" );
@@ -72,7 +72,7 @@ public class EntityKeyUtil {
 		for ( int i = 0; i < key.getColumnNames().length; i++ ) {
 			String columnName = key.getColumnNames()[i];
 			Object columnValue = key.getColumnValues()[i];
-			log.debugf( "EntityKey: columnName: %s ;columnValue: %s (class:%s)",columnName ,columnValue, columnValue.getClass().getName());
+			log.debugf( "EntityKey: columnName: %s ;columnValue: %s (class:%s)", columnName, columnValue, columnValue.getClass().getName() );
 			if ( key.getMetadata().isKeyColumn( columnName ) ) {
 				log.debugf( "EntityKey: columnName: %s is primary key!", columnName );
 				dbKeyValue = columnValue;

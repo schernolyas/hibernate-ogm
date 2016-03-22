@@ -69,6 +69,8 @@ import org.hibernate.type.UrlType;
 import org.hibernate.type.YesNoType;
 import org.hibernate.usertype.UserType;
 
+import com.orientechnologies.orient.core.exception.OCommandExecutionException;
+
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
  */
@@ -168,15 +170,24 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
 			for ( Table table : namespace.getTables() ) {
-				log.debugf( "table: %s", table );
+				log.debugf( "table name: %s, union table: %b; physical table: %b ",
+						table.getName(), table.isAbstractUnionTable(), table.isPhysicalTable() );
+				log.debugf( "QualifiedTableName: ObjectName: %s; TableName:%s ",
+						table.getQualifiedTableName().getObjectName(), table.getQualifiedTableName().getTableName() );
 				boolean isMappingTable = isMapingTable( table );
-				String classQuery = createClassQuery( table );
-				log.debugf( "create class query: %s", classQuery );
-				try {
-					provider.getConnection().createStatement().execute( classQuery );
+				boolean isEmbeddedCollecttionTable = isEmbeddedCollecttionTable( table );
+				if ( !isEmbeddedCollecttionTable ) {
+					String classQuery = createClassQuery( table );
+					log.debugf( "create class query: %s", classQuery );
+					try {
+						provider.getConnection().createStatement().execute( classQuery );
+					}
+					catch (SQLException e) {
+						throw log.cannotGenerateVertexClass( table.getName(), e );
+					}
 				}
-				catch (SQLException e) {
-					throw log.cannotGenerateVertexClass( table.getName(), e );
+				else {
+					log.debugf( "table %s is table for embedded collections! ", table.getName() );
 				}
 				Iterator<Column> columnIterator = table.getColumnIterator();
 
@@ -296,7 +307,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						provider.getConnection().createStatement().execute( executedQuery );
 						executedQuery = MessageFormat.format( CREATE_EMBEDDED_PROPERTY_TEMPLATE,
 								propertyOwnerClassName, embeddedClassName, embeddedClassName );
-						log.debugf( "query: %s; ", executedQuery );
+						log.debugf( "1.query: %s; ", executedQuery );
 						provider.getConnection().createStatement().execute( executedQuery );
 						createdEmbeddedClassSet.add( embeddedClassName );
 					}
@@ -317,11 +328,21 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 				String executedQuery = null;
 				try {
 					executedQuery = createValueProperyQuery( column, propertyOwnerClassName, valuePropertyName, simpleValue.getType().getClass() );
-					log.debugf( "query: %s; ", executedQuery );
+					log.debugf( "2.query: %s; ", executedQuery );
 					provider.getConnection().createStatement().execute( executedQuery );
 				}
 				catch (SQLException sqle) {
 					throw log.cannotExecuteQuery( executedQuery, sqle );
+				}
+				catch (OCommandExecutionException oe) {
+					log.debugf( "orientdb message: %s; ", oe.getMessage() );
+					if ( oe.getMessage().contains( ".".concat( valuePropertyName ) ) && oe.getMessage().contains( "already exists" ) ) {
+						log.debugf( "property %s.%s already exists. Continue ", propertyOwnerClassName, valuePropertyName );
+					}
+					else {
+						throw log.cannotExecuteQuery( executedQuery, oe );
+					}
+
 				}
 			}
 		}
@@ -373,12 +394,11 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return table.getPrimaryKey() == null && tableColumns == 2;
 	}
 
-	/*
-	 * private EmbedColumnName prepareColumnNames(Column column) { EmbedColumnName names = null; String columnName =
-	 * column.getName(); Matcher matcher = PATTERN.matcher( columnName ); if ( matcher.find() ) { String mainFieldName =
-	 * matcher.group( 1 ); String emdeddedFieldName = matcher.group( 2 ); names = new EmbedColumnName( mainFieldName,
-	 * emdeddedFieldName ); } return names; }
-	 */
+	private boolean isEmbeddedCollecttionTable(Table table) {
+		int p1 = table.getName().indexOf( "_" );
+		int p2 = table.getName().indexOf( ".", p1 );
+		return p1 > -1 && p2 > p1;
+	}
 
 	private String searchMappedByName(SchemaDefinitionContext context, Collection<Table> tables, EntityType type, Column currentColumn) {
 		String columnName = currentColumn.getName();

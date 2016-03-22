@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.hibernate.AssertionFailure;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBAssociationQueries;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBAssociationSnapshot;
@@ -54,6 +55,7 @@ import org.hibernate.ogm.dialect.spi.NextValueRequest;
 import org.hibernate.ogm.dialect.spi.SessionFactoryLifecycleAwareDialect;
 import org.hibernate.ogm.dialect.spi.TupleAlreadyExistsException;
 import org.hibernate.ogm.dialect.spi.TupleContext;
+import org.hibernate.ogm.model.key.spi.AssociatedEntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.AssociationKeyMetadata;
 import org.hibernate.ogm.model.key.spi.EntityKey;
@@ -61,6 +63,7 @@ import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.IdSourceKeyMetadata.IdSourceType;
 import org.hibernate.ogm.model.key.spi.RowKey;
 import org.hibernate.ogm.model.spi.Association;
+import org.hibernate.ogm.model.spi.AssociationOperation;
 import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.persister.impl.OgmCollectionPersister;
 import org.hibernate.ogm.persister.impl.OgmEntityPersister;
@@ -418,46 +421,102 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	}
 
 	@Override
-	public void insertOrUpdateAssociation(AssociationKey key, Association association, AssociationContext associationContext) {
-		log.debugf( "insertOrUpdateAssociation: AssociationKey: %s ; AssociationContext: %s ; association: %s", key, associationContext, association );
-		// throw new UnsupportedOperationException( "Not supported yet!" );
+	public void insertOrUpdateAssociation(AssociationKey associationKey, Association association, AssociationContext associationContext) {
+		log.debugf( "insertOrUpdateAssociation: AssociationKey: %s ; AssociationContext: %s ; association: %s", associationKey, associationContext,
+				association );
+		log.debugf( "insertOrUpdateAssociation: EntityKey: %s ;", associationKey.getEntityKey() );
 
-		/*
-		 * Tuple outEntityTuple = associationContext.getEntityTuple(); String inClassName = key.getTable(); String
-		 * inBusinessPrimaryKeyName = EntityKeyUtil.findPrimaryKeyName(key.getEntityKey()); Object
-		 * inBusinessPrimaryKeyValue = EntityKeyUtil.findPrimaryKeyValue(key.getEntityKey()); String edgeClassName =
-		 * AssociationUtil.getMappedByFieldName(associationContext); ORecordId outRid = (ORecordId)
-		 * outEntityTuple.get(OrientDBConstant.SYSTEM_RID); log.debug("insertOrUpdateAssociation: outRid:" + outRid +
-		 * "; inClassName:" + inClassName + "; inBusinessPrimaryKeyName:" + inBusinessPrimaryKeyName +
-		 * "; inBusinessPrimaryKeyValue:" + inBusinessPrimaryKeyValue + ";mappedBy:" + edgeClassName); try { ORecordId
-		 * inRid = EntityKeyUtil.findRid(provider.getConnection(), inClassName, inBusinessPrimaryKeyName,
-		 * inBusinessPrimaryKeyValue); if (outRid == null) { // try foun rid in db // @TODO search rid for 'out'
-		 * direction throw new UnsupportedOperationException("insertOrUpdateAssociation! Not supported yet."); }
-		 * AssociationUtil.removeAssociation(provider.getConnection(), edgeClassName, outRid, inRid);
-		 * AssociationUtil.insertAssociation(provider.getConnection(), edgeClassName, outRid, inRid); } catch
-		 * (SQLException sqle) { log.error("Error!", sqle); throw new RuntimeException(
-		 * "Can not insert or update association", sqle); }
-		 */
+		for ( AssociationOperation action : association.getOperations() ) {
+			applyAssociationOperation( association, associationKey, action, associationContext );
+		}
 
+	}
+
+	private void applyAssociationOperation(Association association, AssociationKey associationKey, AssociationOperation operation,
+			AssociationContext associationContext) {
+		switch ( operation.getType() ) {
+			case CLEAR:
+				log.debugf( "applyAssociationOperation: CLEAR operation for: %s ;", associationKey );
+				removeAssociation( associationKey, associationContext );
+				break;
+			case PUT:
+				log.debugf( "applyAssociationOperation: PUT operation for: %s ;", associationKey );
+				putAssociationOperation( association, associationKey, operation,
+						associationContext.getAssociationTypeContext().getAssociatedEntityKeyMetadata() );
+				break;
+			case REMOVE:
+				log.debugf( "applyAssociationOperation: REMOVE operation for: %s ;", associationKey );
+				// removeAssociationOperation( association, key, operation,
+				// associationContext.getAssociationTypeContext().getAssociatedEntityKeyMetadata() );
+				break;
+		}
+	}
+
+	private void putAssociationOperation(Association association, AssociationKey associationKey, AssociationOperation action,
+			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
+		if ( associationQueries.get( associationKey.getMetadata() ).findRelationship( provider.getConnection(), associationKey, action.getKey() ).isEmpty() ) {
+			// create
+			createRelationship( associationKey, action.getValue(), associatedEntityKeyMetadata );
+		}
+		else {
+			// relationship = createRelationship( associationKey, action.getValue(), associatedEntityKeyMetadata );
+		}
+	}
+
+	private void createRelationship(AssociationKey associationKey, Tuple associationRow, AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
+		log.debugf( "createRelationship: associationKey.getMetadata(): %s ; associationRow: %s", associationKey.getMetadata(), associationRow );
+		switch ( associationKey.getMetadata().getAssociationKind() ) {
+			case EMBEDDED_COLLECTION:
+				log.debug( "createRelationship:EMBEDDED_COLLECTION" );
+				createRelationshipWithEmbeddedNode( associationKey, associationRow, associatedEntityKeyMetadata );
+				break;
+			case ASSOCIATION:
+				log.debug( "createRelationship:ASSOCIATION" );
+				break;
+				// return findOrCreateRelationshipWithEntityNode( associationKey, associationRow,
+				// associatedEntityKeyMetadata );
+			default:
+				throw new AssertionFailure( "Unrecognized associationKind: " + associationKey.getMetadata().getAssociationKind() );
+		}
+
+	}
+
+	private void createRelationshipWithEmbeddedNode(AssociationKey associationKey, Tuple associationRow,
+			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
+		log.debugf( "createRelationshipWithEmbeddedNode: associationKey.getMetadata(): %s ; associationRow: %s", associationKey.getMetadata(), associationRow );
+		StringBuilder queryBuffer = new StringBuilder( 100 );
+		queryBuffer.append( "insert into " ).append( associationKey.getTable() ).append( " content " );
+		JSONObject fieldValues = new JSONObject();
+		for ( String columnName : associationRow.getColumnNames() ) {
+			Object value = associationRow.get( columnName );
+			if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
+				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
+				// @TODO don't forget about many embedeed classes!!!!!
+				if ( !fieldValues.containsKey( ec.getClassNames().get( 0 ) ) ) {
+					fieldValues.put( ec.getClassNames().get( 0 ), getDefaultEmbeddedRow( ec.getClassNames().get( 0 ) ) );
+				}
+				JSONObject embeddedValue = (JSONObject) fieldValues.get( ec.getClassNames().get( 0 ) );
+				embeddedValue.put( ec.getPropertyName(), value );
+			}
+			else {
+				fieldValues.put( columnName, value );
+			}
+		}
+		queryBuffer.append( fieldValues.toJSONString() );
+		log.debugf( "createRelationshipWithEmbeddedNode: query: %s", queryBuffer );
+
+		try {
+			PreparedStatement pstmt = provider.getConnection().prepareStatement( queryBuffer.toString() );
+			log.debugf( "createRelationshipWithEmbeddedNode: execute insert query: %d", pstmt.executeUpdate() );
+		}
+		catch (SQLException sqle) {
+			throw log.cannotExecuteQuery( queryBuffer.toString(), sqle );
+		}
 	}
 
 	@Override
 	public void removeAssociation(AssociationKey key, AssociationContext associationContext) {
 		log.debugf( "removeAssociation: AssociationKey: %s ; AssociationContext: %s", key, associationContext );
-		throw new UnsupportedOperationException( "nextValue Not supported yet." );
-		/*
-		 * Tuple outEntityTuple = associationContext.getEntityTuple(); String inClassName = key.getTable(); Object
-		 * inBusinessPrimaryKeyName = EntityKeyUtil.findPrimaryKeyName( key.getEntityKey() ); Object
-		 * inBusinessPrimaryKeyValue = EntityKeyUtil.findPrimaryKeyValue( key.getEntityKey() ); String edgeClassName =
-		 * AssociationUtil.getMappedByFieldName( associationContext ); ORecordId outRid = (ORecordId)
-		 * outEntityTuple.get( OrientDBConstant.SYSTEM_RID ); log.debug( "removeAssociation: outRid:" + outRid +
-		 * "; inClassName:" + inClassName + "; inBusinessPrimaryKeyName:" + inBusinessPrimaryKeyName +
-		 * "; inBusinessPrimaryKeyValue:" + inBusinessPrimaryKeyValue + ";mappedBy:" + edgeClassName ); try { ORecordId
-		 * inRid = EntityKeyUtil.findRid( provider.getConnection(), inClassName, inClassName, inBusinessPrimaryKeyValue
-		 * ); AssociationUtil.removeAssociation( provider.getConnection(), edgeClassName, outRid, inRid ); } catch
-		 * (SQLException sqle) { log.error( "Error!", sqle ); throw new RuntimeException(
-		 * "Can not insert or update association", sqle ); }
-		 */
 	}
 
 	@Override

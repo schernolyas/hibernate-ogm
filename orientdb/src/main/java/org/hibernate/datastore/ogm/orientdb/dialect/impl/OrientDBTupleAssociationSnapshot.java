@@ -11,12 +11,16 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.datastore.ogm.orientdb.utils.EntityKeyUtil;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.AssociationKind;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
+
+import com.orientechnologies.orient.core.record.impl.ODocument;
 
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
@@ -83,9 +87,16 @@ public class OrientDBTupleAssociationSnapshot implements TupleSnapshot {
 	}
 
 	@Override
-	public Object get(String column) {
-		log.debug( "targetColumnName: " + column );
-		return properties.get( column );
+	public Object get(String columnName) {
+		log.debugf( "targetColumnName:  %s", columnName );
+
+		Object value = properties.get( columnName );
+		if ( value == null && EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
+			EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
+			ODocument embeddedContainer = (ODocument) properties.get( ec.getClassNames().get( 0 ) );
+			value = embeddedContainer.field( ec.getPropertyName() );
+		}
+		return value;
 	}
 
 	@Override

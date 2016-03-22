@@ -6,7 +6,13 @@
  */
 package org.hibernate.datastore.ogm.orientdb;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.LinkedList;
+import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -15,7 +21,9 @@ import javax.persistence.Persistence;
 
 import org.apache.log4j.Logger;
 import org.hibernate.datastore.ogm.orientdb.jpa.Car;
+import org.hibernate.datastore.ogm.orientdb.jpa.CarOwner;
 import org.hibernate.datastore.ogm.orientdb.jpa.EngineInfo;
+import org.hibernate.datastore.ogm.orientdb.jpa.Producer;
 import org.hibernate.datastore.ogm.orientdb.utils.MemoryDBUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -26,8 +34,6 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
-import org.hibernate.datastore.ogm.orientdb.jpa.Producer;
-import static org.junit.Assert.assertEquals;
 
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
@@ -90,6 +96,12 @@ public class OrientDbEmbeddedTest {
 			engineInfo.setPrice( 1000000 );
 			engineInfo.setProducer( producer );
 			newCar.setEngineInfo( engineInfo );
+
+			List<CarOwner> owners = new LinkedList<>();
+			owners.add( new CarOwner( "name1", true ) );
+			owners.add( new CarOwner( "name2", false ) );
+			newCar.setOwners( owners );
+
 			em.persist( newCar );
 			em.getTransaction().commit();
 			em.clear();
@@ -98,9 +110,22 @@ public class OrientDbEmbeddedTest {
 			Car car = em.find( Car.class, 1l );
 			assertNotNull( "Car must be saved!", car );
 			assertNotNull( "Engine info of saved Car must be saved!", car.getEngineInfo() );
-                        assertEquals( "E6GV",car.getEngineInfo().getTitle() );
+			assertEquals( "E6GV", car.getEngineInfo().getTitle() );
 			assertNotNull( "Producer of Engine info of saved Car must be saved!", car.getEngineInfo().getProducer() );
-                        assertEquals( "+74956667788",car.getEngineInfo().getProducer().getPhone() );
+			assertEquals( "+74956667788", car.getEngineInfo().getProducer().getPhone() );
+			assertNotNull( "Car must have owners!", car.getOwners() );
+			assertEquals( "Car must have 2 owners!", 2, car.getOwners().size() );
+			for ( CarOwner owner : owners ) {
+				assertTrue( "Unkwoun owner :" + owner.getName(),
+						( owner.getName().equals( "name1" ) || owner.getName().equals( "name2" ) ) );
+				if ( owner.getName().equals( "name1" ) ) {
+					assertTrue( "Owner with name1 must be active", owner.isActive() );
+				}
+				else if ( owner.getName().equals( "name2" ) ) {
+					assertFalse( "Owner with name2 must be not active", owner.isActive() );
+				}
+			}
+
 			em.getTransaction().commit();
 		}
 		catch (Exception e) {

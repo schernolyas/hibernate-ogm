@@ -9,6 +9,7 @@ package org.hibernate.datastore.ogm.orientdb.type.descriptor.java;
 
 import org.hibernate.type.descriptor.WrapperOptions;
 import org.hibernate.type.descriptor.java.AbstractTypeDescriptor;
+
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 
 /**

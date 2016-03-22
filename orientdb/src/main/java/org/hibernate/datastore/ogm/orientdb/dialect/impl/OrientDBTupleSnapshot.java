@@ -6,13 +6,12 @@
  */
 package org.hibernate.datastore.ogm.orientdb.dialect.impl;
 
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
-
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.datastore.ogm.orientdb.utils.AssociationUtil;
@@ -20,6 +19,8 @@ import org.hibernate.datastore.ogm.orientdb.utils.EntityKeyUtil;
 import org.hibernate.ogm.model.key.spi.AssociatedEntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
+
+import com.orientechnologies.orient.core.record.impl.ODocument;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -65,8 +66,8 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		else if ( EntityKeyUtil.isEmbeddedColumn( targetColumnName ) ) {
 			// @TODO think about optimization
 			EmbeddedColumnInfo ec = new EmbeddedColumnInfo( targetColumnName );
-                        ODocument targetDocument = findEmbeddedClass((ODocument) dbNameValueMap.get( ec.getClassNames().get( 0 ) ),ec);
-			log.debugf( "embedded column. class: %s ; property: %s", targetDocument.getClassName(), ec.getPropertyName() );			
+			ODocument targetDocument = findEmbeddedClass( (ODocument) dbNameValueMap.get( ec.getClassNames().get( 0 ) ), ec );
+			log.debugf( "embedded column. class: %s ; property: %s", targetDocument.getClassName(), ec.getPropertyName() );
 			value = targetDocument.field( ec.getPropertyName() );
 			log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );
 		}
@@ -76,19 +77,18 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		}
 		return value;
 	}
-        
-        private ODocument findEmbeddedClass(ODocument doc,EmbeddedColumnInfo ec ) {
-            ODocument targetDocument = doc;
-            if (ec.getClassNames().size()>1) {
-                for (int i = 1; i < ec.getClassNames().size(); i++) {
-                    String className = ec.getClassNames().get(i);
-                    targetDocument = targetDocument.field(className);
-                }
-            }
-            
-            return targetDocument;
-        }
-        
+
+	private ODocument findEmbeddedClass(ODocument doc, EmbeddedColumnInfo ec) {
+		ODocument targetDocument = doc;
+		if ( ec.getClassNames().size() > 1 ) {
+			for ( int i = 1; i < ec.getClassNames().size(); i++ ) {
+				String className = ec.getClassNames().get( i );
+				targetDocument = targetDocument.field( className );
+			}
+		}
+
+		return targetDocument;
+	}
 
 	private Map<String, Object> loadAssociatedEntity(AssociatedEntityKeyMetadata associatedEntityKeyMetadata, String targetColumnName) {
 		String mappedByName = AssociationUtil.getMappedByFieldName( associatedEntityKeyMetadata );

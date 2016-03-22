@@ -104,7 +104,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 					if ( dbValue != null && dbValue.getClass().equals( Date.class ) ) {
 						String format = rs.getMetaData().getColumnTypeName( dbFieldNo ).equals( "DATETIME" )
 								? OrientDBConstant.DATETIME_FORMAT
-								: OrientDBConstant.DATE_FORMAT;
+										: OrientDBConstant.DATE_FORMAT;
 						dbValues.put( dbColumnName, new SimpleDateFormat( format ).format( dbValue ) );
 					}
 				}
@@ -150,7 +150,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 	public List<Map<String, Object>> findAssociation(Connection connection, AssociationKey associationKey,
 			AssociationContext associationContext) {
 		List<Map<String, Object>> association = new LinkedList<>();
-		log.debug( "findAssociation: associationKey:" + associationKey + "; associationContext:" + associationContext );
+		log.debugf( "findAssociation: associationKey: %s; associationContext: %s", associationKey, associationContext );
 		StringBuilder query = new StringBuilder( 100 );
 		query.append( "SELECT FROM " ).append( associationKey.getTable() ).append( " WHERE " );
 		for ( int i = 0; i < associationKey.getColumnNames().length; i++ ) {
@@ -159,7 +159,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 			query.append( name ).append( "=" );
 			EntityKeyUtil.setFieldValue( query, value );
 		}
-		log.debug( "findAssociation: query:" + query );
+		log.debugf( "findAssociation: query: %s", query );
 		try {
 			Statement stmt = connection.createStatement();
 			ResultSet rs = stmt.executeQuery( query.toString() );
@@ -181,7 +181,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 				log.debug( " entiry values from db: " + dbValues );
 				association.add( dbValues );
 			}
-			log.debug( "findAssociation: edges:" + association.size() );
+			log.debugf( "findAssociation: rows %d:" + association.size() );
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( query.toString(), sqle );

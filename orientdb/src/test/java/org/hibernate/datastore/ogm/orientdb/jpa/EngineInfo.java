@@ -19,8 +19,8 @@ public class EngineInfo {
 	private int power;
 	private short cylinders;
 	private long price;
-        @Embedded
-        private Producer producer;
+	@Embedded
+	private Producer producer;
 
 	public String getTitle() {
 		return title;
@@ -54,12 +54,12 @@ public class EngineInfo {
 		this.price = price;
 	}
 
-        public Producer getProducer() {
-                return producer;
-        }
+	public Producer getProducer() {
+		return producer;
+	}
 
-        public void setProducer(Producer producer) {
-            this.producer = producer;
-        }        
+	public void setProducer(Producer producer) {
+		this.producer = producer;
+	}
 
 }
