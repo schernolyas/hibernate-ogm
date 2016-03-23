@@ -16,6 +16,14 @@ public class EmbeddedColumnInfo {
 
 	private LinkedList<String> classNames;
 	private String propertyName;
+	private String classNamesAdd;
+
+	public EmbeddedColumnInfo(String fullPropertyName, String classNamesAdd) {
+		this( fullPropertyName );
+		if ( classNamesAdd != null && classNamesAdd.trim().length() > 0 ) {
+			classNames.addFirst( classNamesAdd );
+		}
+	}
 
 	public EmbeddedColumnInfo(String fullPropertyName) {
 		String[] parts = fullPropertyName.split( "\\." );
@@ -33,6 +41,10 @@ public class EmbeddedColumnInfo {
 
 	public String getPropertyName() {
 		return propertyName;
+	}
+
+	public String getClassNamesAdd() {
+		return classNamesAdd;
 	}
 
 }

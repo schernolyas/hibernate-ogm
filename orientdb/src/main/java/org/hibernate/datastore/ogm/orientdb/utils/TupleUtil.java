@@ -24,6 +24,9 @@ import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.dialect.spi.TupleContext;
 
 import com.orientechnologies.orient.core.id.ORecordId;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import org.hibernate.ogm.model.spi.Tuple;
 
 public class TupleUtil {
 
@@ -47,6 +50,14 @@ public class TupleUtil {
 		}
 
 		return classPropertyNames;
+	}
+
+	public static Map<String, Object> toMap(Tuple tuple) {
+		LinkedHashMap<String, Object> map = new LinkedHashMap<>();
+		for ( String columnName : tuple.getColumnNames() ) {
+			map.put( columnName, tuple.get( columnName ) );
+		}
+		return map;
 	}
 
 	@Deprecated

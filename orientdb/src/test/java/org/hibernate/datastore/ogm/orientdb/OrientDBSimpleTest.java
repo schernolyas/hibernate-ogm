@@ -34,7 +34,6 @@ import org.junit.runners.MethodSorters;
 
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
-import java.text.MessageFormat;
 import org.apache.log4j.Logger;
 
 /**
@@ -97,7 +96,7 @@ public class OrientDBSimpleTest {
 			Query query = em.createNativeQuery( "select from Customer where name=:name", Customer.class );
 			query.setParameter( "name", "test" );
 			List<Customer> customers = query.getResultList();
-			log.debug( MessageFormat.format( "customers.size(): {0}", customers.size() ) );
+			log.debug( String.format( "customers.size(): %s", customers.size() ) );
 			assertFalse( "Customers must be", customers.isEmpty() );
 			Customer testCustomer = customers.get( 0 );
 			assertNotNull( "Customer with 'test' must be saved!", testCustomer );
@@ -165,7 +164,6 @@ public class OrientDBSimpleTest {
 			log.debug( "read entity properties:" );
 			log.debug( "pizza.getBKey():" + pizza.getbKey() );
 			log.debug( "pizza.getName(): " + pizza.getName() );
-			log.debug( "pizza.getbKey(): {0}" + pizza.getbKey() );
 			assertEquals( Long.valueOf( 1L ), pizza.getbKey() );
 			assertNotNull( pizza.getRid() );
 		}
@@ -247,8 +245,9 @@ public class OrientDBSimpleTest {
 			log.debug( "old rid:{0}" + customer.getRid() );
 			ORecordId oldRid = customer.getRid();
 			em.refresh( customer );
-			ORecordId newRid = customer.getRid();
 			assertNotNull( "Must not be null", customer );
+			ORecordId newRid = customer.getRid();
+
 			if ( oldRid == null ) {
 				assertNotNull( "@Rid must be changed", newRid );
 			}
@@ -277,7 +276,6 @@ public class OrientDBSimpleTest {
 
 			em.getTransaction().begin();
 			Customer removedCustomer = em.find( Customer.class, id );
-			log.debug( "customer:{0}" + removedCustomer );
 			assertNull( "removedCustomer must be null!", removedCustomer );
 			em.getTransaction().commit();
 

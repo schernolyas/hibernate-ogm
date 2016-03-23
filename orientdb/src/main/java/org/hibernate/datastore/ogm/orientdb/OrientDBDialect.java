@@ -92,6 +92,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
 	private static final Association ASSOCIATION_NOT_FOUND = null;
+	private static final InsertQueryGenerator INSERT_QUERY_GENERATOR = new InsertQueryGenerator();
 
 	private OrientDBDatastoreProvider provider;
 	private ServiceRegistryImplementor serviceRegistry;
@@ -158,6 +159,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	 * @param primaryKeyName primary key column name
 	 * @return list of query parameters
 	 */
+	@Deprecated
 	private List<Object> addTupleFields(StringBuilder queryBuffer, Tuple tuple, String primaryKeyName, boolean forInsert) {
 		Map<String, JSONObject> embeddedColumnValues = new HashMap<>();
 		LinkedList<Object> preparedStatementParams = new LinkedList<>();
@@ -256,25 +258,16 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 		}
 		else {
 			// it is insert with business key which set already
-
 			log.debugf( "insertOrUpdateTuple:Key: %s is new! Insert new record!", dbKeyName );
-			queryBuffer.append( "insert into " ).append( key.getTable() ).append( "  (" );
-			for ( String columnName : tuple.getColumnNames() ) {
-				if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) ) {
-					continue;
-				}
-				queryBuffer.append( columnName ).append( "," );
-			}
-			queryBuffer.setLength( queryBuffer.length() - 1 );
-			queryBuffer.append( ") values (" );
-			preparedStatementParams = addTupleFields( queryBuffer, tuple, null, true );
-			queryBuffer.append( ")" );
+			InsertQueryGenerator.GenerationResult result = INSERT_QUERY_GENERATOR.generate( key.getTable(), tuple );
+			queryBuffer.append( result.getQuery() );
+			preparedStatementParams = result.getPreparedStatementParams();
 		}
 		try {
-			log.debugf( "insertOrUpdateTuple:Key: %s  ( %s ). Query: ", dbKeyName, dbKeyValue, queryBuffer );
+			log.debugf( "insertOrUpdateTuple:Key: %s  ( %s ). Query: %s ", dbKeyName, dbKeyValue, queryBuffer );
 			PreparedStatement pstmt = connection.prepareStatement( queryBuffer.toString() );
 			log.debugf( "insertOrUpdateTuple: exist parameters for preparedstatement : %d", preparedStatementParams.size() );
-			setParameters( pstmt, preparedStatementParams );
+			QueryUtil.setParameters( pstmt, preparedStatementParams );
 			log.debugf( "insertOrUpdateTuple:Key: %s (%s) ;inserted or updated: %d ", dbKeyName, dbKeyValue, pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
@@ -286,13 +279,10 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	public void insertTuple(EntityKeyMetadata entityKeyMetadata, Tuple tuple, TupleContext tupleContext) {
 		log.debugf( "insertTuple:EntityKeyMetadata: %s ; tupleContext: %s ; tuple: %s ", entityKeyMetadata, tupleContext, tuple );
 
-		StringBuilder insertQuery = new StringBuilder( 100 );
-		insertQuery.append( "insert into " ).append( entityKeyMetadata.getTable() ).append( "( " );
-
 		String dbKeyName = entityKeyMetadata.getColumnNames()[0];
 		Long dbKeyValue = null;
 		Connection connection = provider.getConnection();
-		List<Object> preparedStatementParams = Collections.emptyList();
+		String query = null;
 
 		if ( dbKeyName.equals( OrientDBConstant.SYSTEM_RID ) ) {
 			// use @RID for key
@@ -304,56 +294,19 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 			dbKeyValue = (Long) SequenceUtil.getSequence( connection, seqName );
 			tuple.put( dbKeyName, dbKeyValue );
 		}
+		InsertQueryGenerator.GenerationResult result = INSERT_QUERY_GENERATOR.generate( entityKeyMetadata.getTable(), tuple );
+		query = result.getQuery();
 
-		Set<String> embeddedColumns = new HashSet<>();
-		for ( String columnName : tuple.getColumnNames() ) {
-			if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) ) {
-				continue;
-			}
-			else if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
-				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
-				if ( !embeddedColumns.contains( ec.getClassNames().get( 0 ) ) ) {
-					insertQuery.append( ec.getClassNames().get( 0 ) ).append( "," );
-					embeddedColumns.add( ec.getClassNames().get( 0 ) );
-				}
-			}
-			else {
-				insertQuery.append( columnName ).append( "," );
-			}
-		}
-		insertQuery.setLength( insertQuery.length() - 1 );
-		insertQuery.append( ") values (" );
-
-		preparedStatementParams = addTupleFields( insertQuery, tuple, null, true );
-		insertQuery.append( ")" );
-
-		log.debugf( "insertTuple: insertQuery: %s ", insertQuery );
+		log.debugf( "insertTuple: insertQuery: %s ", result.getQuery() );
 		try {
-			PreparedStatement pstmt = connection.prepareStatement( insertQuery.toString() );
-			if ( preparedStatementParams != null ) {
-				setParameters( pstmt, preparedStatementParams );
+			PreparedStatement pstmt = connection.prepareStatement( result.getQuery() );
+			if ( result.getPreparedStatementParams() != null ) {
+				QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
 			}
 			log.debugf( "insertTuple:Key: %s (%s) ;inserted or updated: %d ", dbKeyName, dbKeyValue, pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
-			throw log.cannotExecuteQuery( insertQuery.toString(), sqle );
-		}
-	}
-
-	private void setParameters(PreparedStatement pstmt, List<Object> preparedStatementParams) {
-		for ( int i = 0; i < preparedStatementParams.size(); i++ ) {
-			Object value = preparedStatementParams.get( i );
-			try {
-				if ( value instanceof byte[] ) {
-					pstmt.setBytes( i + 1, (byte[]) value );
-				}
-				else {
-					pstmt.setObject( i + 1, value );
-				}
-			}
-			catch (SQLException sqle) {
-				throw log.cannotSetValueForParameter( i + 1, sqle );
-			}
+			throw log.cannotExecuteQuery( query, sqle );
 		}
 	}
 
@@ -465,6 +418,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 
 	private void createRelationship(AssociationKey associationKey, Tuple associationRow, AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
 		log.debugf( "createRelationship: associationKey.getMetadata(): %s ; associationRow: %s", associationKey.getMetadata(), associationRow );
+		log.debugf( "createRelationship: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
 		switch ( associationKey.getMetadata().getAssociationKind() ) {
 			case EMBEDDED_COLLECTION:
 				log.debug( "createRelationship:EMBEDDED_COLLECTION" );
@@ -483,34 +437,17 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 
 	private void createRelationshipWithEmbeddedNode(AssociationKey associationKey, Tuple associationRow,
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
-		log.debugf( "createRelationshipWithEmbeddedNode: associationKey.getMetadata(): %s ; associationRow: %s", associationKey.getMetadata(), associationRow );
-		StringBuilder queryBuffer = new StringBuilder( 100 );
-		queryBuffer.append( "insert into " ).append( associationKey.getTable() ).append( " content " );
-		JSONObject fieldValues = new JSONObject();
-		for ( String columnName : associationRow.getColumnNames() ) {
-			Object value = associationRow.get( columnName );
-			if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
-				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
-				// @TODO don't forget about many embedeed classes!!!!!
-				if ( !fieldValues.containsKey( ec.getClassNames().get( 0 ) ) ) {
-					fieldValues.put( ec.getClassNames().get( 0 ), getDefaultEmbeddedRow( ec.getClassNames().get( 0 ) ) );
-				}
-				JSONObject embeddedValue = (JSONObject) fieldValues.get( ec.getClassNames().get( 0 ) );
-				embeddedValue.put( ec.getPropertyName(), value );
-			}
-			else {
-				fieldValues.put( columnName, value );
-			}
-		}
-		queryBuffer.append( fieldValues.toJSONString() );
-		log.debugf( "createRelationshipWithEmbeddedNode: query: %s", queryBuffer );
-
+		log.debugf( "createRelationshipWithEmbeddedNode: associationKey.getMetadata(): %s ; associationRow: %s ; associatedEntityKeyMetadata: %s",
+				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
+		InsertQueryGenerator.GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow );
+		log.debugf( "createRelationshipWithEmbeddedNode: query: %s", result.getQuery() );
 		try {
-			PreparedStatement pstmt = provider.getConnection().prepareStatement( queryBuffer.toString() );
+			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getQuery() );
+			QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
 			log.debugf( "createRelationshipWithEmbeddedNode: execute insert query: %d", pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
-			throw log.cannotExecuteQuery( queryBuffer.toString(), sqle );
+			throw log.cannotExecuteQuery( result.getQuery(), sqle );
 		}
 	}
 
@@ -535,7 +472,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 			log.debugf( "nextValue: %s", nextValue );
 		}
 		else {
-			throw new UnsupportedOperationException( "Not supported yet!" );
+			throw new UnsupportedOperationException( String.format( "Type %s not supported yet!", type ) );
 		}
 		return nextValue;
 	}

@@ -68,12 +68,12 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 			EmbeddedColumnInfo ec = new EmbeddedColumnInfo( targetColumnName );
 			ODocument targetDocument = findEmbeddedClass( (ODocument) dbNameValueMap.get( ec.getClassNames().get( 0 ) ), ec );
 			log.debugf( "embedded column. class: %s ; property: %s", targetDocument.getClassName(), ec.getPropertyName() );
-			value = targetDocument.field( ec.getPropertyName() );
 			log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );
+			value = targetDocument.field( ec.getPropertyName() );
 		}
 		else {
+			log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );
 			value = dbNameValueMap.get( targetColumnName );
-			log.debugf( "targetColumnName: %s ; value: %s; class : ", targetColumnName, value, ( value != null ? value.getClass() : null ) );
 		}
 		return value;
 	}

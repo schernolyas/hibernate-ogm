@@ -169,26 +169,53 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
+			Set<String> tables = new HashSet<>();
 			for ( Table table : namespace.getTables() ) {
 				log.debugf( "table name: %s, union table: %b; physical table: %b ",
 						table.getName(), table.isAbstractUnionTable(), table.isPhysicalTable() );
 				log.debugf( "QualifiedTableName: ObjectName: %s; TableName:%s ",
 						table.getQualifiedTableName().getObjectName(), table.getQualifiedTableName().getTableName() );
 				boolean isMappingTable = isMapingTable( table );
-				boolean isEmbeddedCollecttionTable = isEmbeddedCollecttionTable( table );
-				if ( !isEmbeddedCollecttionTable ) {
-					String classQuery = createClassQuery( table );
+				boolean isEmbeddedListTableName = isEmbeddedListTable( table );
+				String tableName = table.getName();
+
+				if ( isEmbeddedListTableName ) {
+					tableName = table.getName().substring( 0, table.getName().indexOf( "_" ) );
+
+					EmbeddedColumnInfo embeddedListColumn = new EmbeddedColumnInfo( table.getName().substring( table.getName().indexOf( "_" ) + 1 ) );
+					log.debugf( "table %s is table for embedded collections! EmbeddedList class: %s; embedded list property: %s",
+							table.getName(), embeddedListColumn.getClassNames(), embeddedListColumn.getPropertyName() );
+					for ( String className : embeddedListColumn.getClassNames() ) {
+						if ( !createdEmbeddedClassSet.contains( className ) ) {
+							String classQuery = createClassQuery( className );
+							log.debugf( "create class query: %s", classQuery );
+							try {
+								provider.getConnection().createStatement().execute( classQuery );
+								tables.add( className );
+							}
+							catch (SQLException e) {
+								throw log.cannotGenerateVertexClass( table.getName(), e );
+							}
+						}
+					}
+					String createEmbeddedListQuery = String.format( "create property %s.%s embeddedlist %s ",
+							embeddedListColumn.getClassNames().get( embeddedListColumn.getClassNames().size() - 1 ),
+							embeddedListColumn.getPropertyName(),
+							embeddedListColumn.getPropertyName() );
+					log.debugf( "create embeddedlist query: %s", createEmbeddedListQuery );
+				}
+				else {
+					String classQuery = createClassQuery( tableName );
 					log.debugf( "create class query: %s", classQuery );
 					try {
 						provider.getConnection().createStatement().execute( classQuery );
+						tables.add( tableName );
 					}
 					catch (SQLException e) {
 						throw log.cannotGenerateVertexClass( table.getName(), e );
 					}
 				}
-				else {
-					log.debugf( "table %s is table for embedded collections! ", table.getName() );
-				}
+
 				Iterator<Column> columnIterator = table.getColumnIterator();
 
 				while ( columnIterator.hasNext() ) {
@@ -225,16 +252,25 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					else if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
 						EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
 						log.debugf( "embedded column. class: %s ; property: %s", ec.getClassNames(), ec.getPropertyName() );
-						createEmbeddedColumn( createdEmbeddedClassSet, table, column );
+						createEmbeddedColumn( createdEmbeddedClassSet, tableName, column, ec );
 					}
 					else {
-						String propertyQuery = createValueProperyQuery( table, column );
+						String propertyQuery = createValueProperyQuery( tableName, column );
 						log.debug( "create property query: " + propertyQuery );
 						try {
 							provider.getConnection().createStatement().execute( propertyQuery );
 						}
 						catch (SQLException e) {
 							throw log.cannotGenerateProperty( column.getName(), table.getName(), e );
+						}
+						catch (OCommandExecutionException oe) {
+							log.debugf( "orientdb message: %s; ", oe.getMessage() );
+							if ( oe.getMessage().contains( "already exists" ) ) {
+								log.debugf( "property %s already exists. Continue ", column.getName() );
+							}
+							else {
+								throw log.cannotExecuteQuery( propertyQuery, oe );
+							}
 						}
 					}
 				}
@@ -287,10 +323,14 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return createValueProperyQuery( table, column, simpleValue.getType().getClass() );
 	}
 
-	private void createEmbeddedColumn(Set<String> createdEmbeddedClassSet, Table table, Column column) {
-		EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
+	private String createValueProperyQuery(String tableName, Column column) {
+		SimpleValue simpleValue = (SimpleValue) column.getValue();
+		return createValueProperyQuery( tableName, column, simpleValue.getType().getClass() );
+	}
+
+	private void createEmbeddedColumn(Set<String> createdEmbeddedClassSet, String tableName, Column column, EmbeddedColumnInfo ec) {
 		LinkedList<String> allClasses = new LinkedList<>();
-		allClasses.add( table.getName() );
+		allClasses.add( tableName );
 		allClasses.addAll( ec.getClassNames() );
 		allClasses.add( ec.getPropertyName() );
 		for ( int classIndex = 0; classIndex < allClasses.size() - 1; classIndex++ ) {
@@ -379,6 +419,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return query;
 	}
 
+	private String createValueProperyQuery(String tableName, Column column, Class targetTypeClass) {
+		log.debugf( "1.Column: %s, targetTypeClass: %s ", column.getName(), targetTypeClass );
+		return createValueProperyQuery( column, tableName, column.getName(), targetTypeClass );
+
+	}
+
 	private String createValueProperyQuery(Table table, Column column, Class targetTypeClass) {
 		log.debugf( "1.Column: %s, targetTypeClass: %s ", column.getName(), targetTypeClass );
 		return createValueProperyQuery( column, table.getName(), column.getName(), targetTypeClass );
@@ -394,7 +440,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return table.getPrimaryKey() == null && tableColumns == 2;
 	}
 
-	private boolean isEmbeddedCollecttionTable(Table table) {
+	private boolean isEmbeddedListTable(Table table) {
 		int p1 = table.getName().indexOf( "_" );
 		int p2 = table.getName().indexOf( ".", p1 );
 		return p1 > -1 && p2 > p1;

@@ -104,7 +104,6 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( queryBuilder.toString(), sqle );
-
 		}
 		log.debugf( "findRelationship: found: %d", dbValues.size() );
 
@@ -114,13 +113,9 @@ public class OrientDBAssociationQueries extends QueriesBase {
 	private EntityKey getEntityKey(AssociationKey associationKey, RowKey rowKey) {
 		String[] associationKeyColumns = associationKey.getMetadata().getAssociatedEntityKeyMetadata().getAssociationKeyColumns();
 		Object[] columnValues = new Object[associationKeyColumns.length];
-		int i = 0;
-
-		for ( String associationKeyColumn : associationKeyColumns ) {
-			columnValues[i] = rowKey.getColumnValue( associationKeyColumn );
-			i++;
+		for ( int i = 0; i < associationKeyColumns.length; i++ ) {
+			columnValues[i] = rowKey.getColumnValue( associationKeyColumns[i] );
 		}
-
 		EntityKeyMetadata entityKeyMetadata = associationKey.getMetadata().getAssociatedEntityKeyMetadata().getEntityKeyMetadata();
 		return new EntityKey( entityKeyMetadata, columnValues );
 	}

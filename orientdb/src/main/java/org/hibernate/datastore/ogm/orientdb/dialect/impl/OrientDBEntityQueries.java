@@ -46,7 +46,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 		this.entityKeyMetadata = entityKeyMetadata;
 		for ( int i = 0; i < entityKeyMetadata.getColumnNames().length; i++ ) {
 			String columnName = entityKeyMetadata.getColumnNames()[i];
-			log.debug( "column number:" + i + "; column name:" + columnName );
+			log.debugf( "column number: %d ; column name: %s", i, columnName );
 		}
 
 	}
@@ -84,7 +84,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 			else {
 				throw new UnsupportedOperationException( "Not supported yet." );
 			}
-			log.debug( "find entiry query: " + query.toString() );
+			log.debugf( "find entiry query: %s", query.toString() );
 			ResultSet rs = stmt.executeQuery( query.toString() );
 			if ( rs.next() ) {
 				ResultSetMetaData metadata = rs.getMetaData();
@@ -98,8 +98,8 @@ public class OrientDBEntityQueries extends QueriesBase {
 					 * if ( isLinkedProperty( dbColumnName ) ) { continue; }
 					 */
 					Object dbValue = rs.getObject( dbColumnName );
-					log.debug( i + " dbColumnName " + dbColumnName + "; dbValue class:" + ( dbValue != null ? dbValue.getClass() : null ) );
-					log.debug( i + " dbColumnName " + dbColumnName + "; sql type:" + rs.getMetaData().getColumnTypeName( dbFieldNo ) );
+					log.debugf( "%d  dbColumnName: %s dbValue class:", i, dbColumnName, ( dbValue != null ? dbValue.getClass() : null ) );
+					log.debugf( "%d dbColumnName: %s ; sql type: %s", i, dbColumnName, rs.getMetaData().getColumnTypeName( dbFieldNo ) );
 					dbValues.put( dbColumnName, dbValue );
 					if ( dbValue != null && dbValue.getClass().equals( Date.class ) ) {
 						String format = rs.getMetaData().getColumnTypeName( dbFieldNo ).equals( "DATETIME" )
@@ -109,7 +109,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 					}
 				}
 				reCastValues( dbValues );
-				log.debug( " entiry values from db: " + dbValues );
+				log.debugf( " entiry values from db:  %s", dbValues );
 			}
 			else {
 				return null;
@@ -178,7 +178,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 					Object dbValue = rs.getObject( dbColumnName );
 					dbValues.put( dbColumnName, dbValue );
 				}
-				log.debug( " entiry values from db: " + dbValues );
+				log.debugf( " entiry values from db: %s", dbValues );
 				association.add( dbValues );
 			}
 			log.debugf( "findAssociation: rows %d:" + association.size() );
