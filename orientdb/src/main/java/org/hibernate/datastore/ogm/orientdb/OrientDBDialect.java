@@ -82,6 +82,8 @@ import org.json.simple.JSONObject;
 
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.id.ORecordId;
+import org.hibernate.datastore.ogm.orientdb.utils.InsertQueryGenerator;
+import org.hibernate.datastore.ogm.orientdb.utils.QueryUtil;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
