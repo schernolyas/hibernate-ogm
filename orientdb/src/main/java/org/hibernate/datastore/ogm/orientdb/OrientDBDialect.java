@@ -81,7 +81,10 @@ import org.hibernate.type.Type;
 import org.json.simple.JSONObject;
 
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
+import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.id.ORecordId;
+import java.io.Serializable;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.datastore.ogm.orientdb.utils.InsertQueryGenerator;
 import org.hibernate.datastore.ogm.orientdb.utils.QueryUtil;
 
@@ -274,7 +277,9 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( queryBuffer.toString(), sqle );
-		}
+		} catch (OConcurrentModificationException cme) {
+                        throw new StaleObjectStateException(key.getTable(), (Serializable) dbKeyValue);
+                }
 	}
 
 	@Override
