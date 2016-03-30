@@ -9,7 +9,9 @@ package org.hibernate.datastore.ogm.orientdb.constant;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -26,12 +28,19 @@ public class OrientDBConstant {
 
 	public static final String SYSTEM_RID = "@rid";
 	public static final String SYSTEM_VERSION = "@version";
+	public static final String SYSTEM_CLASS = "@class";
+	public static final Map<String, String> MAPPING_FIELDS;
 
 	static {
 		Set<String> set = new HashSet<>();
 		set.add( SYSTEM_RID );
 		set.add( SYSTEM_VERSION );
+		set.add( SYSTEM_CLASS );
 		SYSTEM_FIELDS = Collections.unmodifiableSet( set );
 		LINK_FIELDS = Collections.unmodifiableSet( new HashSet<String>( Arrays.asList( new String[]{ "in_", "out_" } ) ) );
+		Map<String, String> map = new HashMap<>();
+		map.put( "version", "@version" );
+		MAPPING_FIELDS = Collections.unmodifiableMap( map );
+
 	}
 }

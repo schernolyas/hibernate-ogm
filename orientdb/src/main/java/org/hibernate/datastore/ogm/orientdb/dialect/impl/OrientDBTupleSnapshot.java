@@ -60,8 +60,13 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 	public Object get(String targetColumnName) {
 		log.debugf( "targetColumnName: %s", targetColumnName );
 		Object value = null;
-		if ( targetColumnName.equals( OrientDBConstant.SYSTEM_VERSION ) && value == null ) {
-			value = Integer.valueOf( 0 );
+		if ( targetColumnName.equals( OrientDBConstant.SYSTEM_VERSION ) ) {
+			if ( dbNameValueMap.containsKey( "version" ) ) {
+				value = dbNameValueMap.get( OrientDBConstant.SYSTEM_VERSION );
+			}
+			else {
+				value = Integer.valueOf( 0 );
+			}
 		}
 		else if ( EntityKeyUtil.isEmbeddedColumn( targetColumnName ) ) {
 			// @TODO think about optimization
@@ -70,6 +75,9 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 			log.debugf( "embedded column. class: %s ; property: %s", targetDocument.getClassName(), ec.getPropertyName() );
 			log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );
 			value = targetDocument.field( ec.getPropertyName() );
+		}
+		else if ( OrientDBConstant.MAPPING_FIELDS.containsKey( targetColumnName ) ) {
+			value = dbNameValueMap.get( OrientDBConstant.MAPPING_FIELDS.get( targetColumnName ) );
 		}
 		else {
 			log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );
@@ -119,7 +127,7 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 	 * call.
 	 */
 	public boolean isNew() {
-		return dbNameValueMap == null || ( dbNameValueMap != null && dbNameValueMap.isEmpty() );
+		return ( dbNameValueMap == null || dbNameValueMap.isEmpty() );
 	}
 
 }

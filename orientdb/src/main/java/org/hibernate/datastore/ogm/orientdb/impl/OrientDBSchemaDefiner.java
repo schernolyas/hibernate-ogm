@@ -200,7 +200,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 							embeddedListColumn.getPropertyName(),
 							embeddedListColumn.getPropertyName() );
 					log.debugf( "create embeddedlist query: %s", createEmbeddedListQuery );
-                                        throw new UnsupportedOperationException(String.format("Table name %s not supported!",tableName));
+					throw new UnsupportedOperationException( String.format( "Table name %s not supported!", tableName ) );
 				}
 				else {
 					String classQuery = createClassQuery( tableName );
@@ -224,12 +224,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					if ( OrientDBConstant.SYSTEM_FIELDS.contains( column.getName() ) ) {
 						continue;
 					}
-                                        else if ( ComponentType.class.equals( column.getValue().getType().getClass() ) ) {
-                                            log.debugf( "column name %s has component type. Returned type: %s ", 
-                                                    column.getName(),column.getValue().getType().getReturnedClass());
-                                            ComponentType type = (ComponentType) column.getValue().getType();                                            
-                                        } 
-                                        else if ( RELATIONS_TYPES.contains( column.getValue().getType().getClass() ) ) {
+					else if ( ComponentType.class.equals( column.getValue().getType().getClass() ) ) {
+						log.debugf( "column name %s has component type. Returned type: %s ",
+								column.getName(), column.getValue().getType().getReturnedClass() );
+						ComponentType type = (ComponentType) column.getValue().getType();
+					}
+					else if ( RELATIONS_TYPES.contains( column.getValue().getType().getClass() ) ) {
 						// @TODO refactor it
 						Value value = column.getValue();
 						log.debugf( "column name: %s ; column.getCanonicalName(): %s", column.getName(), column.getCanonicalName() );

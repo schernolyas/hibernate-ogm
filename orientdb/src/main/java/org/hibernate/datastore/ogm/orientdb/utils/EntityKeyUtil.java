@@ -117,6 +117,32 @@ public class EntityKeyUtil {
 		return exists;
 	}
 
+	public static boolean isVersionActual(Connection connection, EntityKey key, int version) {
+		String dbKeyName = key.getColumnNames()[0];
+		Object dbKeyValue = key.getColumnValues()[0];
+		boolean exists = false;
+		StringBuilder buffer = new StringBuilder();
+		try {
+			Statement stmt = connection.createStatement();
+			buffer.append( "select count(" ).append( dbKeyName ).append( ") from " );
+			buffer.append( key.getTable() ).append( " where " ).append( dbKeyName );
+			buffer.append( " = " );
+			EntityKeyUtil.setFieldValue( buffer, dbKeyValue );
+			buffer.append( " and @version>=" ).append( version );
+			ResultSet rs = stmt.executeQuery( buffer.toString() );
+			if ( rs.next() ) {
+				long count = rs.getLong( 1 );
+				log.debugf( "isVersionActual:Key: %s ; count: %d", dbKeyName, count );
+				exists = count > 0;
+			}
+		}
+		catch (SQLException sqle) {
+			throw log.cannotExecuteQuery( buffer.toString(), sqle );
+
+		}
+		return exists;
+	}
+
 	public static ORecordId findRid(Connection connection, String className, String businessKeyName, Object businessKeyValue) {
 		StringBuilder buffer = new StringBuilder();
 		ORecordId rid = null;

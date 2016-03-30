@@ -54,21 +54,19 @@ public class OrientDBEntityQueries extends QueriesBase {
 	/**
 	 * Find the node corresponding to an entity.
 	 *
-	 * @param executionEngine the {@link GraphDatabaseService} used to run the query
+	 * @param connection the connection
 	 * @param entityKey
-	 * @param columnValues the values in {@link org.hibernate.ogm.model.key.spi.EntityKey#getColumnValues()}
 	 * @return the corresponding node
-	 * @throws java.sql.SQLException
 	 */
 
-	public Map<String, Object> findEntity(Connection executionEngine, EntityKey entityKey) {
+	public Map<String, Object> findEntity(Connection connection, EntityKey entityKey) {
 		Map<String, Object> params = params( entityKey.getColumnValues() );
 		Map<String, Object> dbValues = new LinkedHashMap<>();
 		Object dbKeyValue = EntityKeyUtil.findPrimaryKeyValue( entityKey );
 		String dbKeyName = EntityKeyUtil.findPrimaryKeyName( entityKey );
 		StringBuilder query = new StringBuilder( "select from " );
 		try {
-			Statement stmt = executionEngine.createStatement();
+			Statement stmt = connection.createStatement();
 			if ( params.size() == 1 ) {
 				if ( dbKeyValue instanceof ORecordId ) {
 					// search by @rid
@@ -104,7 +102,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 					if ( dbValue != null && dbValue.getClass().equals( Date.class ) ) {
 						String format = rs.getMetaData().getColumnTypeName( dbFieldNo ).equals( "DATETIME" )
 								? OrientDBConstant.DATETIME_FORMAT
-										: OrientDBConstant.DATE_FORMAT;
+								: OrientDBConstant.DATE_FORMAT;
 						dbValues.put( dbColumnName, new SimpleDateFormat( format ).format( dbValue ) );
 					}
 				}
@@ -112,6 +110,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 				log.debugf( " entiry values from db:  %s", dbValues );
 			}
 			else {
+				log.debugf( " entiry by primary key %s not found!", dbKeyValue );
 				return null;
 			}
 			return dbValues;

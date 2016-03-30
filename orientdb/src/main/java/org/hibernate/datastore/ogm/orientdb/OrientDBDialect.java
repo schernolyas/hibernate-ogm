@@ -6,6 +6,7 @@
  */
 package org.hibernate.datastore.ogm.orientdb;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Connection;
@@ -15,13 +16,12 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.hibernate.AssertionFailure;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBAssociationQueries;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBAssociationSnapshot;
@@ -83,8 +83,6 @@ import org.json.simple.JSONObject;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.id.ORecordId;
-import java.io.Serializable;
-import org.hibernate.StaleObjectStateException;
 import org.hibernate.datastore.ogm.orientdb.utils.InsertQueryGenerator;
 import org.hibernate.datastore.ogm.orientdb.utils.QueryUtil;
 
@@ -92,7 +90,7 @@ import org.hibernate.datastore.ogm.orientdb.utils.QueryUtil;
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>,
-ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+		ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -110,7 +108,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 
 	@Override
 	public Tuple getTuple(EntityKey key, TupleContext tupleContext) {
-		log.debugf( "getTuple:EntityKey: %s ; tupleContext: %s ", key, tupleContext );
+		log.debugf( "getTuple:EntityKey: %s ; tupleContext: %s; current thread: %s ", key, tupleContext, Thread.currentThread().getName() );
 		Map<String, Object> dbValuesMap = entityQueries.get( key.getMetadata() ).findEntity( provider.getConnection(), key );
 		if ( dbValuesMap == null || dbValuesMap.isEmpty() ) {
 			return null;
@@ -171,6 +169,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 		int currentBufferLenght = -1;
 		for ( String columnName : tuple.getColumnNames() ) {
 			if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) ||
+					columnName.equals( "version" ) ||
 					( primaryKeyName != null && columnName.equals( primaryKeyName ) ) ) {
 				continue;
 			}
@@ -235,7 +234,10 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	@Override
 	public void insertOrUpdateTuple(EntityKey key, Tuple tuple, TupleContext tupleContext) throws TupleAlreadyExistsException {
 
-		log.debugf( "insertOrUpdateTuple:EntityKey: %s ; tupleContext: %s ; tuple: %s ", key, tupleContext, tuple );
+		log.debugf( "insertOrUpdateTuple:EntityKey: %s ; tupleContext: %s ; tuple: %s ; thread: %s",
+				key, tupleContext, tuple, Thread.currentThread().getName() );
+		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
+		log.debugf( "insertOrUpdateTuple: snapshot.isNew(): %b ,snapshot.isEmpty(): %b ", snapshot.isNew(), snapshot.isEmpty() );
 		Connection connection = provider.getConnection();
 
 		StringBuilder queryBuffer = new StringBuilder();
@@ -251,15 +253,26 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 		log.debugf( "insertOrUpdateTuple:Key: %s ; exists in database ? %b", dbKeyName, existsPrimaryKey );
 		List<Object> preparedStatementParams = Collections.emptyList();
 
-		if ( existsPrimaryKey ) {
+		if ( !snapshot.isNew() ) {
 			// it is update
-			queryBuffer.append( "update " ).append( key.getTable() ).append( "  set " );
-			preparedStatementParams = addTupleFields( queryBuffer, tuple, dbKeyName, false );
-			if ( queryBuffer.toString().endsWith( "," ) ) {
-				queryBuffer.setLength( queryBuffer.length() - 1 );
+			// check version actual
+			boolean isVersionActual = EntityKeyUtil.isVersionActual( connection, key, (Integer) snapshot.get( OrientDBConstant.SYSTEM_VERSION ) );
+			log.debugf( "insertOrUpdateTuple:@version: %s. current tread: %s; is version actual : %b",
+					snapshot.get( "@version" ), Thread.currentThread().getName(), isVersionActual );
+
+			if ( isVersionActual ) {
+
+				queryBuffer.append( "update " ).append( key.getTable() ).append( "  set " );
+				preparedStatementParams = addTupleFields( queryBuffer, tuple, dbKeyName, false );
+				if ( queryBuffer.toString().endsWith( "," ) ) {
+					queryBuffer.setLength( queryBuffer.length() - 1 );
+				}
+				queryBuffer.append( " WHERE " ).append( dbKeyName ).append( "=" );
+				EntityKeyUtil.setFieldValue( queryBuffer, dbKeyValue );
 			}
-			queryBuffer.append( " WHERE " ).append( dbKeyName ).append( "=" );
-			EntityKeyUtil.setFieldValue( queryBuffer, dbKeyValue );
+			else {
+				throw new StaleObjectStateException( key.getTable(), (Serializable) dbKeyValue );
+			}
 		}
 		else {
 			// it is insert with business key which set already
@@ -277,14 +290,16 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( queryBuffer.toString(), sqle );
-		} catch (OConcurrentModificationException cme) {
-                        throw new StaleObjectStateException(key.getTable(), (Serializable) dbKeyValue);
-                }
+		}
+		catch (OConcurrentModificationException cme) {
+			throw new StaleObjectStateException( key.getTable(), (Serializable) dbKeyValue );
+		}
 	}
 
 	@Override
 	public void insertTuple(EntityKeyMetadata entityKeyMetadata, Tuple tuple, TupleContext tupleContext) {
-		log.debugf( "insertTuple:EntityKeyMetadata: %s ; tupleContext: %s ; tuple: %s ", entityKeyMetadata, tupleContext, tuple );
+		log.debugf( "insertTuple:EntityKeyMetadata: %s ; tupleContext: %s ; tuple: %s ",
+				entityKeyMetadata, tupleContext, tuple );
 
 		String dbKeyName = entityKeyMetadata.getColumnNames()[0];
 		Long dbKeyValue = null;
@@ -319,7 +334,8 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 
 	@Override
 	public void removeTuple(EntityKey key, TupleContext tupleContext) {
-		log.debugf( "removeTuple:EntityKey: %s ; tupleContext ", key, tupleContext );
+		log.debugf( "removeTuple:EntityKey: %s ; tupleContext %s ; current thread: %s",
+				key, tupleContext, Thread.currentThread().getName() );
 		Connection connection = provider.getConnection();
 		StringBuilder queryBuffer = new StringBuilder();
 		String dbKeyName = EntityKeyUtil.findPrimaryKeyName( key );
@@ -329,7 +345,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 			EntityKeyUtil.setFieldValue( queryBuffer, dbKeyValue );
 			log.debugf( "removeTuple:Key: %s (%s). query: %s ", dbKeyName, dbKeyValue, queryBuffer );
 			PreparedStatement pstmt = connection.prepareStatement( queryBuffer.toString() );
-			log.debugf( "removeTuple:Key: %s (%s). remove: ", dbKeyName, dbKeyValue, pstmt.executeUpdate() );
+			log.debugf( "removeTuple:Key: %s (%s). remove: %s", dbKeyName, dbKeyValue, pstmt.executeUpdate() );
 		}
 		catch (SQLException e) {
 			throw log.cannotExecuteQuery( queryBuffer.toString(), e );
@@ -434,8 +450,8 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 			case ASSOCIATION:
 				log.debug( "createRelationship:ASSOCIATION" );
 				break;
-				// return findOrCreateRelationshipWithEntityNode( associationKey, associationRow,
-				// associatedEntityKeyMetadata );
+			// return findOrCreateRelationshipWithEntityNode( associationKey, associationRow,
+			// associatedEntityKeyMetadata );
 			default:
 				throw new AssertionFailure( "Unrecognized associationKind: " + associationKey.getMetadata().getAssociationKind() );
 		}
