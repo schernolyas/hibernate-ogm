@@ -85,6 +85,8 @@ import com.orientechnologies.orient.core.exception.OConcurrentModificationExcept
 import com.orientechnologies.orient.core.id.ORecordId;
 import org.hibernate.datastore.ogm.orientdb.utils.InsertQueryGenerator;
 import org.hibernate.datastore.ogm.orientdb.utils.QueryUtil;
+import org.hibernate.datastore.ogm.orientdb.utils.UpdateQueryGenerator;
+import org.hibernate.datastore.ogm.orientdb.utils.AbstractQueryGenerator.GenerationResult;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -96,6 +98,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	private static final Log log = LoggerFactory.getLogger();
 	private static final Association ASSOCIATION_NOT_FOUND = null;
 	private static final InsertQueryGenerator INSERT_QUERY_GENERATOR = new InsertQueryGenerator();
+        private static final UpdateQueryGenerator UPDATE_QUERY_GENERATOR = new UpdateQueryGenerator();
 
 	private OrientDBDatastoreProvider provider;
 	private ServiceRegistryImplementor serviceRegistry;
@@ -249,26 +252,16 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			Object columnValue = key.getColumnValues()[i];
 			log.debugf( "EntityKey: columnName: %s ;columnValue: %s  (class:%s)", columnName, columnValue, columnValue.getClass().getName() );
 		}
-		boolean existsPrimaryKey = EntityKeyUtil.existsPrimaryKeyInDB( provider.getConnection(), key );
-		log.debugf( "insertOrUpdateTuple:Key: %s ; exists in database ? %b", dbKeyName, existsPrimaryKey );
 		List<Object> preparedStatementParams = Collections.emptyList();
-
 		if ( !snapshot.isNew() ) {
 			// it is update
 			// check version actual
 			boolean isVersionActual = EntityKeyUtil.isVersionActual( connection, key, (Integer) snapshot.get( OrientDBConstant.SYSTEM_VERSION ) );
 			log.debugf( "insertOrUpdateTuple:@version: %s. current tread: %s; is version actual : %b",
 					snapshot.get( "@version" ), Thread.currentThread().getName(), isVersionActual );
-
 			if ( isVersionActual ) {
-
-				queryBuffer.append( "update " ).append( key.getTable() ).append( "  set " );
-				preparedStatementParams = addTupleFields( queryBuffer, tuple, dbKeyName, false );
-				if ( queryBuffer.toString().endsWith( "," ) ) {
-					queryBuffer.setLength( queryBuffer.length() - 1 );
-				}
-				queryBuffer.append( " WHERE " ).append( dbKeyName ).append( "=" );
-				EntityKeyUtil.setFieldValue( queryBuffer, dbKeyValue );
+                                GenerationResult result = UPDATE_QUERY_GENERATOR.generate(dbKeyName, tuple, key);
+                                queryBuffer.append(result.getQuery());
 			}
 			else {
 				throw new StaleObjectStateException( key.getTable(), (Serializable) dbKeyValue );
@@ -277,7 +270,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		else {
 			// it is insert with business key which set already
 			log.debugf( "insertOrUpdateTuple:Key: %s is new! Insert new record!", dbKeyName );
-			InsertQueryGenerator.GenerationResult result = INSERT_QUERY_GENERATOR.generate( key.getTable(), tuple );
+			GenerationResult result = INSERT_QUERY_GENERATOR.generate( key.getTable(), tuple );
 			queryBuffer.append( result.getQuery() );
 			preparedStatementParams = result.getPreparedStatementParams();
 		}
@@ -462,7 +455,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
 		log.debugf( "createRelationshipWithEmbeddedNode: associationKey.getMetadata(): %s ; associationRow: %s ; associatedEntityKeyMetadata: %s",
 				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
-		InsertQueryGenerator.GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow );
+		GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow );
 		log.debugf( "createRelationshipWithEmbeddedNode: query: %s", result.getQuery() );
 		try {
 			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getQuery() );

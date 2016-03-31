@@ -6,15 +6,13 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import javax.xml.bind.DatatypeConverter;
+import org.apache.commons.codec.binary.Base64;
 
 import org.json.simple.JSONObject;
 import org.junit.After;
@@ -61,10 +59,10 @@ public class InsertQueryGeneratorTest {
 		result = instance.createJSON( valuesMap );
 		assertEquals( result.getJson().get( "field1" ), 1l );
 		assertTrue( "No parameters for prepare statement must be!", result.getPreparedStatementParams().isEmpty() );
-		// use ?
+                
 		valuesMap.put( "field2", new byte[]{ 1, 2, 3 } );
 		result = instance.createJSON( valuesMap );
-		assertEquals( result.getJson().get( "field2" ), DatatypeConverter.printBase64Binary( new byte[]{ 1, 2, 3 } ) );
+		assertEquals(result.getJson().get( "field2" ), new String(Base64.encodeBase64( new byte[]{ 1, 2, 3 } )) );
 		assertTrue( "No parameters for prepare statement must be!", result.getPreparedStatementParams().isEmpty() );
 
 		// using embedded fields

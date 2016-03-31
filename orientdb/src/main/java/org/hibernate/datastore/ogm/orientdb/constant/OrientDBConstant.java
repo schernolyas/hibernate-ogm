@@ -7,6 +7,7 @@
 
 package org.hibernate.datastore.ogm.orientdb.constant;
 
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ public class OrientDBConstant {
 	public static final String SYSTEM_VERSION = "@version";
 	public static final String SYSTEM_CLASS = "@class";
 	public static final Map<String, String> MAPPING_FIELDS;
+        public static final Set<Class> BASE64_TYPES;
 
 	static {
 		Set<String> set = new HashSet<>();
@@ -41,6 +43,11 @@ public class OrientDBConstant {
 		Map<String, String> map = new HashMap<>();
 		map.put( "version", "@version" );
 		MAPPING_FIELDS = Collections.unmodifiableMap( map );
+                
+                Set<Class> set1 = new HashSet<>();
+		set1.add( BigInteger.class );
+		set1.add( byte[].class );
+		BASE64_TYPES = Collections.unmodifiableSet( set1 );
 
 	}
 }

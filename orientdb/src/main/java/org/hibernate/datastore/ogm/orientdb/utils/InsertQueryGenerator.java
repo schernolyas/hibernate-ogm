@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.xml.bind.DatatypeConverter;
+import org.apache.commons.codec.binary.Base64;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
@@ -30,26 +31,10 @@ import org.json.simple.JSONObject;
  *
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
  */
-public class InsertQueryGenerator {
+public class InsertQueryGenerator extends AbstractQueryGenerator  {
 
 	private static final Log log = LoggerFactory.getLogger();
-	private static final Set<Class> PREPARED_STATEMENT_TYPES;
-
-	private static final ThreadLocal<SimpleDateFormat> FORMATTER = new ThreadLocal<SimpleDateFormat>() {
-
-		@Override
-		protected SimpleDateFormat initialValue() {
-			return new SimpleDateFormat( OrientDBConstant.DATETIME_FORMAT );
-		}
-	};
-
-	static {
-		Set<Class> set = new HashSet<>();
-		set.add( BigInteger.class );
-		set.add( byte[].class );
-		set.add( BigDecimal.class );
-		PREPARED_STATEMENT_TYPES = Collections.unmodifiableSet( set );
-	}
+	
 
 	public GenerationResult generate(String tableName, Tuple tuple) {
 		return generate( tableName, TupleUtil.toMap( tuple ) );
@@ -79,18 +64,12 @@ public class InsertQueryGenerator {
 				}
 				setJsonValue( result, ec, columnValue );
 			}
-			else if ( PREPARED_STATEMENT_TYPES.contains( columnValue.getClass() ) ) {
-				result.getJson().put( columnName, "?" );
+			else if ( OrientDBConstant.BASE64_TYPES.contains( columnValue.getClass() ) ) {				
 				if ( columnValue instanceof BigInteger ) {
-                                        result.getJson().remove(columnName );
-                                        result.getJson().put( columnName, DatatypeConverter.printBase64Binary( ( (BigInteger) columnValue ).toByteArray())  );
+                                        result.getJson().put( columnName, new String( Base64.encodeBase64( ( (BigInteger) columnValue ).toByteArray()))  );
 				} else if ( columnValue instanceof byte[] ) {
-                                        result.getJson().remove(columnName );
-                                        result.getJson().put( columnName, DatatypeConverter.printBase64Binary( (byte[]) columnValue)  );
-                                } 
-				else {
-					result.getPreparedStatementParams().add( columnValue );
-				}
+                                        result.getJson().put( columnName,new String( Base64.encodeBase64( (byte[]) columnValue) ));
+                                }
 			}
 			else if ( columnValue instanceof Date || columnValue instanceof Calendar ) {
 				Calendar calendar = null;
@@ -101,7 +80,7 @@ public class InsertQueryGenerator {
 				else if ( columnValue instanceof Calendar ) {
 					calendar = (Calendar) columnValue;
 				}
-				String formattedStr = ( FORMATTER.get() ).format( calendar.getTime() );
+				String formattedStr = ( getFormatter().get() ).format( calendar.getTime() );
 				result.getJson().put( columnName, formattedStr );
 			}
 			else if ( columnValue instanceof Character ) {
@@ -130,26 +109,6 @@ public class InsertQueryGenerator {
                 embeddedFieldValue.put( "@type", "d" );
 		embeddedFieldValue.put( "@class", className );
 		return embeddedFieldValue;
-	}
-
-	public static class GenerationResult {
-
-		private List<Object> preparedStatementParams;
-		private String query;
-
-		public GenerationResult(List<Object> preparedStatementParams, String query) {
-			this.preparedStatementParams = preparedStatementParams;
-			this.query = query;
-		}
-
-		public List<Object> getPreparedStatementParams() {
-			return preparedStatementParams;
-		}
-
-		public String getQuery() {
-			return query;
-		}
-
 	}
 
 	protected class QueryResult {
