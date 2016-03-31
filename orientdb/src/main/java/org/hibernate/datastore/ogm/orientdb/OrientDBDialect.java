@@ -630,8 +630,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	public GridType overrideType(Type type) {
 		log.debugf( "overrideType: %s ; ReturnedClass: %s", type.getName(), type.getReturnedClass() );
 		GridType gridType = null;
-		// @TODO change from name to class
-
+		
 		if ( type.getReturnedClass().equals( ORecordId.class ) ) {
 			gridType = ORecordIdGridType.INSTANCE;
 		}
