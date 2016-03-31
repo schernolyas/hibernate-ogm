@@ -72,6 +72,8 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "String value does not match", bookmark.getDescription(), loadedBookmark.getDescription() );
 	}
 
+	@SkipByGridDialect(value = {
+			GridDialectType.ORIENTDB }, comment = "OrientDB not supports JSON escaping (https://github.com/orientechnologies/orientdb/issues/5911)")
 	@Test
 	public void testCharacterSupport() throws Exception {
 		bookmark.setDelimiter( '/' );
@@ -191,7 +193,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "Original and loaded data do not match!", text, loadedBookmark.getLobWithString() );
 	}
 
-	@SkipByGridDialect(GridDialectType.ORIENTDB)
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Byte array not supported in JSON")
 	@Test
 	public void testByteArraySupport() throws Exception {
 		byte[] testData = new byte[200];
@@ -285,6 +287,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "Year value does not match", destructionDate.get( Calendar.YEAR ), c2.get( Calendar.YEAR ) );
 	}
 
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Calendar is not supports in DB")
 	@Test
 	public void testCalendarTemporalTypeTimestampSupport() throws Exception {
 		bookmark.setDestructionCalendar( Calendar.getInstance() );
@@ -321,6 +324,8 @@ public class BuiltInTypeTest extends OgmTestCase {
 	}
 
 	// Misc
+	@SkipByGridDialect(value = {
+			GridDialectType.ORIENTDB }, comment = "OrientDB not supports JSON escaping (https://github.com/orientechnologies/orientdb/issues/5911)")
 	@Test
 	public void testURLSupport() throws Exception {
 		bookmark.setUrl( new URL( "http://www.hibernate.org/" ) );
@@ -346,7 +351,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "BigDecimal value does not match", bookmark.getSiteWeight(), loadedBookmark.getSiteWeight() );
 	}
 
-	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "see issue https://github.com/orientechnologies/orientdb/issues/5753")
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "BigInteger not supports")
 	@Test
 	public void testBigIntegerSupport() throws Exception {
 		bookmark.setVisitCount( new BigInteger( "444" ) );

@@ -6,11 +6,15 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.xml.bind.DatatypeConverter;
 
 import org.json.simple.JSONObject;
 import org.junit.After;
@@ -47,11 +51,12 @@ public class InsertQueryGeneratorTest {
 	 * Test of createJSON method, of class InsertQueryGenerator.
 	 */
 	@Test
-	public void testCreateJSON() {
+	public void testCreateJSON() throws Exception {
 		System.out.println( "createJSON" );
 		InsertQueryGenerator.QueryResult result = null;
 		Map<String, Object> valuesMap = new LinkedHashMap<>();
 		valuesMap.put( "field1", 1l );
+                
 
 		result = instance.createJSON( valuesMap );
 		assertEquals( result.getJson().get( "field1" ), 1l );
@@ -59,8 +64,8 @@ public class InsertQueryGeneratorTest {
 		// use ?
 		valuesMap.put( "field2", new byte[]{ 1, 2, 3 } );
 		result = instance.createJSON( valuesMap );
-		assertEquals( result.getJson().get( "field2" ), "?" );
-		assertEquals( "One parameter for prepare statement must be!", 1, result.getPreparedStatementParams().size() );
+		assertEquals( result.getJson().get( "field2" ), DatatypeConverter.printBase64Binary( new byte[]{ 1, 2, 3 } ) );
+		assertTrue( "No parameters for prepare statement must be!", result.getPreparedStatementParams().isEmpty() );
 
 		// using embedded fields
 		valuesMap.put( "field3.embeddedField1", "f1" );
@@ -81,6 +86,7 @@ public class InsertQueryGeneratorTest {
 
 		valuesMap.put( "field4.ef2l1.ef1l2", "f21" );
 		valuesMap.put( "field4.ef2l1.ef2l2", "f22" );
+                valuesMap.put( "field5",  "http://www.hibernate.org/" );                
 		result = instance.createJSON( valuesMap );
 		assertTrue( "Field 'field4' must exists!", result.getJson().containsKey( "field4" ) );
 		embeddedFiled = (JSONObject) result.getJson().get( "field4" );
@@ -89,7 +95,12 @@ public class InsertQueryGeneratorTest {
 		embeddedFiled = (JSONObject) ( (JSONObject) result.getJson().get( "field4" ) ).get( "ef1l1" );
 		assertTrue( "JSON must have key 'ef1l1.ef1l2'", embeddedFiled.containsKey( "ef1l2" ) );
 		assertEquals( "f11", embeddedFiled.get( "ef1l2" ) );
+                
+                
+                System.out.println("toString:"+result.getJson().toString());
+                System.out.println("toJSONString:"+result.getJson().toJSONString());
 
 	}
 
 }
+

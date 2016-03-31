@@ -17,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.xml.bind.DatatypeConverter;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
@@ -81,8 +82,12 @@ public class InsertQueryGenerator {
 			else if ( PREPARED_STATEMENT_TYPES.contains( columnValue.getClass() ) ) {
 				result.getJson().put( columnName, "?" );
 				if ( columnValue instanceof BigInteger ) {
-					result.getPreparedStatementParams().add( ( (BigInteger) columnValue ).toByteArray() );
-				}
+                                        result.getJson().remove(columnName );
+                                        result.getJson().put( columnName, DatatypeConverter.printBase64Binary( ( (BigInteger) columnValue ).toByteArray())  );
+				} else if ( columnValue instanceof byte[] ) {
+                                        result.getJson().remove(columnName );
+                                        result.getJson().put( columnName, DatatypeConverter.printBase64Binary( (byte[]) columnValue)  );
+                                } 
 				else {
 					result.getPreparedStatementParams().add( columnValue );
 				}
@@ -101,7 +106,7 @@ public class InsertQueryGenerator {
 			}
 			else if ( columnValue instanceof Character ) {
 				result.getJson().put( columnName, ( (Character) columnValue ).toString() );
-			}
+			}                        
 			else {
 				result.getJson().put( columnName, columnValue );
 			}
@@ -122,7 +127,7 @@ public class InsertQueryGenerator {
 
 	private JSONObject createDefaultEmbeddedRow(String className) {
 		JSONObject embeddedFieldValue = new JSONObject();
-		embeddedFieldValue.put( "@type", "d" );
+                embeddedFieldValue.put( "@type", "d" );
 		embeddedFieldValue.put( "@class", className );
 		return embeddedFieldValue;
 	}
