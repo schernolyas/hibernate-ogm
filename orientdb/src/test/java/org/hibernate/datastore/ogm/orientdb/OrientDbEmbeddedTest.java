@@ -6,6 +6,7 @@
  */
 package org.hibernate.datastore.ogm.orientdb;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -79,7 +80,7 @@ public class OrientDbEmbeddedTest {
 	}
 
 	@Test
-	public void test1InsertNewEmbeddedClass() {
+	public void testInsertNewEmbeddedClass() {
 		log.debug( "start" );
 		try {
 			em.getTransaction().begin();
@@ -101,6 +102,7 @@ public class OrientDbEmbeddedTest {
 			owners.add( new CarOwner( "name1", true ) );
 			owners.add( new CarOwner( "name2", false ) );
 			newCar.setOwners( owners );
+			newCar.setPhoto( new byte[]{ 1, 2, 3 } );
 
 			em.persist( newCar );
 			em.getTransaction().commit();
@@ -109,6 +111,7 @@ public class OrientDbEmbeddedTest {
 			em.getTransaction().begin();
 			Car car = em.find( Car.class, 1l );
 			assertNotNull( "Car must be saved!", car );
+			assertArrayEquals( "Photo of car  must be saved correctly!", new byte[]{ 1, 2, 3 }, car.getPhoto() );
 			assertNotNull( "Engine info of saved Car must be saved!", car.getEngineInfo() );
 			assertEquals( "E6GV", car.getEngineInfo().getTitle() );
 			assertNotNull( "Producer of Engine info of saved Car must be saved!", car.getEngineInfo().getProducer() );
@@ -126,6 +129,65 @@ public class OrientDbEmbeddedTest {
 				}
 			}
 
+			em.getTransaction().commit();
+		}
+		catch (Exception e) {
+			log.error( "Error", e );
+			em.getTransaction().rollback();
+			throw e;
+		}
+	}
+
+	@Test
+	public void updateEmbeddedClass() {
+		log.debug( "start" );
+		try {
+			em.getTransaction().begin();
+			Car car = em.find( Car.class, 1l );
+			assertNotNull( "Car must be saved!", car );
+			car.setPhoto( new byte[]{ 3, 2, 1 } );
+			em.merge( car );
+			em.getTransaction().commit();
+
+			em.clear();
+
+			em.getTransaction().begin();
+			car = em.find( Car.class, 1l );
+			assertNotNull( "Car must be updated!", car );
+			assertArrayEquals( "Photo of car  must be updated correctly!", new byte[]{ 3, 2, 1 }, car.getPhoto() );
+			assertEquals( "Owners of car must not be changed!", car.getOwners().size(), 2L );
+			em.getTransaction().commit();
+		}
+		catch (Exception e) {
+			log.error( "Error", e );
+			em.getTransaction().rollback();
+			throw e;
+		}
+	}
+
+	@Test
+	public void updateEmbeddedCollection() {
+		log.debug( "start" );
+		try {
+			em.getTransaction().begin();
+			Car car = em.find( Car.class, 1l );
+			assertNotNull( "Car must be saved!", car );
+
+			List<CarOwner> owners = car.getOwners();
+			for ( CarOwner owner : owners ) {
+				owner.setActive( false );
+			}
+			em.merge( car );
+			owners.add( new CarOwner( "name3", true ) );
+			em.merge( car );
+			em.getTransaction().commit();
+
+			em.clear();
+
+			em.getTransaction().begin();
+			car = em.find( Car.class, 1l );
+			assertNotNull( "Car must be updated!", car );
+			assertEquals( "Count of owners must be changed!", car.getOwners().size(), 3L );
 			em.getTransaction().commit();
 		}
 		catch (Exception e) {

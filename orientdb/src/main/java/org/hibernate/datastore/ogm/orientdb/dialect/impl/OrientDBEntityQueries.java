@@ -96,7 +96,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 					 * if ( isLinkedProperty( dbColumnName ) ) { continue; }
 					 */
 					Object dbValue = rs.getObject( dbColumnName );
-					log.debugf( "%d  dbColumnName: %s dbValue class:", i, dbColumnName, ( dbValue != null ? dbValue.getClass() : null ) );
+					log.debugf( "%d dbColumnName: %s dbValue class:", i, dbColumnName, ( dbValue != null ? dbValue.getClass() : null ) );
 					log.debugf( "%d dbColumnName: %s ; sql type: %s", i, dbColumnName, rs.getMetaData().getColumnTypeName( dbFieldNo ) );
 					dbValues.put( dbColumnName, dbValue );
 					if ( dbValue != null && dbValue.getClass().equals( Date.class ) ) {
@@ -107,10 +107,10 @@ public class OrientDBEntityQueries extends QueriesBase {
 					}
 				}
 				reCastValues( dbValues );
-				log.debugf( " entiry values from db:  %s", dbValues );
+				log.debugf( " entity values from db:  %s", dbValues );
 			}
 			else {
-				log.debugf( " entiry by primary key %s not found!", dbKeyValue );
+				log.debugf( " entity by primary key %s not found!", dbKeyValue );
 				return null;
 			}
 			return dbValues;

@@ -8,9 +8,9 @@ package org.hibernate.datastore.ogm.orientdb.utils;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.hibernate.ogm.model.impl.DefaultEntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.junit.After;
@@ -21,65 +21,65 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- *
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
  */
 public class UpdateQueryGeneratorTest {
 
-    public UpdateQueryGeneratorTest() {
-    }
+	public UpdateQueryGeneratorTest() {
+	}
 
-    @BeforeClass
-    public static void setUpClass() {
-    }
+	@BeforeClass
+	public static void setUpClass() {
+	}
 
-    @AfterClass
-    public static void tearDownClass() {
-    }
+	@AfterClass
+	public static void tearDownClass() {
+	}
 
-    @Before
-    public void setUp() {
-    }
+	@Before
+	public void setUp() {
+	}
 
-    @After
-    public void tearDown() {
-    }
+	@After
+	public void tearDown() {
+	}
 
-    /**
-     * Test of generate method, of class UpdateQueryGenerator.
-     */
-    @Test
-    public void testGenerate() {
-        System.out.println("generate");
-        String tableName = "tableName";
-        Map<String, Object> valuesMap = new HashMap<>();
-        valuesMap.put("field1", 1);
-        valuesMap.put("field2", "field2");
-        valuesMap.put("field3.subfield1", 1);
-        valuesMap.put("field3.subfield2", new byte[]{1, 2, 3});
-        EntityKey primaryKey = new EntityKey(new DefaultEntityKeyMetadata(tableName, new String[]{"id"}), new Object[]{1});
-        UpdateQueryGenerator instance = new UpdateQueryGenerator();
-        AbstractQueryGenerator.GenerationResult result = instance.generate(tableName, valuesMap, primaryKey);
-        System.out.println("update query: " + result.getQuery());
-        Assert.assertThat(result.getQuery(), new BaseMatcher<String>() {
-            @Override
-            public boolean matches(Object o) {
-                System.out.println(" o: " + o);
-                String query = (String) o;
-                return query.contains("AQID");
-            }
+	/**
+	 * Test of generate method, of class UpdateQueryGenerator.
+	 */
+	@Test
+	public void testGenerate() {
+		System.out.println( "generate" );
+		String tableName = "tableName";
+		Map<String, Object> valuesMap = new HashMap<>();
+		valuesMap.put( "field1", 1 );
+		valuesMap.put( "field2", "field2" );
+		valuesMap.put( "field3.subfield1", 1 );
+		valuesMap.put( "field3.subfield2", new byte[]{ 1, 2, 3 } );
+		EntityKey primaryKey = new EntityKey( new DefaultEntityKeyMetadata( tableName, new String[]{ "id" } ), new Object[]{ 1 } );
+		UpdateQueryGenerator instance = new UpdateQueryGenerator();
+		AbstractQueryGenerator.GenerationResult result = instance.generate( tableName, valuesMap, primaryKey );
+		System.out.println( "update query: " + result.getQuery() );
+		Assert.assertThat( result.getQuery(), new BaseMatcher<String>() {
 
-            @Override
-            public void describeMismatch(Object o, Description d) {
+			@Override
+			public boolean matches(Object o) {
+				System.out.println( " o: " + o );
+				String query = (String) o;
+				return query.contains( "AQID" ) && query.contains( "field3.subfield2" );
+			}
 
-            }
+			@Override
+			public void describeMismatch(Object o, Description d) {
 
-            @Override
-            public void describeTo(Description d) {
-                d.appendText("containt binary data");
-            }
-        });
+			}
 
-    }
+			@Override
+			public void describeTo(Description d) {
+				d.appendText( "containt binary data" );
+			}
+		} );
+
+	}
 
 }

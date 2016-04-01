@@ -31,7 +31,8 @@ public class OrientDBConstant {
 	public static final String SYSTEM_VERSION = "@version";
 	public static final String SYSTEM_CLASS = "@class";
 	public static final Map<String, String> MAPPING_FIELDS;
-        public static final Set<Class> BASE64_TYPES;
+	public static final Set<Class> BASE64_TYPES;
+	public static final String NULL_VALUE = "null";
 
 	static {
 		Set<String> set = new HashSet<>();
@@ -43,8 +44,8 @@ public class OrientDBConstant {
 		Map<String, String> map = new HashMap<>();
 		map.put( "version", "@version" );
 		MAPPING_FIELDS = Collections.unmodifiableMap( map );
-                
-                Set<Class> set1 = new HashSet<>();
+
+		Set<Class> set1 = new HashSet<>();
 		set1.add( BigInteger.class );
 		set1.add( byte[].class );
 		BASE64_TYPES = Collections.unmodifiableSet( set1 );

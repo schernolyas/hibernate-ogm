@@ -6,18 +6,13 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import javax.xml.bind.DatatypeConverter;
+
 import org.apache.commons.codec.binary.Base64;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
@@ -31,10 +26,9 @@ import org.json.simple.JSONObject;
  *
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
  */
-public class InsertQueryGenerator extends AbstractQueryGenerator  {
+public class InsertQueryGenerator extends AbstractQueryGenerator {
 
 	private static final Log log = LoggerFactory.getLogger();
-	
 
 	public GenerationResult generate(String tableName, Tuple tuple) {
 		return generate( tableName, TupleUtil.toMap( tuple ) );
@@ -52,7 +46,7 @@ public class InsertQueryGenerator extends AbstractQueryGenerator  {
 		for ( Map.Entry<String, Object> entry : valuesMap.entrySet() ) {
 			String columnName = entry.getKey();
 			Object columnValue = entry.getValue();
-			if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) ||  OrientDBConstant.MAPPING_FIELDS.containsKey( columnName )) {
+			if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) || OrientDBConstant.MAPPING_FIELDS.containsKey( columnName ) ) {
 				continue;
 			}
 			log.debugf( "createJSON: Column %s; value: %s (class: %s) ", columnName, columnValue, ( columnValue != null ? columnValue.getClass() : null ) );
@@ -64,12 +58,13 @@ public class InsertQueryGenerator extends AbstractQueryGenerator  {
 				}
 				setJsonValue( result, ec, columnValue );
 			}
-			else if ( OrientDBConstant.BASE64_TYPES.contains( columnValue.getClass() ) ) {				
+			else if ( OrientDBConstant.BASE64_TYPES.contains( columnValue.getClass() ) ) {
 				if ( columnValue instanceof BigInteger ) {
-                                        result.getJson().put( columnName, new String( Base64.encodeBase64( ( (BigInteger) columnValue ).toByteArray()))  );
-				} else if ( columnValue instanceof byte[] ) {
-                                        result.getJson().put( columnName,new String( Base64.encodeBase64( (byte[]) columnValue) ));
-                                }
+					result.getJson().put( columnName, new String( Base64.encodeBase64( ( (BigInteger) columnValue ).toByteArray() ) ) );
+				}
+				else if ( columnValue instanceof byte[] ) {
+					result.getJson().put( columnName, new String( Base64.encodeBase64( (byte[]) columnValue ) ) );
+				}
 			}
 			else if ( columnValue instanceof Date || columnValue instanceof Calendar ) {
 				Calendar calendar = null;
@@ -85,7 +80,7 @@ public class InsertQueryGenerator extends AbstractQueryGenerator  {
 			}
 			else if ( columnValue instanceof Character ) {
 				result.getJson().put( columnName, ( (Character) columnValue ).toString() );
-			}                        
+			}
 			else {
 				result.getJson().put( columnName, columnValue );
 			}
@@ -106,7 +101,7 @@ public class InsertQueryGenerator extends AbstractQueryGenerator  {
 
 	private JSONObject createDefaultEmbeddedRow(String className) {
 		JSONObject embeddedFieldValue = new JSONObject();
-                embeddedFieldValue.put( "@type", "d" );
+		embeddedFieldValue.put( "@type", "d" );
 		embeddedFieldValue.put( "@class", className );
 		return embeddedFieldValue;
 	}

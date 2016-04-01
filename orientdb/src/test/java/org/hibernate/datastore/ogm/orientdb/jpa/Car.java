@@ -30,6 +30,9 @@ public class Car {
 	@Column(name = "bKey")
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long bKey;
+
+	private byte[] photo;
+
 	@Embedded
 	private EngineInfo engineInfo;
 
@@ -58,6 +61,14 @@ public class Car {
 
 	public void setOwners(List<CarOwner> owners) {
 		this.owners = owners;
+	}
+
+	public byte[] getPhoto() {
+		return photo;
+	}
+
+	public void setPhoto(byte[] photo) {
+		this.photo = photo;
 	}
 
 	@Override

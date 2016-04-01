@@ -92,13 +92,13 @@ import org.hibernate.datastore.ogm.orientdb.utils.AbstractQueryGenerator.Generat
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>,
-		ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
 	private static final Association ASSOCIATION_NOT_FOUND = null;
 	private static final InsertQueryGenerator INSERT_QUERY_GENERATOR = new InsertQueryGenerator();
-        private static final UpdateQueryGenerator UPDATE_QUERY_GENERATOR = new UpdateQueryGenerator();
+	private static final UpdateQueryGenerator UPDATE_QUERY_GENERATOR = new UpdateQueryGenerator();
 
 	private OrientDBDatastoreProvider provider;
 	private ServiceRegistryImplementor serviceRegistry;
@@ -239,9 +239,12 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 
 		log.debugf( "insertOrUpdateTuple:EntityKey: %s ; tupleContext: %s ; tuple: %s ; thread: %s",
 				key, tupleContext, tuple, Thread.currentThread().getName() );
-		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
-		log.debugf( "insertOrUpdateTuple: snapshot.isNew(): %b ,snapshot.isEmpty(): %b ", snapshot.isNew(), snapshot.isEmpty() );
 		Connection connection = provider.getConnection();
+		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
+		boolean existsInDB = EntityKeyUtil.existsPrimaryKeyInDB( connection, key );
+		boolean isInsertQuery = !existsInDB;
+		log.debugf( "insertOrUpdateTuple: snapshot.isNew(): %b ,snapshot.isEmpty(): %b; exists in DB: %b; insert query: %b ",
+				snapshot.isNew(), snapshot.isEmpty(), existsInDB, isInsertQuery );
 
 		StringBuilder queryBuffer = new StringBuilder();
 		String dbKeyName = key.getColumnNames()[0];
@@ -253,15 +256,15 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			log.debugf( "EntityKey: columnName: %s ;columnValue: %s  (class:%s)", columnName, columnValue, columnValue.getClass().getName() );
 		}
 		List<Object> preparedStatementParams = Collections.emptyList();
-		if ( !snapshot.isNew() ) {
+		if ( !isInsertQuery ) {
 			// it is update
 			// check version actual
 			boolean isVersionActual = EntityKeyUtil.isVersionActual( connection, key, (Integer) snapshot.get( OrientDBConstant.SYSTEM_VERSION ) );
 			log.debugf( "insertOrUpdateTuple:@version: %s. current tread: %s; is version actual : %b",
 					snapshot.get( "@version" ), Thread.currentThread().getName(), isVersionActual );
 			if ( isVersionActual ) {
-                                GenerationResult result = UPDATE_QUERY_GENERATOR.generate(dbKeyName, tuple, key);
-                                queryBuffer.append(result.getQuery());
+				GenerationResult result = UPDATE_QUERY_GENERATOR.generate( key.getTable(), tuple, key );
+				queryBuffer.append( result.getQuery() );
 			}
 			else {
 				throw new StaleObjectStateException( key.getTable(), (Serializable) dbKeyValue );
@@ -394,6 +397,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		log.debugf( "insertOrUpdateAssociation: AssociationKey: %s ; AssociationContext: %s ; association: %s", associationKey, associationContext,
 				association );
 		log.debugf( "insertOrUpdateAssociation: EntityKey: %s ;", associationKey.getEntityKey() );
+		log.debugf( "insertOrUpdateAssociation: operations: %s ;", association.getOperations() );
 
 		for ( AssociationOperation action : association.getOperations() ) {
 			applyAssociationOperation( association, associationKey, action, associationContext );
@@ -415,6 +419,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 				break;
 			case REMOVE:
 				log.debugf( "applyAssociationOperation: REMOVE operation for: %s ;", associationKey );
+				// removeAssociation( associationKey, associationContext );
 				// removeAssociationOperation( association, key, operation,
 				// associationContext.getAssociationTypeContext().getAssociatedEntityKeyMetadata() );
 				break;
@@ -423,13 +428,24 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 
 	private void putAssociationOperation(Association association, AssociationKey associationKey, AssociationOperation action,
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
-		if ( associationQueries.get( associationKey.getMetadata() ).findRelationship( provider.getConnection(), associationKey, action.getKey() ).isEmpty() ) {
-			// create
-			createRelationship( associationKey, action.getValue(), associatedEntityKeyMetadata );
+		log.debugf( "putAssociationOperation: : action: %s ; metadata: %s", action, associationKey.getMetadata() );
+		if ( associationQueries.containsKey( associationKey.getMetadata() ) ) {
+			List<Map<String, Object>> relationship = associationQueries.get( associationKey.getMetadata() ).findRelationship( provider.getConnection(),
+					associationKey, action.getKey() );
+			if ( relationship.isEmpty() ) {
+				// create
+				createRelationship( associationKey, action.getValue(), associatedEntityKeyMetadata );
+			}
+			else {
+				log.debugf( "putAssociationOperation: :  associations for  metadata: %s is %d", associationKey.getMetadata(), relationship.size() );
+				// relationship = createRelationship( associationKey, action.getValue(), associatedEntityKeyMetadata );
+			}
+
 		}
 		else {
-			// relationship = createRelationship( associationKey, action.getValue(), associatedEntityKeyMetadata );
+			log.debugf( "putAssociationOperation: no associations for  metadata: %s", associationKey.getMetadata() );
 		}
+
 	}
 
 	private void createRelationship(AssociationKey associationKey, Tuple associationRow, AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
@@ -442,13 +458,29 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 				break;
 			case ASSOCIATION:
 				log.debug( "createRelationship:ASSOCIATION" );
+				createRelationshipWithEntityNode( associationKey, associationRow, associatedEntityKeyMetadata );
 				break;
-			// return findOrCreateRelationshipWithEntityNode( associationKey, associationRow,
-			// associatedEntityKeyMetadata );
 			default:
 				throw new AssertionFailure( "Unrecognized associationKind: " + associationKey.getMetadata().getAssociationKind() );
 		}
 
+	}
+
+	private void createRelationshipWithEntityNode(AssociationKey associationKey, Tuple associationRow,
+			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
+		log.debugf( "createRelationshipWithEntityNode: associationKey.getMetadata(): %s ; associationRow: %s ; associatedEntityKeyMetadata: %s",
+				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
+		// @TODO equals with createRelationshipWithEmbeddedNode?
+		GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow );
+		log.debugf( "createRelationshipWithEntityNode: query: %s", result.getQuery() );
+		try {
+			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getQuery() );
+			QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
+			log.debugf( "createRelationshipWithEntityNode: execute insert query: %d", pstmt.executeUpdate() );
+		}
+		catch (SQLException sqle) {
+			throw log.cannotExecuteQuery( result.getQuery(), sqle );
+		}
 	}
 
 	private void createRelationshipWithEmbeddedNode(AssociationKey associationKey, Tuple associationRow,
@@ -468,8 +500,41 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	}
 
 	@Override
-	public void removeAssociation(AssociationKey key, AssociationContext associationContext) {
-		log.debugf( "removeAssociation: AssociationKey: %s ; AssociationContext: %s", key, associationContext );
+	public void removeAssociation(AssociationKey associationKey, AssociationContext associationContext) {
+		log.debugf( "removeAssociation: AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
+		log.debugf( "removeAssociation: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
+		StringBuilder deleteQuery = null;
+		String columnName = null;
+		switch ( associationKey.getMetadata().getAssociationKind() ) {
+			case EMBEDDED_COLLECTION:
+				log.debug( "removeAssociation:EMBEDDED_COLLECTION" );
+				deleteQuery = new StringBuilder( "delete vertex " );
+				deleteQuery.append( associationKey.getTable() ).append( " where " );
+				columnName = associationKey.getColumnNames()[0];
+				deleteQuery.append( columnName ).append( "=" );
+				EntityKeyUtil.setFieldValue( deleteQuery, associationKey.getColumnValues()[0] );
+				break;
+			case ASSOCIATION:
+				log.debug( "removeAssociation:ASSOCIATION" );
+				deleteQuery = new StringBuilder( "delete vertex " );
+				deleteQuery.append( associationKey.getTable() ).append( " where " );
+				columnName = associationKey.getColumnNames()[0];
+				deleteQuery.append( columnName ).append( "=" );
+				EntityKeyUtil.setFieldValue( deleteQuery, associationKey.getColumnValues()[0] );
+				break;
+			default:
+				throw new AssertionFailure( "Unrecognized associationKind: " + associationKey.getMetadata().getAssociationKind() );
+		}
+
+		log.debugf( "removeAssociation: query: %s ", deleteQuery );
+		try {
+			PreparedStatement pstmt = provider.getConnection().prepareStatement( deleteQuery.toString() );
+			log.debugf( "removeAssociation:AssociationKey: %s. remove: %s", associationKey, pstmt.executeUpdate() );
+		}
+		catch (SQLException e) {
+			throw log.cannotExecuteQuery( deleteQuery.toString(), e );
+		}
+
 	}
 
 	@Override
@@ -482,13 +547,14 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		log.debugf( "NextValueRequest: %s", request );
 		Number nextValue = null;
 		IdSourceType type = request.getKey().getMetadata().getType();
-		if ( IdSourceType.SEQUENCE.equals( type ) ) {
-			String seqName = request.getKey().getMetadata().getName();
-			nextValue = SequenceUtil.getSequence( provider.getConnection(), seqName );
-			log.debugf( "nextValue: %s", nextValue );
-		}
-		else {
-			throw new UnsupportedOperationException( String.format( "Type %s not supported yet!", type ) );
+		switch ( type ) {
+			case SEQUENCE:
+				String seqName = request.getKey().getMetadata().getName();
+				nextValue = SequenceUtil.getSequence( provider.getConnection(), seqName );
+				log.debugf( "nextValue: %s", nextValue );
+				break;
+			default:
+				throw new UnsupportedOperationException( String.format( "Type %s not supported yet!", type ) );
 		}
 		return nextValue;
 	}
@@ -623,7 +689,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	public GridType overrideType(Type type) {
 		log.debugf( "overrideType: %s ; ReturnedClass: %s", type.getName(), type.getReturnedClass() );
 		GridType gridType = null;
-		
+
 		if ( type.getReturnedClass().equals( ORecordId.class ) ) {
 			gridType = ORecordIdGridType.INSTANCE;
 		}

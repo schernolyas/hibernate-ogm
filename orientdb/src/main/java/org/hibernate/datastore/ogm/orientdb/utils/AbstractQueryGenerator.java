@@ -6,20 +6,15 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
-import java.math.BigInteger;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 
 /**
- *
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
  */
 public abstract class AbstractQueryGenerator {
-    
 
 	private static final ThreadLocal<SimpleDateFormat> FORMATTER = new ThreadLocal<SimpleDateFormat>() {
 
@@ -29,12 +24,11 @@ public abstract class AbstractQueryGenerator {
 		}
 	};
 
-	
+	protected static ThreadLocal<SimpleDateFormat> getFormatter() {
+		return FORMATTER;
+	}
 
-    protected static ThreadLocal<SimpleDateFormat> getFormatter() {
-        return FORMATTER;
-    }
-    public static class GenerationResult {
+	public static class GenerationResult {
 
 		private List<Object> preparedStatementParams;
 		private String query;
@@ -53,6 +47,5 @@ public abstract class AbstractQueryGenerator {
 		}
 
 	}
-        
-        
+
 }

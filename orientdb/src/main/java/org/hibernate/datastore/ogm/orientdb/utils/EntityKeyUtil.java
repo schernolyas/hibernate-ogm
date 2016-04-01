@@ -120,26 +120,29 @@ public class EntityKeyUtil {
 	public static boolean isVersionActual(Connection connection, EntityKey key, int version) {
 		String dbKeyName = key.getColumnNames()[0];
 		Object dbKeyValue = key.getColumnValues()[0];
-		boolean exists = false;
+		boolean actual = false;
 		StringBuilder buffer = new StringBuilder();
 		try {
 			Statement stmt = connection.createStatement();
-			buffer.append( "select count(" ).append( dbKeyName ).append( ") from " );
+			buffer.append( "select @version from " );
 			buffer.append( key.getTable() ).append( " where " ).append( dbKeyName );
 			buffer.append( " = " );
 			EntityKeyUtil.setFieldValue( buffer, dbKeyValue );
-			buffer.append( " and @version>=" ).append( version );
 			ResultSet rs = stmt.executeQuery( buffer.toString() );
 			if ( rs.next() ) {
-				long count = rs.getLong( 1 );
-				log.debugf( "isVersionActual: Key: %s ; count: %d", dbKeyName, count );
-				exists = count > 0;
+				int dbVersion = rs.getInt( 1 );
+				log.debugf( "isVersionActual: Key: %s ; dbVersion: %d ;current version: %d", key, dbVersion, version );
+				actual = ( version == 0 ) ? true : ( version >= dbVersion );
+			}
+			else {
+				log.debugf( "isVersionActual: No versions in DB for key: %s ." );
+				actual = true;
 			}
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( buffer.toString(), sqle );
 		}
-		return exists;
+		return actual;
 	}
 
 	public static ORecordId findRid(Connection connection, String className, String businessKeyName, Object businessKeyValue) {
