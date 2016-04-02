@@ -87,6 +87,8 @@ import org.hibernate.datastore.ogm.orientdb.utils.InsertQueryGenerator;
 import org.hibernate.datastore.ogm.orientdb.utils.QueryUtil;
 import org.hibernate.datastore.ogm.orientdb.utils.UpdateQueryGenerator;
 import org.hibernate.datastore.ogm.orientdb.utils.AbstractQueryGenerator.GenerationResult;
+import org.hibernate.datastore.ogm.orientdb.utils.QueryTypeDefiner;
+import org.hibernate.datastore.ogm.orientdb.utils.QueryTypeDefiner.QueryType;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -112,7 +114,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	@Override
 	public Tuple getTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "getTuple:EntityKey: %s ; tupleContext: %s; current thread: %s ", key, tupleContext, Thread.currentThread().getName() );
-		Map<String, Object> dbValuesMap = entityQueries.get( key.getMetadata() ).findEntity( provider.getConnection(), key );
+                Map<String, Object> dbValuesMap = entityQueries.get( key.getMetadata() ).findEntity( provider.getConnection(), key );
 		if ( dbValuesMap == null || dbValuesMap.isEmpty() ) {
 			return null;
 		}
@@ -242,9 +244,9 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 		Connection connection = provider.getConnection();
 		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
 		boolean existsInDB = EntityKeyUtil.existsPrimaryKeyInDB( connection, key );
-		boolean isInsertQuery = !existsInDB;
-		log.debugf( "insertOrUpdateTuple: snapshot.isNew(): %b ,snapshot.isEmpty(): %b; exists in DB: %b; insert query: %b ",
-				snapshot.isNew(), snapshot.isEmpty(), existsInDB, isInsertQuery );
+                QueryType queryType = QueryTypeDefiner.define( existsInDB, snapshot.isNew() );
+		log.debugf( "insertOrUpdateTuple: snapshot.isNew(): %b ,snapshot.isEmpty(): %b; exists in DB: %b; query type: %s ",
+				snapshot.isNew(), snapshot.isEmpty(), existsInDB, queryType );
 
 		StringBuilder queryBuffer = new StringBuilder();
 		String dbKeyName = key.getColumnNames()[0];
@@ -256,33 +258,41 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 			log.debugf( "EntityKey: columnName: %s ;columnValue: %s  (class:%s)", columnName, columnValue, columnValue.getClass().getName() );
 		}
 		List<Object> preparedStatementParams = Collections.emptyList();
-		if ( !isInsertQuery ) {
-			// it is update
-			// check version actual
-			boolean isVersionActual = EntityKeyUtil.isVersionActual( connection, key, (Integer) snapshot.get( OrientDBConstant.SYSTEM_VERSION ) );
+                
+                switch (queryType) {
+                    case INSERT:
+                        log.debugf( "insertOrUpdateTuple:Key: %s is new! Insert new record!", dbKeyName );
+			GenerationResult insertResult = INSERT_QUERY_GENERATOR.generate( key.getTable(), tuple );
+			queryBuffer.append( insertResult.getQuery() );
+			preparedStatementParams = insertResult.getPreparedStatementParams();
+                        break;
+                    case UPDATE:
+                        boolean isVersionActual = EntityKeyUtil.isVersionActual( connection, key, (Integer) snapshot.get( OrientDBConstant.SYSTEM_VERSION ) );
 			log.debugf( "insertOrUpdateTuple:@version: %s. current tread: %s; is version actual : %b",
 					snapshot.get( "@version" ), Thread.currentThread().getName(), isVersionActual );
 			if ( isVersionActual ) {
-				GenerationResult result = UPDATE_QUERY_GENERATOR.generate( key.getTable(), tuple, key );
-				queryBuffer.append( result.getQuery() );
+				GenerationResult updateResult = UPDATE_QUERY_GENERATOR.generate( key.getTable(), tuple, key );
+				queryBuffer.append( updateResult.getQuery() );
 			}
 			else {
 				throw new StaleObjectStateException( key.getTable(), (Serializable) dbKeyValue );
 			}
-		}
-		else {
-			// it is insert with business key which set already
-			log.debugf( "insertOrUpdateTuple:Key: %s is new! Insert new record!", dbKeyName );
-			GenerationResult result = INSERT_QUERY_GENERATOR.generate( key.getTable(), tuple );
-			queryBuffer.append( result.getQuery() );
-			preparedStatementParams = result.getPreparedStatementParams();
-		}
+                        break;
+                    case ERROR:
+                        throw new StaleObjectStateException( key.getTable(), (Serializable) dbKeyValue );
+                }
+		
 		try {
 			log.debugf( "insertOrUpdateTuple:Key: %s  ( %s ). Query: %s ", dbKeyName, dbKeyValue, queryBuffer );
 			PreparedStatement pstmt = connection.prepareStatement( queryBuffer.toString() );
 			log.debugf( "insertOrUpdateTuple: exist parameters for preparedstatement : %d", preparedStatementParams.size() );
 			QueryUtil.setParameters( pstmt, preparedStatementParams );
-			log.debugf( "insertOrUpdateTuple:Key: %s (%s) ;inserted or updated: %d ", dbKeyName, dbKeyValue, pstmt.executeUpdate() );
+                        int updateCount = pstmt.executeUpdate();
+			log.debugf( "insertOrUpdateTuple:Key: %s (%s) ;inserted or updated: %d ", dbKeyName, dbKeyValue, updateCount  );
+                        if (updateCount == 0 && existsInDB) {
+                            //primary key was in DB .... but during prepare query someone remove it from DB.
+                            throw new StaleObjectStateException( key.getTable(), (Serializable) dbKeyValue );
+                        }
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( queryBuffer.toString(), sqle );

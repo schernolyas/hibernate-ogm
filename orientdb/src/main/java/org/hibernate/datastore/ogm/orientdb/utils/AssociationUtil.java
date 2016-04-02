@@ -22,6 +22,10 @@ import com.orientechnologies.orient.core.id.ORecordId;
 public class AssociationUtil {
 
 	private static final Log log = LoggerFactory.getLogger();
+	
+	private AssociationUtil() {
+		
+	}
 
 	public static String getMappedByFieldName(AssociationContext associationContext) {
 		return associationContext.getAssociationTypeContext().getRoleOnMainSide();

@@ -65,7 +65,7 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 				value = dbNameValueMap.get( OrientDBConstant.SYSTEM_VERSION );
 			}
 			else {
-				value = Integer.valueOf( 0 );
+				value = Integer.valueOf( 1 );
 			}
 		}
 		else if ( EntityKeyUtil.isEmbeddedColumn( targetColumnName ) ) {
