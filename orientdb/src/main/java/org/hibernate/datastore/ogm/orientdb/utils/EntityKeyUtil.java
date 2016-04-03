@@ -118,6 +118,7 @@ public class EntityKeyUtil {
 	}
 
 	public static boolean isVersionActual(Connection connection, EntityKey key, int version) {
+		log.debugf( "isVersionActual: key: %s ; version: %d!", key, version );
 		String dbKeyName = key.getColumnNames()[0];
 		Object dbKeyValue = key.getColumnValues()[0];
 		boolean actual = false;

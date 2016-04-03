@@ -27,7 +27,7 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
  */
 public class OrientDBTupleSnapshot implements TupleSnapshot {
 
-	private static Log log = LoggerFactory.getLogger();
+	private static final Log log = LoggerFactory.getLogger();
 	private final Map<String, Object> dbNameValueMap;
 
 	private Map<String, AssociatedEntityKeyMetadata> associatedEntityKeyMetadata;
@@ -61,11 +61,20 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		log.debugf( "targetColumnName: %s", targetColumnName );
 		Object value = null;
 		if ( targetColumnName.equals( OrientDBConstant.SYSTEM_VERSION ) ) {
-			if ( dbNameValueMap.containsKey( "version" ) ) {
+			if ( dbNameValueMap.containsKey( OrientDBConstant.SYSTEM_VERSION ) ) {
 				value = dbNameValueMap.get( OrientDBConstant.SYSTEM_VERSION );
 			}
 			else {
-				value = Integer.valueOf( 1 );
+				value = Integer.valueOf( 0 );
+			}
+			log.debugf( "targetColumnName: %s, value: %d", targetColumnName, value );
+		}
+		else if ( targetColumnName.equals( "version" ) ) {
+			if ( dbNameValueMap.containsKey( OrientDBConstant.SYSTEM_VERSION ) ) {
+				value = dbNameValueMap.get( OrientDBConstant.SYSTEM_VERSION );
+			}
+			else {
+				value = Integer.valueOf( 0 );
 			}
 		}
 		else if ( EntityKeyUtil.isEmbeddedColumn( targetColumnName ) ) {

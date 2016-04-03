@@ -11,18 +11,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import org.apache.log4j.Logger;
+
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.FlushModeType;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
 
+import org.apache.log4j.Logger;
 import org.hibernate.datastore.ogm.orientdb.jpa.BuyingOrder;
 import org.hibernate.datastore.ogm.orientdb.jpa.Customer;
 import org.hibernate.datastore.ogm.orientdb.jpa.Pizza;
@@ -38,7 +40,6 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
-import java.text.MessageFormat;
 
 /**
  * Test checks CRUD for entities with associations (with links with other entities)
@@ -132,26 +133,30 @@ public class OrientDbAssociationTest {
 			Pizza pizza1 = new Pizza();
 			pizza1.setName( "Super Papa" );
 			em.persist( pizza1 );
+			em.refresh( pizza1 );
 
 			Pizza pizza2 = new Pizza();
 			pizza2.setName( "Cheese" );
 			em.persist( pizza2 );
+			em.refresh( pizza2 );
 
 			pizza2.setProducts( new LinkedList<>( Arrays.asList( cheese, olive ) ) );
-			em.merge( pizza2 );
+			pizza2 = em.merge( pizza2 );
 
 			pizza1.setProducts( new LinkedList<>( Arrays.asList( cheese, olive, sausage ) ) );
-			em.merge( pizza1 );
+			pizza1 = em.merge( pizza1 );
 
-			cheese.setPizzas( new LinkedList<Pizza>( Arrays.asList( pizza1, pizza2 ) ) );
-			em.merge( cheese );
-			olive.setPizzas( new LinkedList<Pizza>( Arrays.asList( pizza1, pizza2 ) ) );
-			em.merge( olive );
-			sausage.setPizzas( new LinkedList<Pizza>( Arrays.asList( pizza1 ) ) );
+			cheese.setPizzas( new LinkedList<>( Arrays.asList( pizza1, pizza2 ) ) );
+			cheese = em.merge( cheese );
+			olive.setPizzas( new LinkedList<>( Arrays.asList( pizza1, pizza2 ) ) );
+			olive = em.merge( olive );
+			sausage.setPizzas( new LinkedList<>( Arrays.asList( pizza1 ) ) );
 
+			em.refresh( buyingOrder1 );
 			buyingOrder1.setOwner( customer );
 			em.merge( buyingOrder1 );
 
+			em.refresh( buyingOrder2 );
 			buyingOrder2.setOwner( customer );
 			em.merge( buyingOrder2 );
 
@@ -177,15 +182,16 @@ public class OrientDbAssociationTest {
 			BuyingOrder buyingOrder3 = new BuyingOrder();
 			buyingOrder3.setOrderKey( "4433" );
 			em.persist( buyingOrder3 );
+			em.refresh( buyingOrder3 );
 			Query query = em.createNativeQuery( "select from Customer where name='Ivahoe'", Customer.class );
 			Customer customer = (Customer) query.getResultList().get( 0 );
 
 			buyingOrder3.setOwner( customer );
-			em.merge( buyingOrder3 );
+			buyingOrder3 = em.merge( buyingOrder3 );
 
 			List<BuyingOrder> list = customer.getOrders();
 			list.add( buyingOrder3 );
-			em.merge( customer );
+			customer = em.merge( customer );
 			em.getTransaction().commit();
 
 			em.clear();
@@ -229,9 +235,9 @@ public class OrientDbAssociationTest {
 			}
 			log.debug( MessageFormat.format( "Orders size. old: {0}; new:{1}", customer.getOrders().size(), list.size() ) );
 			customer.setOrders( list );
-			em.merge( customer );
+			customer = em.merge( customer );
 			removeOrder.setOwner( null );
-			em.merge( removeOrder );
+			removeOrder = em.merge( removeOrder );
 			em.getTransaction().commit();
 			em.clear();
 
