@@ -6,6 +6,8 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
+import com.orientechnologies.common.exception.OException;
+import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -29,15 +31,13 @@ public class SequenceUtil {
 			ResultSet rs = stmt.executeQuery( query );
 			if ( rs.next() ) {
 				nextValue = rs.getLong( "sequence" );
-				if ( nextValue.intValue() == 0 ) {
-					// @TODO fixed in 2.2.0-rc1. see https://github.com/orientechnologies/orientdb/issues/5820
-					throw log.cannotExecuteQuery( query, new SQLException( String.format( "Sequence %s not found in the database!", seqName ) ) );
-				}
 			}
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( query, sqle );
-		}
+		} catch (OCommandExecutionException oe) {
+                        throw log.sequenceNotExists( seqName, oe );
+                }
 		return nextValue;
 	}
 }
