@@ -101,7 +101,7 @@ public class OrientDBTestHelper implements TestableGridDialect {
 
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
-		log.infof( "call dropSchemaAndDatabase! db closed: %b " + graphNoTx.isClosed() );
+		log.infof( "call dropSchemaAndDatabase! db closed: %b ", graphNoTx.isClosed() );
 		/*
 		 * if ( graphNoTx.countVertices() > 0 ) { MemoryDBUtil.recrateInMemoryDn( OrientDBSimpleTest.MEMORY_TEST ); }
 		 */
