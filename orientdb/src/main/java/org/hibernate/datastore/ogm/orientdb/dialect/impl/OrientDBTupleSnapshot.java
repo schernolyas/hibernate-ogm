@@ -81,22 +81,29 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 			// @TODO think about optimization
 			EmbeddedColumnInfo ec = new EmbeddedColumnInfo( targetColumnName );
 			ODocument targetDocument = findEmbeddedClass( (ODocument) dbNameValueMap.get( ec.getClassNames().get( 0 ) ), ec );
-			log.debugf( "embedded column. class: %s ; property: %s", targetDocument.getClassName(), ec.getPropertyName() );
-			log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );
-			value = targetDocument.field( ec.getPropertyName() );
+                        if (targetDocument!=null) {
+                            log.debugf( "embedded column. class: %s ; property: %s", targetDocument.getClassName(), ec.getPropertyName() );
+                        } else {
+                            log.debugf( "embedded column.  class not found for property: %s", ec );
+                        }			
+			value = targetDocument!=null ? targetDocument.field( ec.getPropertyName() ) : null;
+                        log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );
 		}
 		else if ( OrientDBConstant.MAPPING_FIELDS.containsKey( targetColumnName ) ) {
 			value = dbNameValueMap.get( OrientDBConstant.MAPPING_FIELDS.get( targetColumnName ) );
 		}
 		else {
-			log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );
-			value = dbNameValueMap.get( targetColumnName );
+                        value = dbNameValueMap.get( targetColumnName );
+			log.debugf( "targetColumnName: %s ; value: %s; class : %s", targetColumnName, value, ( value != null ? value.getClass() : null ) );			
 		}
 		return value;
 	}
 
 	private ODocument findEmbeddedClass(ODocument doc, EmbeddedColumnInfo ec) {
 		ODocument targetDocument = doc;
+                if (targetDocument==null) {
+                    return null;
+                }
 		if ( ec.getClassNames().size() > 1 ) {
 			for ( int i = 1; i < ec.getClassNames().size(); i++ ) {
 				String className = ec.getClassNames().get( i );

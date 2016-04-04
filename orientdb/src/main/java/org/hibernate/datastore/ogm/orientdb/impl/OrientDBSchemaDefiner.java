@@ -309,7 +309,10 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	}
         
         private boolean isTablePerClassInheritance(Table table) {
-            String primaryKeyTableName = table.getPrimaryKey().getTable().getName();
+            if (!table.hasPrimaryKey()) {
+                return false;
+            }
+            String primaryKeyTableName =  table.getPrimaryKey().getTable().getName();
             String tableName = table.getName();
             return !tableName.equals(primaryKeyTableName);
         } 
