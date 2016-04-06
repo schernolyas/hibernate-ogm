@@ -32,6 +32,8 @@ import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.spi.Tuple;
 
 import com.orientechnologies.orient.core.id.ORecordId;
+import com.orientechnologies.orient.core.record.impl.ODocument;
+import org.hibernate.datastore.ogm.orientdb.utils.ODocumentUtil;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -99,12 +101,15 @@ public class OrientDBEntityQueries extends QueriesBase {
 					log.debugf( "%d dbColumnName: %s dbValue class:", i, dbColumnName, ( dbValue != null ? dbValue.getClass() : null ) );
 					log.debugf( "%d dbColumnName: %s ; sql type: %s", i, dbColumnName, rs.getMetaData().getColumnTypeName( dbFieldNo ) );
 					dbValues.put( dbColumnName, dbValue );
-					if ( dbValue != null && dbValue.getClass().equals( Date.class ) ) {
+					if (  dbValue instanceof Date )  {
 						String format = rs.getMetaData().getColumnTypeName( dbFieldNo ).equals( "DATETIME" )
 								? OrientDBConstant.DATETIME_FORMAT
 								: OrientDBConstant.DATE_FORMAT;
 						dbValues.put( dbColumnName, new SimpleDateFormat( format ).format( dbValue ) );
-					}
+					} else if (dbValue instanceof ODocument) {                                            
+                                                dbValues.remove( dbColumnName );
+                                                dbValues.putAll( ODocumentUtil.extractNamesTree( dbColumnName, (ODocument) dbValue ) );
+                                        }
 				}
 				reCastValues( dbValues );
 				log.debugf( " entity values from db:  %s", dbValues );

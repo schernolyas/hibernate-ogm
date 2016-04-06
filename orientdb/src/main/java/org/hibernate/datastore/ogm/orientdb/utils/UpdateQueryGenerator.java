@@ -47,7 +47,7 @@ public class UpdateQueryGenerator extends AbstractQueryGenerator {
 			// process ODocument
 			if ( value instanceof ODocument ) {
 				allValuesMap.remove( fieldName );
-				allValuesMap.putAll( extractNamesTree( fieldName, (ODocument) value ) );
+				allValuesMap.putAll( ODocumentUtil.extractNamesTree( fieldName, (ODocument) value ) );
 			}
 		}
 
@@ -114,19 +114,6 @@ public class UpdateQueryGenerator extends AbstractQueryGenerator {
 		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
 	}
 
-	private Map<String, Object> extractNamesTree(String baseFieldName, ODocument document) {
-		Map<String, Object> map = new LinkedHashMap<>();
-		for ( int i = 0; i < document.fields(); i++ ) {
-			String fieldName = baseFieldName.concat( "." ).concat( document.fieldNames()[i] );
-			Object fieldValue = document.fieldValues()[i];
-			if ( fieldValue instanceof ODocument ) {
-				map.putAll( extractNamesTree( fieldName, (ODocument) fieldValue ) );
-			}
-			else {
-				map.put( fieldName, fieldValue );
-			}
-		}
-		return map;
-	}
+	
 
 }
