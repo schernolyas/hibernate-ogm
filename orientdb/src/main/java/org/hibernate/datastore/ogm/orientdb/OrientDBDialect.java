@@ -555,13 +555,13 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	@Override
 	public Number nextValue(NextValueRequest request) {
 		log.debugf( "NextValueRequest: %s", request );
-		Number nextValue = null;
+		long nextValue = 0;
 		IdSourceType type = request.getKey().getMetadata().getType();
 		switch ( type ) {
 			case SEQUENCE:
 				String seqName = request.getKey().getMetadata().getName();
 				nextValue = SequenceUtil.getSequence( provider.getConnection(), seqName );
-				log.debugf( "nextValue: %s", nextValue );
+				log.debugf( "nextValue: %d", nextValue );
 				break;
 			default:
 				throw new UnsupportedOperationException( String.format( "Type %s not supported yet!", type ) );

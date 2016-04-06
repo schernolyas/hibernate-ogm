@@ -23,8 +23,8 @@ public class SequenceUtil {
 
 	private static final Log log = LoggerFactory.getLogger();
 
-	public static Number getSequence(Connection connection, String seqName) {
-		Number nextValue = null;
+	public static long getSequence(Connection connection, String seqName) {
+		long nextValue = 0;
 		String query = String.format( "select sequence('%s').next()", seqName );
 		try {
 			Statement stmt = connection.createStatement();
@@ -33,11 +33,9 @@ public class SequenceUtil {
 				nextValue = rs.getLong( "sequence" );
 			}
 		}
-		catch (SQLException sqle) {
+		catch (SQLException | OException sqle) {
 			throw log.cannotExecuteQuery( query, sqle );
-		} catch (OCommandExecutionException oe) {
-                        throw log.sequenceNotExists( seqName, oe );
-                }
+		} 
 		return nextValue;
 	}
 }

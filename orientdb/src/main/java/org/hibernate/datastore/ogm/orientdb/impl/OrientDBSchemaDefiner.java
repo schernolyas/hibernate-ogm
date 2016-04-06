@@ -7,6 +7,7 @@
 
 package org.hibernate.datastore.ogm.orientdb.impl;
 
+import com.orientechnologies.common.exception.OException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.MessageFormat;
@@ -159,6 +160,19 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
                 }
 		return query;
 	}
+        public void createSequence (Connection connection, String name, int startValue) {
+            createSequence(connection, name, startValue, 1);
+        }
+        
+        public void createSequence (Connection connection, String name, int startValue, int incValue) {
+            try {
+                    String query = String.format("CREATE SEQUENCE %s TYPE ORDERED START %d INCREMENT %d", name,(startValue==0 ? 0 : startValue-1), incValue);
+                    log.debugf( "query for create sequnce: %s", query);
+                    connection.createStatement().execute(query );
+            } catch (SQLException | OException e) {
+                    throw log.cannotGenerateSequence( name, e );
+            } 
+        }
 
 	private void createEntities(SchemaDefinitionContext context) {
 		// check exists sequence
@@ -166,20 +180,16 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			log.debugf( "default hibernate sequence value: %s", SequenceUtil.getSequence( provider.getConnection(), "hibernate_sequence" ) );
 		}
 		catch (HibernateException he) {
-			// no sequence. try to create it
-			try {
-				provider.getConnection().createStatement().execute( "CREATE SEQUENCE hibernate_sequence TYPE ORDERED START 0" );
-			}
-			catch (SQLException e) {
-				throw log.cannotGenerateSequence( "hibernate_sequence", e );
-			}
+                    createSequence(provider.getConnection(), "hibernate_sequence", 0, 1);
 		}
                 
                 for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
 			Set<String> tables = new HashSet<>();
                         for (Sequence sequence : namespace.getSequences()) {
-                            log.debugf( "sequence.getName(): %s", sequence.getName() );                        
+                            log.debugf( "sequence.getName(): %s", sequence.getName() );
+                            createSequence(provider.getConnection(), sequence.getName().getSequenceName().getCanonicalName(), 
+                                    sequence.getInitialValue());
                         }
                         
 			for ( Table table : namespace.getTables() ) {
