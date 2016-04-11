@@ -20,7 +20,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 public interface Log extends org.hibernate.ogm.util.impl.Log {
 
 	@Message(id = 1700, value = "Cannot create class %s")
-	HibernateException cannotGenerateVertexClass(String className, @Cause Exception cause);
+	HibernateException cannotGenerateClass(String className, @Cause Exception cause);
 
 	@Message(id = 1701, value = "Cannot create property %s for class %s")
 	HibernateException cannotGenerateProperty(String propertyName, String className, @Cause Exception cause);
@@ -54,7 +54,13 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 
 	@Message(id = 1711, value = "Cannot parse embedded class for column %s. JSON %s")
 	HibernateException cannotParseEmbeddedClass(String column, String json, @Cause Exception cause);
-        
-        @Message(id = 1712, value = "Sequence %s not exists.")
-	HibernateException sequenceNotExists(String sequenceName,@Cause Exception cause);
+
+	@Message(id = 1712, value = "Sequence %s not exists.")
+	HibernateException sequenceNotExists(String sequenceName, @Cause Exception cause);
+
+	@Message(id = 1713, value = "Cannot create srored procedure %s .")
+	HibernateException cannotCreateStoredProcedure(String storedProcName, @Cause Exception cause);
+
+	@Message(id = 1714, value = "Cannot execute srored procedure %s .")
+	HibernateException cannotExecuteStoredProcedure(String storedProcName, @Cause Exception cause);
 }

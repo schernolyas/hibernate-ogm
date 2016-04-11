@@ -50,7 +50,7 @@ public class InsertQueryGenerator extends AbstractQueryGenerator {
 				continue;
 			}
 			log.debugf( "createJSON: Column %s; value: %s (class: %s) ", columnName, columnValue, ( columnValue != null ? columnValue.getClass() : null ) );
-                         if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
+			if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
 				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
 				if ( !result.getJson().containsKey( ec.getClassNames().get( 0 ) ) ) {
 					JSONObject embeddedFieldValue = createDefaultEmbeddedRow( ec.getClassNames().get( 0 ) );
@@ -58,7 +58,7 @@ public class InsertQueryGenerator extends AbstractQueryGenerator {
 				}
 				setJsonValue( result, ec, columnValue );
 			}
-			else if ( columnValue!=null && OrientDBConstant.BASE64_TYPES.contains( columnValue.getClass() ) ) {
+			else if ( columnValue != null && OrientDBConstant.BASE64_TYPES.contains( columnValue.getClass() ) ) {
 				if ( columnValue instanceof BigInteger ) {
 					result.getJson().put( columnName, new String( Base64.encodeBase64( ( (BigInteger) columnValue ).toByteArray() ) ) );
 				}
@@ -89,10 +89,10 @@ public class InsertQueryGenerator extends AbstractQueryGenerator {
 	}
 
 	private void setJsonValue(QueryResult result, EmbeddedColumnInfo ec, Object value) {
-            log.debugf( "setJsonValue. EmbeddedColumnInfo: %s", ec );
+		log.debugf( "setJsonValue. EmbeddedColumnInfo: %s", ec );
 		JSONObject json = (JSONObject) result.getJson().get( ec.getClassNames().get( 0 ) );
 		for ( int i = 1; i < ec.getClassNames().size(); i++ ) {
-                    log.debugf( "setJsonValue. index: %d; className: %s",i,ec.getClassNames().get( i ));
+			log.debugf( "setJsonValue. index: %d; className: %s", i, ec.getClassNames().get( i ) );
 			if ( !json.containsKey( ec.getClassNames().get( i ) ) ) {
 				json.put( ec.getClassNames().get( i ), createDefaultEmbeddedRow( ec.getClassNames().get( i ) ) );
 			}

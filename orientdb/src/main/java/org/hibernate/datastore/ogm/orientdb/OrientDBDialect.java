@@ -94,7 +94,7 @@ import org.hibernate.datastore.ogm.orientdb.utils.QueryTypeDefiner.QueryType;
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>,
-		ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -319,7 +319,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		else {
 			// use business key. get new id from sequence
 			String seqName = OrientDBSchemaDefiner.generateSeqName( entityKeyMetadata.getTable(), dbKeyName );
-			dbKeyValue = (Long) SequenceUtil.getSequence( connection, seqName );
+			dbKeyValue = (Long) SequenceUtil.getNextSequenceValue( connection, seqName );
 			tuple.put( dbKeyName, dbKeyValue );
 		}
 		InsertQueryGenerator.GenerationResult result = INSERT_QUERY_GENERATOR.generate( entityKeyMetadata.getTable(), tuple );
@@ -560,12 +560,20 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		switch ( type ) {
 			case SEQUENCE:
 				String seqName = request.getKey().getMetadata().getName();
-				nextValue = SequenceUtil.getSequence( provider.getConnection(), seqName );
-				log.debugf( "nextValue: %d", nextValue );
+				nextValue = SequenceUtil.getNextSequenceValue( provider.getConnection(), seqName );
+
 				break;
-			default:
-				throw new UnsupportedOperationException( String.format( "Type %s not supported yet!", type ) );
+			case TABLE:
+				String seqTableName = request.getKey().getMetadata().getName();
+				String pkColumnName = request.getKey().getMetadata().getKeyColumnName();
+				String valueColumnName = request.getKey().getMetadata().getValueColumnName();
+				String pkColumnValue = (String) request.getKey().getColumnValues()[0];
+				log.debugf( "seqTableName:%s, pkColumnName:%s, pkColumnValue:%s, valueColumnName:%s",
+						seqTableName, pkColumnName, pkColumnValue, valueColumnName );
+				nextValue = SequenceUtil.getNextTableValue( provider.getConnection(), seqTableName, pkColumnName, pkColumnValue, valueColumnName,
+						request.getInitialValue(), request.getIncrement() );
 		}
+		log.debugf( "nextValue: %d", nextValue );
 		return nextValue;
 	}
 

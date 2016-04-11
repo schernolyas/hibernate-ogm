@@ -71,6 +71,11 @@ import org.hibernate.type.YesNoType;
 import org.hibernate.usertype.UserType;
 
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.CharBuffer;
 import org.hibernate.boot.model.relational.Sequence;
 import org.hibernate.type.ComponentType;
 
@@ -146,59 +151,89 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		RELATIONS_TYPES = Collections.unmodifiableSet( set2 );
 
 	}
-        private String createClassQuery(String tableName) {
-            return String.format( "create class %s extends V", tableName );
-        }
+
+	private String createClassQuery(String tableName) {
+		return String.format( "create class %s extends V", tableName );
+	}
 
 	private String createClassQuery(Table table) {
-                String query = null;
-                if (isTablePerClassInheritance(table)) {
-                    query = String.format( "create class %s extends %s", table.getName(), table.getPrimaryKey().getTable().getName() );
-                    
-                } else {
-                    query = String.format( "create class %s extends V", table.getName() );
-                }
+		String query = null;
+		if ( isTablePerClassInheritance( table ) ) {
+			query = String.format( "create class %s extends %s", table.getName(), table.getPrimaryKey().getTable().getName() );
+
+		}
+		else {
+			query = String.format( "create class %s extends V", table.getName() );
+		}
 		return query;
 	}
-        public void createSequence (Connection connection, String name, int startValue) {
-            createSequence(connection, name, startValue, 1);
-        }
-        
-        public void createSequence (Connection connection, String name, int startValue, int incValue) {
-            try {
-                    String query = String.format("CREATE SEQUENCE %s TYPE ORDERED START %d INCREMENT %d", name,(startValue==0 ? 0 : startValue-1), incValue);
-                    log.debugf( "query for create sequnce: %s", query);
-                    connection.createStatement().execute(query );
-            } catch (SQLException | OException e) {
-                    throw log.cannotGenerateSequence( name, e );
-            } 
-        }
+
+	private void createSequence(Connection connection, String name, int startValue, int incValue) {
+		try {
+			String query = String.format( "CREATE SEQUENCE %s TYPE ORDERED START %d INCREMENT %d", name, ( startValue == 0 ? 0 : startValue - 1 ), incValue );
+			log.debugf( "query for create sequnce: %s", query );
+			connection.createStatement().execute( query );
+		}
+		catch (SQLException | OException e) {
+			throw log.cannotGenerateSequence( name, e );
+		}
+	}
+
+	public static void createTableSequence(Connection connection, String seqTable, String pkColumnName, String pkColumnValue, String valueColumnName) {
+		try {
+			connection.createStatement().execute( String.format( "create class %s extends V", seqTable ) );
+			connection.createStatement().execute( String.format( "create property %s.%s string ", seqTable, pkColumnName ) );
+			connection.createStatement().execute( String.format( "create property %s.%s long ", seqTable, valueColumnName ) );
+			connection.createStatement().execute( String.format( "create index %s.%s unique ", seqTable, pkColumnName ) );
+		}
+		catch (SQLException | OException e) {
+			throw log.cannotGenerateClass( seqTable, e );
+		}
+	}
+
+	private void createGetTableSeqValueFunc(Connection connection) {
+		try {
+			InputStream is = OrientDBSchemaDefiner.class.getResourceAsStream( "getTableSeq.sql" );
+			Reader reader = new InputStreamReader( is, "utf-8" );
+			char[] chars = new char[2000];
+			CharBuffer buffer = CharBuffer.wrap( chars );
+			int realReadChars = reader.read( buffer );
+			log.debugf( "getTableSeq query: %s ; realReadChars: %d", new String( buffer.array() ).trim(), realReadChars );
+			connection.createStatement().execute( new String( buffer.array() ).trim() );
+		}
+		catch (SQLException | OException | IOException e) {
+			log.error( "Error!", e );
+			throw log.cannotCreateStoredProcedure( "getTableSeq", e );
+		}
+	}
 
 	private void createEntities(SchemaDefinitionContext context) {
 		// check exists sequence
 		try {
-			log.debugf( "default hibernate sequence value: %s", SequenceUtil.getSequence( provider.getConnection(), "hibernate_sequence" ) );
+			log.debugf( "default hibernate sequence value: %s", SequenceUtil.getNextSequenceValue( provider.getConnection(), "hibernate_sequence" ) );
 		}
 		catch (HibernateException he) {
-                    createSequence(provider.getConnection(), "hibernate_sequence", 0, 1);
+			createSequence( provider.getConnection(), "hibernate_sequence", 0, 1 );
 		}
-                
-                for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
+
+		createGetTableSeqValueFunc( provider.getConnection() );
+
+		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
 			Set<String> tables = new HashSet<>();
-                        for (Sequence sequence : namespace.getSequences()) {
-                            log.debugf( "sequence.getName(): %s", sequence.getName() );
-                            createSequence(provider.getConnection(), sequence.getName().getSequenceName().getCanonicalName(), 
-                                    sequence.getInitialValue());
-                        }
-                        
+			for ( Sequence sequence : namespace.getSequences() ) {
+				log.debugf( "sequence.getName(): %s", sequence.getName() );
+				createSequence( provider.getConnection(), sequence.getName().getSequenceName().getCanonicalName(),
+						sequence.getInitialValue(), sequence.getIncrementSize() );
+			}
+
 			for ( Table table : namespace.getTables() ) {
 				log.debugf( "table name: %s, abstract union table: %b; physical table: %b; abstract table: %b ",
-						table.getName(), table.isAbstractUnionTable(), table.isPhysicalTable(),table.isAbstract() );
+						table.getName(), table.isAbstractUnionTable(), table.isPhysicalTable(), table.isAbstract() );
 				log.debugf( "QualifiedTableName: ObjectName: %s; TableName:%s ",
 						table.getQualifiedTableName().getObjectName(), table.getQualifiedTableName().getTableName() );
-                                
-                                boolean isMappingTable = isMapingTable( table );
+
+				boolean isMappingTable = isMapingTable( table );
 				boolean isEmbeddedListTableName = isEmbeddedListTable( table );
 				String tableName = table.getName();
 
@@ -217,7 +252,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 								tables.add( className );
 							}
 							catch (SQLException e) {
-								throw log.cannotGenerateVertexClass( table.getName(), e );
+								throw log.cannotGenerateClass( table.getName(), e );
 							}
 						}
 					}
@@ -236,7 +271,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						tables.add( tableName );
 					}
 					catch (SQLException e) {
-						throw log.cannotGenerateVertexClass( table.getName(), e );
+						throw log.cannotGenerateClass( table.getName(), e );
 					}
 				}
 
@@ -303,7 +338,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						}
 					}
 				}
-				if ( table.hasPrimaryKey() && !isTablePerClassInheritance(table)) {                                        
+				if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table ) ) {
 					PrimaryKey primaryKey = table.getPrimaryKey();
 					if ( primaryKey != null ) {
 						log.debugf( "primaryKey: %s ", primaryKey.getTable().getName() );
@@ -317,15 +352,15 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 
 	}
-        
-        private boolean isTablePerClassInheritance(Table table) {
-            if (!table.hasPrimaryKey()) {
-                return false;
-            }
-            String primaryKeyTableName =  table.getPrimaryKey().getTable().getName();
-            String tableName = table.getName();
-            return !tableName.equals(primaryKeyTableName);
-        } 
+
+	private boolean isTablePerClassInheritance(Table table) {
+		if ( !table.hasPrimaryKey() ) {
+			return false;
+		}
+		String primaryKeyTableName = table.getPrimaryKey().getTable().getName();
+		String tableName = table.getName();
+		return !tableName.equals( primaryKeyTableName );
+	}
 
 	private void createPrimaryKey(Connection connection, PrimaryKey primaryKey) {
 		String table = primaryKey.getTable().getName();

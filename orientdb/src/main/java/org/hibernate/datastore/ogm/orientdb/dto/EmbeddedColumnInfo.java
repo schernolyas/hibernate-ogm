@@ -47,8 +47,8 @@ public class EmbeddedColumnInfo {
 		return classNamesAdd;
 	}
 
-        @Override
-        public String toString() {
-            return "EmbeddedColumnInfo{" + "classNames=" + classNames + ", propertyName=" + propertyName + ", classNamesAdd=" + classNamesAdd + '}';
-        }
+	@Override
+	public String toString() {
+		return "EmbeddedColumnInfo{" + "classNames=" + classNames + ", propertyName=" + propertyName + ", classNamesAdd=" + classNamesAdd + '}';
+	}
 }

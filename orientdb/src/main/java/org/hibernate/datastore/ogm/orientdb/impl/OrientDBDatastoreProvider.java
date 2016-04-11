@@ -36,7 +36,7 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 public class OrientDBDatastoreProvider extends BaseDatastoreProvider
-		implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
+implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	private static boolean isInmemoryDB = false;
 	private static Log log = LoggerFactory.getLogger();

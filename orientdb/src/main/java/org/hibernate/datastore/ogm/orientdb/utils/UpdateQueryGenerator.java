@@ -114,6 +114,4 @@ public class UpdateQueryGenerator extends AbstractQueryGenerator {
 		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
 	}
 
-	
-
 }
