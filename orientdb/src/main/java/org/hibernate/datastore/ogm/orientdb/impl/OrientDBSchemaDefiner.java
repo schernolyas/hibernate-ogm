@@ -71,6 +71,7 @@ import org.hibernate.type.YesNoType;
 import org.hibernate.usertype.UserType;
 
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
+import com.orientechnologies.orient.core.exception.OSequenceException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -173,7 +174,9 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			String query = String.format( "CREATE SEQUENCE %s TYPE ORDERED START %d INCREMENT %d", name, ( startValue == 0 ? 0 : startValue - 1 ), incValue );
 			log.debugf( "query for create sequnce: %s", query );
 			connection.createStatement().execute( query );
-		}
+		} catch (OSequenceException ose ) {
+                    log.warnf("OSequenceException: %s",ose.getMessage());                    
+                }
 		catch (SQLException | OException e) {
 			throw log.cannotGenerateSequence( name, e );
 		}
