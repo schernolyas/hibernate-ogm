@@ -19,8 +19,8 @@ import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
-import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 import com.tinkerpop.blueprints.impls.orient.OrientVertexType;
 
 /**
@@ -31,7 +31,7 @@ public class MemoryDBUtil {
 	private static final Logger LOG = Logger.getLogger( MemoryDBUtil.class.getName() );
 	private static OrientGraphFactory factory;
 
-	public static OrientGraphNoTx recrateInMemoryDn(String url) {
+	public static OrientGraph recrateInMemoryDn(String url) {
 		if ( getOrientGraphFactory().exists() ) {
 			getOrientGraphFactory().drop();
 			getOrientGraphFactory().close();
@@ -40,7 +40,7 @@ public class MemoryDBUtil {
 	};
 
 	@Deprecated
-	private static void addCommonProperties(OrientGraphNoTx graph, OrientVertexType type) {
+	private static void addCommonProperties(OrientGraph graph, OrientVertexType type) {
 		type.createProperty( "bKey", OType.LONG );
 		LOG.log( Level.INFO, "Create unique index like primary key for {0}", type.getName() );
 		String indexCommand = "CREATE INDEX " + type.getName() + "PrimaryIndex ON " + type.getName() + "(bKey) UNIQUE";
@@ -53,11 +53,11 @@ public class MemoryDBUtil {
 
 	}
 
-	public static OrientGraphNoTx createDbFactory(String url) {
+	public static OrientGraph createDbFactory(String url) {
 		factory = new OrientGraphFactory( url );
 		// see https://github.com/orientechnologies/orientdb/issues/5688
 		factory.setStandardElementConstraints( false );
-		return factory.getNoTx();
+                return factory.getTx();
 	}
 
 	public static OrientGraphFactory getOrientGraphFactory() {
@@ -70,7 +70,7 @@ public class MemoryDBUtil {
 		Map<String, List<ORecordId>> idMap = new HashMap<>();
 		try {
 			// System.setProperty("ORIENTDB_HOME", "./target");
-			OrientGraphNoTx graph = createDbFactory( url );
+			OrientGraph graph = createDbFactory( url );
 
 			// vertex classes
 			OrientVertexType pizzaType = graph.createVertexType( "Pizza" );

@@ -6,6 +6,8 @@
  */
 package org.hibernate.datastore.ogm.orientdb.impl;
 
+import com.orientechnologies.orient.core.tx.OTransactionNoTx;
+import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -31,12 +33,49 @@ import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
+import org.hibernate.datastore.ogm.orientdb.transaction.impl.OrientDBJtaTransactionCoordinator;
+import org.hibernate.datastore.ogm.orientdb.transaction.impl.OrientDbTransactionCoordinatorBuilder;
+import org.hibernate.resource.transaction.TransactionCoordinatorBuilder;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
+    private final ThreadLocal<Connection> connectionHolder = new ThreadLocal<Connection>() {
+        private Connection connection;
+
+        @Override
+        protected Connection initialValue() {
+            try {
+                log.debugf("create connection for thread %s", Thread.currentThread().getName());
+            connection = DriverManager.getConnection( jdbcUrl, info );
+            connection.setAutoCommit( false );
+	    setDateFormats( connection );
+            //OrientJdbcConnection oc = (OrientJdbcConnection) connection;
+            //oc.getDatabase().activateOnCurrentThread();
+            } catch (SQLException sqle) {
+                    throw log.cannotCreateConnection(sqle);
+                }
+            return connection; 
+        }
+        
+        @Override
+        public Connection get() {
+             log.debugf("get connection for thread %s", Thread.currentThread().getName());
+             if (connection==null) {
+                 connection = initialValue();
+             }
+             /*OrientJdbcConnection oc = (OrientJdbcConnection) connection;
+             if (oc.getDatabase().getTransaction() instanceof OTransactionNoTx) {
+                 log.debug("no transaction");
+             } else {
+                 log.debugf("transaction: %s",oc.getDatabase().getTransaction());
+                 
+             } */
+            return connection; 
+        }
+    };
 
 	private static boolean isInmemoryDB = false;
 	private static Log log = LoggerFactory.getLogger();
@@ -45,8 +84,8 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 	private ServiceRegistryImplementor registry;
 	private JtaPlatform jtaPlatform;
 	private JndiService jndiService;
-
-	private Connection connection;
+        private  String jdbcUrl;
+        private Properties info;
 
 	@Override
 	public Class<? extends GridDialect> getDefaultDialect() {
@@ -59,26 +98,22 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 		try {
 			PropertyReaderContext<String> jdbcUrlPropery = propertyReader.property( "javax.persistence.jdbc.url", String.class );
 			if ( jdbcUrlPropery != null ) {
-				String jdbcUrl = jdbcUrlPropery.getValue();
+				jdbcUrl = jdbcUrlPropery.getValue();
 				log.warn( "jdbcUrl:" + jdbcUrl );
 				Class.forName( propertyReader.property( "javax.persistence.jdbc.driver", String.class ).getValue() ).newInstance();
-				Properties info = new Properties();
+				info = new Properties();
 				info.put( "user", propertyReader.property( "javax.persistence.jdbc.user", String.class ).getValue() );
 				info.put( "password", propertyReader.property( "javax.persistence.jdbc.password", String.class ).getValue() );
-
 				createInMemoryDB();
-
-				connection = DriverManager.getConnection( jdbcUrl, info );
-				setDateFormats( connection );
 			}
-
+                        
 		}
 		catch (Exception e) {
 			throw log.unableToStartDatastoreProvider( e );
 		}
 	}
 
-	private void setDateFormats(Connection connection) {
+	private static void setDateFormats(Connection connection) {
 		String[] queries = new String[]{ "ALTER DATABASE DATETIMEFORMAT \"" + OrientDBConstant.DATETIME_FORMAT + "\"",
 				"ALTER DATABASE DATEFORMAT \"" + OrientDBConstant.DATE_FORMAT + "\"" };
 		for ( String query : queries ) {
@@ -110,13 +145,11 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	}
 
-	public Connection getConnection() {
-		return connection;
+	public Connection getConnection()  {
+                return connectionHolder.get();                
 	}
 
-	public void setConnection(Connection connection) {
-		this.connection = connection;
-	}
+	
 
 	@Override
 	public void stop() {
@@ -132,13 +165,14 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	@Override
 	public void configure(Map cfg) {
-		log.debug( "config map:" + cfg.toString() );
+		log.debugf( "config map: %s" ,cfg.toString() );
 		propertyReader = new ConfigurationPropertyReader( cfg );
 
 	}
 
 	@Override
 	public void injectServices(ServiceRegistryImplementor serviceRegistry) {
+                log.debug( "injectServices");
 		this.registry = serviceRegistry;
 		jtaPlatform = serviceRegistry.getService( JtaPlatform.class );
 		jndiService = serviceRegistry.getService( JndiService.class );
@@ -148,5 +182,9 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 	public Class<? extends SchemaDefiner> getSchemaDefinerType() {
 		return OrientDBSchemaDefiner.class;
 	}
-
-}
+        
+        @Override
+	public TransactionCoordinatorBuilder getTransactionCoordinatorBuilder(TransactionCoordinatorBuilder coordinatorBuilder) {
+		return new OrientDbTransactionCoordinatorBuilder( coordinatorBuilder, this );
+	}
+}        

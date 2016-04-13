@@ -63,4 +63,7 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 
 	@Message(id = 1714, value = "Cannot execute srored procedure %s .")
 	HibernateException cannotExecuteStoredProcedure(String storedProcName, @Cause Exception cause);
+        
+        @Message(id = 1715, value = "Cannot create connection.")
+	HibernateException cannotCreateConnection(@Cause Exception cause);
 }

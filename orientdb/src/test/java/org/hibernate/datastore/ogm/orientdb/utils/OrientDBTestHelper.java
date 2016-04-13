@@ -32,7 +32,7 @@ import org.hibernate.ogm.model.spi.TupleSnapshot;
 import org.hibernate.ogm.utils.GridDialectOperationContexts;
 import org.hibernate.ogm.utils.TestableGridDialect;
 
-import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -42,12 +42,12 @@ public class OrientDBTestHelper implements TestableGridDialect {
 	private static final Log log = LoggerFactory.getLogger();
 
 	private static final String JDBC_URL = "jdbc:orient:".concat( OrientDBSimpleTest.MEMORY_TEST );
-	private static OrientGraphNoTx graphNoTx;
+	private static OrientGraph graph;
 
 	public OrientDBTestHelper() {
 		log.info( "call me" );
 		// create OrientDB in memory
-		graphNoTx = MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
+		graph = MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
 
 	}
 
@@ -55,7 +55,7 @@ public class OrientDBTestHelper implements TestableGridDialect {
 	public long getNumberOfEntities(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		Connection connection = provider.getConnection();
-		long result = -1;
+                long result = -1;
 		try {
 			ResultSet rs = connection.createStatement().executeQuery( "select count(@rid) as all_rows from V" );
 			if ( rs.next() ) {
@@ -85,7 +85,7 @@ public class OrientDBTestHelper implements TestableGridDialect {
 
 	@Override
 	public Map<String, Object> extractEntityTuple(SessionFactory sessionFactory, EntityKey key) {
-		Map<String, Object> tuple = new HashMap<String, Object>();
+		Map<String, Object> tuple = new HashMap<>();
 		GridDialect dialect = getDialect( sessionFactory );
 		TupleSnapshot snapshot = dialect.getTuple( key, GridDialectOperationContexts.emptyTupleContext() ).getSnapshot();
 		for ( String column : snapshot.getColumnNames() ) {
@@ -101,7 +101,7 @@ public class OrientDBTestHelper implements TestableGridDialect {
 
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
-		log.infof( "call dropSchemaAndDatabase! db closed: %b ", graphNoTx.isClosed() );
+		log.infof( "call dropSchemaAndDatabase! db closed: %b ", graph.isClosed() );
 		/*
 		 * if ( graphNoTx.countVertices() > 0 ) { MemoryDBUtil.recrateInMemoryDn( OrientDBSimpleTest.MEMORY_TEST ); }
 		 */

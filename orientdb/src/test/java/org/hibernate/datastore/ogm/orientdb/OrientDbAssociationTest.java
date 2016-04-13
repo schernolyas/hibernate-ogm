@@ -39,7 +39,7 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 
 /**
  * Test checks CRUD for entities with associations (with links with other entities)
@@ -52,11 +52,11 @@ public class OrientDbAssociationTest {
 	private static final Logger log = Logger.getLogger( OrientDbAssociationTest.class.getName() );
 	private static EntityManager em;
 	private static EntityManagerFactory emf;
-	private static OrientGraphNoTx graphNoTx;
+	private static OrientGraph graph;
 
 	@BeforeClass
 	public static void setUpClass() {
-		graphNoTx = MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
+		graph = MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
 		emf = Persistence.createEntityManagerFactory( "hibernateOgmJpaUnit" );
 		em = emf.createEntityManager();
 		em.setFlushMode( FlushModeType.COMMIT );
@@ -68,7 +68,7 @@ public class OrientDbAssociationTest {
 			em.close();
 			emf.close();
 		}
-		graphNoTx.shutdown();
+		graph.shutdown();
 		MemoryDBUtil.recrateInMemoryDn( OrientDBSimpleTest.MEMORY_TEST );
 
 	}
@@ -133,12 +133,10 @@ public class OrientDbAssociationTest {
 			Pizza pizza1 = new Pizza();
 			pizza1.setName( "Super Papa" );
 			em.persist( pizza1 );
-			em.refresh( pizza1 );
 
 			Pizza pizza2 = new Pizza();
 			pizza2.setName( "Cheese" );
 			em.persist( pizza2 );
-			em.refresh( pizza2 );
 
 			pizza2.setProducts( new LinkedList<>( Arrays.asList( cheese, olive ) ) );
 			pizza2 = em.merge( pizza2 );
@@ -152,11 +150,9 @@ public class OrientDbAssociationTest {
 			olive = em.merge( olive );
 			sausage.setPizzas( new LinkedList<>( Arrays.asList( pizza1 ) ) );
 
-			em.refresh( buyingOrder1 );
 			buyingOrder1.setOwner( customer );
 			em.merge( buyingOrder1 );
 
-			em.refresh( buyingOrder2 );
 			buyingOrder2.setOwner( customer );
 			em.merge( buyingOrder2 );
 
@@ -182,7 +178,6 @@ public class OrientDbAssociationTest {
 			BuyingOrder buyingOrder3 = new BuyingOrder();
 			buyingOrder3.setOrderKey( "4433" );
 			em.persist( buyingOrder3 );
-			em.refresh( buyingOrder3 );
 			Query query = em.createNativeQuery( "select from Customer where name='Ivahoe'", Customer.class );
 			Customer customer = (Customer) query.getResultList().get( 0 );
 

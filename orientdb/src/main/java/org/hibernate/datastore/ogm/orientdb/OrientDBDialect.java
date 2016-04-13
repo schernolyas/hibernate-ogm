@@ -114,8 +114,8 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	@Override
 	public Tuple getTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "getTuple:EntityKey: %s ; tupleContext: %s; current thread: %s ", key, tupleContext, Thread.currentThread().getName() );
-		Map<String, Object> dbValuesMap = entityQueries.get( key.getMetadata() ).findEntity( provider.getConnection(), key );
-		if ( dbValuesMap == null || dbValuesMap.isEmpty() ) {
+                Map<String, Object> dbValuesMap = entityQueries.get( key.getMetadata() ).findEntity( provider.getConnection(), key );
+                if ( dbValuesMap == null || dbValuesMap.isEmpty() ) {
 			return null;
 		}
 		return new Tuple(
@@ -241,7 +241,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 
 		log.debugf( "insertOrUpdateTuple:EntityKey: %s ; tupleContext: %s ; tuple: %s ; thread: %s",
 				key, tupleContext, tuple, Thread.currentThread().getName() );
-		Connection connection = provider.getConnection();
+                Connection connection = provider.getConnection();                
 		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
 		boolean existsInDB = EntityKeyUtil.existsPrimaryKeyInDB( connection, key );
 		QueryType queryType = QueryTypeDefiner.define( existsInDB, snapshot.isNew() );
@@ -310,7 +310,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 		String dbKeyName = entityKeyMetadata.getColumnNames()[0];
 		Long dbKeyValue = null;
 		Connection connection = provider.getConnection();
-		String query = null;
+                String query = null;
 
 		if ( dbKeyName.equals( OrientDBConstant.SYSTEM_RID ) ) {
 			// use @RID for key
@@ -343,7 +343,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 		log.debugf( "removeTuple:EntityKey: %s ; tupleContext %s ; current thread: %s",
 				key, tupleContext, Thread.currentThread().getName() );
 		Connection connection = provider.getConnection();
-		StringBuilder queryBuffer = new StringBuilder();
+                StringBuilder queryBuffer = new StringBuilder();
 		String dbKeyName = EntityKeyUtil.findPrimaryKeyName( key );
 		Object dbKeyValue = EntityKeyUtil.findPrimaryKeyValue( key );
 		try {
@@ -362,7 +362,8 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	public Association getAssociation(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "getAssociation:AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
 		EntityKey entityKey = associationKey.getEntityKey();
-		boolean existsPrimaryKey = EntityKeyUtil.existsPrimaryKeyInDB( provider.getConnection(), entityKey );
+                Connection connection =  provider.getConnection();
+                boolean existsPrimaryKey = EntityKeyUtil.existsPrimaryKeyInDB( connection, entityKey );
 		if ( !existsPrimaryKey ) {
 			// Entity now extists
 			return ASSOCIATION_NOT_FOUND;
@@ -372,8 +373,9 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	}
 
 	private Map<RowKey, Tuple> createAssociationMap(AssociationKey associationKey, AssociationContext associationContext) {
-		List<Map<String, Object>> relationships = entityQueries.get( associationKey.getEntityKey().getMetadata() )
-				.findAssociation( provider.getConnection(), associationKey, associationContext );
+            Connection connection = provider.getConnection();
+                List<Map<String, Object>> relationships = entityQueries.get( associationKey.getEntityKey().getMetadata() )
+				.findAssociation( connection, associationKey, associationContext );
 
 		Map<RowKey, Tuple> tuples = new HashMap<>();
 
@@ -439,8 +441,9 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	private void putAssociationOperation(Association association, AssociationKey associationKey, AssociationOperation action,
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
 		log.debugf( "putAssociationOperation: : action: %s ; metadata: %s", action, associationKey.getMetadata() );
-		if ( associationQueries.containsKey( associationKey.getMetadata() ) ) {
-			List<Map<String, Object>> relationship = associationQueries.get( associationKey.getMetadata() ).findRelationship( provider.getConnection(),
+                Connection connection = provider.getConnection();
+                if ( associationQueries.containsKey( associationKey.getMetadata() ) ) {
+			List<Map<String, Object>> relationship = associationQueries.get( associationKey.getMetadata() ).findRelationship( connection,
 					associationKey, action.getKey() );
 			if ( relationship.isEmpty() ) {
 				// create
@@ -449,6 +452,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 			else {
 				log.debugf( "putAssociationOperation: :  associations for  metadata: %s is %d", associationKey.getMetadata(), relationship.size() );
 				// relationship = createRelationship( associationKey, action.getValue(), associatedEntityKeyMetadata );
+                                //throw new UnsupportedOperationException("putAssociationOperation: relations not empty not supported!");
 			}
 
 		}
@@ -526,9 +530,11 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 				break;
 			case ASSOCIATION:
 				log.debug( "removeAssociation:ASSOCIATION" );
-				deleteQuery = new StringBuilder( "delete vertex " );
-				deleteQuery.append( associationKey.getTable() ).append( " where " );
-				columnName = associationKey.getColumnNames()[0];
+                                columnName = associationKey.getColumnNames()[0];
+				deleteQuery = new StringBuilder( "update " );
+				deleteQuery.append( associationKey.getTable() );
+                                deleteQuery.append( " set " ).append( columnName ).append( "=null" );
+                                deleteQuery.append( " where " );
 				deleteQuery.append( columnName ).append( "=" );
 				EntityKeyUtil.setFieldValue( deleteQuery, associationKey.getColumnValues()[0] );
 				break;
@@ -556,11 +562,12 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 	public Number nextValue(NextValueRequest request) {
 		log.debugf( "NextValueRequest: %s", request );
 		long nextValue = 0;
-		IdSourceType type = request.getKey().getMetadata().getType();
+                Connection connection =  provider.getConnection();
+                IdSourceType type = request.getKey().getMetadata().getType();
 		switch ( type ) {
 			case SEQUENCE:
 				String seqName = request.getKey().getMetadata().getName();
-				nextValue = SequenceUtil.getNextSequenceValue( provider.getConnection(), seqName );
+				nextValue = SequenceUtil.getNextSequenceValue( connection, seqName );
 
 				break;
 			case TABLE:
@@ -570,7 +577,7 @@ ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumn
 				String pkColumnValue = (String) request.getKey().getColumnValues()[0];
 				log.debugf( "seqTableName:%s, pkColumnName:%s, pkColumnValue:%s, valueColumnName:%s",
 						seqTableName, pkColumnName, pkColumnValue, valueColumnName );
-				nextValue = SequenceUtil.getNextTableValue( provider.getConnection(), seqTableName, pkColumnName, pkColumnValue, valueColumnName,
+				nextValue = SequenceUtil.getNextTableValue( connection, seqTableName, pkColumnName, pkColumnValue, valueColumnName,
 						request.getInitialValue(), request.getIncrement() );
 		}
 		log.debugf( "nextValue: %d", nextValue );

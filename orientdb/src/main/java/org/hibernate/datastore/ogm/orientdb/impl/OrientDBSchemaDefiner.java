@@ -210,23 +210,23 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	private void createEntities(SchemaDefinitionContext context) {
+	private void createEntities(Connection connection ,SchemaDefinitionContext context) {
 		// check exists sequence
 		try {
-			log.debugf( "default hibernate sequence value: %s", SequenceUtil.getNextSequenceValue( provider.getConnection(), "hibernate_sequence" ) );
+			log.debugf( "default hibernate sequence value: %s", SequenceUtil.getNextSequenceValue( connection, "hibernate_sequence" ) );
 		}
 		catch (HibernateException he) {
-			createSequence( provider.getConnection(), "hibernate_sequence", 0, 1 );
+			createSequence( connection, "hibernate_sequence", 0, 1 );
 		}
 
-		createGetTableSeqValueFunc( provider.getConnection() );
+		createGetTableSeqValueFunc( connection );
 
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
 			Set<String> tables = new HashSet<>();
 			for ( Sequence sequence : namespace.getSequences() ) {
 				log.debugf( "sequence.getName(): %s", sequence.getName() );
-				createSequence( provider.getConnection(), sequence.getName().getSequenceName().getCanonicalName(),
+				createSequence( connection, sequence.getName().getSequenceName().getCanonicalName(),
 						sequence.getInitialValue(), sequence.getIncrementSize() );
 			}
 
@@ -345,7 +345,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					PrimaryKey primaryKey = table.getPrimaryKey();
 					if ( primaryKey != null ) {
 						log.debugf( "primaryKey: %s ", primaryKey.getTable().getName() );
-						createPrimaryKey( provider.getConnection(), primaryKey );
+						createPrimaryKey( connection, primaryKey );
 					}
 					else {
 						log.debugf( "Table %s has not primary key", table.getName() );
@@ -555,7 +555,8 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		SessionFactoryImplementor sessionFactoryImplementor = context.getSessionFactory();
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
 		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
-		createEntities( context );
+                Connection connection =provider.getConnection();
+                createEntities( connection, context );
 	}
 
 	@Override
