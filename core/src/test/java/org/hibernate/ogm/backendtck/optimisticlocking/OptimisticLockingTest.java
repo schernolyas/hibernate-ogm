@@ -19,7 +19,6 @@ import static org.hibernate.ogm.utils.GridDialectType.REDIS_HASH;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 
@@ -43,6 +42,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Test for detecting concurrent updates by dialects which support atomic find/update semantics or have their own
@@ -103,10 +103,8 @@ public class OptimisticLockingTest extends OgmTestCase {
 	 * This tests "real" optimistic locking by means of atomic find-and-modify semantics if supported by the datastore.
 	 */
 	@Test
-	@SkipByGridDialect(
-			value = { HASHMAP, INFINISPAN, EHCACHE, NEO4J, COUCHDB, CASSANDRA, REDIS, REDIS_HASH },
-			comment = "Note that CouchDB has its own optimistic locking scheme, handled by the dialect itself."
-	)
+	@SkipByGridDialect(value = { HASHMAP, INFINISPAN, EHCACHE, NEO4J, COUCHDB, CASSANDRA, REDIS,
+			REDIS_HASH }, comment = "Note that CouchDB has its own optimistic locking scheme, handled by the dialect itself.")
 	public void updatingEntityUsingOldVersionCausesExceptionUsingAtomicFindAndUpdate() throws Throwable {
 		thrown.expectCause( isA( StaleObjectStateException.class ) );
 
@@ -150,10 +148,8 @@ public class OptimisticLockingTest extends OgmTestCase {
 	 * This tests "real" optimistic locking by means of atomic find-and-delete semantics if supported by the datastore.
 	 */
 	@Test
-	@SkipByGridDialect(
-			value = { HASHMAP, INFINISPAN, EHCACHE, NEO4J, COUCHDB, CASSANDRA, REDIS, REDIS_HASH },
-			comment = "Note that CouchDB has its own optimistic locking scheme, handled by the dialect itself."
-	)
+	@SkipByGridDialect(value = { HASHMAP, INFINISPAN, EHCACHE, NEO4J, COUCHDB, CASSANDRA, REDIS,
+			REDIS_HASH }, comment = "Note that CouchDB has its own optimistic locking scheme, handled by the dialect itself.")
 	public void deletingEntityUsingOldVersionCausesExceptionUsingAtomicFindAndDelete() throws Throwable {
 		thrown.expectCause( isA( StaleObjectStateException.class ) );
 
@@ -248,8 +244,9 @@ public class OptimisticLockingTest extends OgmTestCase {
 		}
 	}
 
-	private Future<?> updateInSeparateThread(final Class<? extends Nameable> type, final String id, final String newName, final LatchAction latchAction) throws Exception {
-		return Executors.newSingleThreadExecutor().submit( new Runnable() {
+	private Future<?> updateInSeparateThread(final Class<? extends Nameable> type, final String id, final String newName, final LatchAction latchAction)
+			throws Exception {
+		return ForkJoinPool.commonPool().submit( new Runnable() {
 
 			@Override
 			public void run() {
@@ -271,7 +268,7 @@ public class OptimisticLockingTest extends OgmTestCase {
 	}
 
 	private Future<?> removePlanetInSeparateThread() throws Exception {
-		return Executors.newSingleThreadExecutor( threadFactory ).submit( new Runnable() {
+		return ForkJoinPool.commonPool().submit( new Runnable() {
 
 			@Override
 			public void run() {
@@ -283,7 +280,8 @@ public class OptimisticLockingTest extends OgmTestCase {
 				// load the entity and remove it
 				entity = (Planet) session.get( Planet.class, "planet-1" );
 
-				// the latch makes sure we have loaded the entity in both of the sessions before we're going to delete it
+				// the latch makes sure we have loaded the entity in both of the sessions before we're going to delete
+				// it
 				countDownAndAwaitLatch();
 
 				session.delete( entity );
@@ -378,7 +376,7 @@ public class OptimisticLockingTest extends OgmTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { Planet.class, Pulsar.class };
+		return new Class<?>[]{ Planet.class, Pulsar.class };
 	}
 
 	@SuppressWarnings("serial")
