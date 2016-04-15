@@ -6,6 +6,8 @@
  */
 package org.hibernate.datastore.ogm.orientdb.impl;
 
+import com.orientechnologies.orient.core.tx.OTransactionNoTx;
+import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -31,6 +33,7 @@ import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
+import org.hibernate.datastore.ogm.orientdb.transaction.impl.OrientDBJtaTransactionCoordinator;
 import org.hibernate.datastore.ogm.orientdb.transaction.impl.OrientDbTransactionCoordinatorBuilder;
 import org.hibernate.resource.transaction.TransactionCoordinatorBuilder;
 
@@ -46,13 +49,14 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
         protected Connection initialValue() {
             try {
                 log.debugf("create connection for thread %s", Thread.currentThread().getName());
-                connection = DriverManager.getConnection( jdbcUrl, info );
-                connection.setAutoCommit( false );
-                setDateFormats( connection );            
-            } 
-            catch (SQLException sqle) {
+            connection = DriverManager.getConnection( jdbcUrl, info );
+            connection.setAutoCommit( false );
+	    setDateFormats( connection );
+            //OrientJdbcConnection oc = (OrientJdbcConnection) connection;
+            //oc.getDatabase().activateOnCurrentThread();
+            } catch (SQLException sqle) {
                     throw log.cannotCreateConnection(sqle);
-            }
+                }
             return connection; 
         }
         
@@ -61,7 +65,14 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
              log.debugf("get connection for thread %s", Thread.currentThread().getName());
              if (connection==null) {
                  connection = initialValue();
-             }            
+             }
+             /*OrientJdbcConnection oc = (OrientJdbcConnection) connection;
+             if (oc.getDatabase().getTransaction() instanceof OTransactionNoTx) {
+                 log.debug("no transaction");
+             } else {
+                 log.debugf("transaction: %s",oc.getDatabase().getTransaction());
+                 
+             } */
             return connection; 
         }
     };
