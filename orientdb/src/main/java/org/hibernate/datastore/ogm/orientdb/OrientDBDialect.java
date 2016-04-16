@@ -89,6 +89,7 @@ import org.hibernate.datastore.ogm.orientdb.utils.UpdateQueryGenerator;
 import org.hibernate.datastore.ogm.orientdb.utils.AbstractQueryGenerator.GenerationResult;
 import org.hibernate.datastore.ogm.orientdb.utils.QueryTypeDefiner;
 import org.hibernate.datastore.ogm.orientdb.utils.QueryTypeDefiner.QueryType;
+import org.hibernate.ogm.model.key.spi.AssociationType;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -520,9 +521,11 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		log.debugf( "removeAssociation: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
 		StringBuilder deleteQuery = null;
 		String columnName = null;
+                log.debugf( "removeAssociation:%s",associationKey.getMetadata().getAssociationKind() );
+                log.debugf( "removeAssociation:getRoleOnMainSide:%s", associationContext.getAssociationTypeContext().getRoleOnMainSide() );
+                log.debugf( "removeAssociation:getAssociationType:%s", associationKey.getMetadata().getAssociationType() );
 		switch ( associationKey.getMetadata().getAssociationKind() ) {
-			case EMBEDDED_COLLECTION:
-				log.debug( "removeAssociation:EMBEDDED_COLLECTION" );
+			case EMBEDDED_COLLECTION:				
 				deleteQuery = new StringBuilder( "delete vertex " );
 				deleteQuery.append( associationKey.getTable() ).append( " where " );
 				columnName = associationKey.getColumnNames()[0];
@@ -530,11 +533,10 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 				EntityKeyUtil.setFieldValue( deleteQuery, associationKey.getColumnValues()[0] );
 				break;
 			case ASSOCIATION:
-				log.debug( "removeAssociation:ASSOCIATION" );
 				String tableName = associationKey.getTable();
 				columnName = associationKey.getColumnNames()[0];
 				deleteQuery = new StringBuilder( 100 );
-				if ( tableName.contains( "_" ) ) {
+				if ( associationKey.getMetadata().getAssociationType().equals(AssociationType.BAG) ) {
 					// it is ManyToMany
 					deleteQuery.append( "delete vertex " ).append( tableName );
 				}
