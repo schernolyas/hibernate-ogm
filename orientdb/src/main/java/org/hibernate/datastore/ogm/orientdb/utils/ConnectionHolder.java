@@ -77,4 +77,13 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 		}
 	}
 
+	@Override
+	public void remove() {
+		try {
+			connection.close();
+		}
+		catch (SQLException e) {
+		}
+	}
+
 }
