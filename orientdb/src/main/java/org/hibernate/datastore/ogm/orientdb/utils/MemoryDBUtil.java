@@ -57,7 +57,7 @@ public class MemoryDBUtil {
 		factory = new OrientGraphFactory( url );
 		// see https://github.com/orientechnologies/orientdb/issues/5688
 		factory.setStandardElementConstraints( false );
-                return factory.getTx();
+		return factory.getTx();
 	}
 
 	public static OrientGraphFactory getOrientGraphFactory() {

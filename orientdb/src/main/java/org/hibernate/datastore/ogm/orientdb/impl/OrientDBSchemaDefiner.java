@@ -174,9 +174,10 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			String query = String.format( "CREATE SEQUENCE %s TYPE ORDERED START %d INCREMENT %d", name, ( startValue == 0 ? 0 : startValue - 1 ), incValue );
 			log.debugf( "query for create sequnce: %s", query );
 			connection.createStatement().execute( query );
-		} catch (OSequenceException ose ) {
-                    log.warnf("OSequenceException: %s",ose.getMessage());                    
-                }
+		}
+		catch (OSequenceException ose) {
+			log.warnf( "OSequenceException: %s", ose.getMessage() );
+		}
 		catch (SQLException | OException e) {
 			throw log.cannotGenerateSequence( name, e );
 		}
@@ -210,7 +211,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	private void createEntities(Connection connection ,SchemaDefinitionContext context) {
+	private void createEntities(Connection connection, SchemaDefinitionContext context) {
 		// check exists sequence
 		try {
 			log.debugf( "default hibernate sequence value: %s", SequenceUtil.getNextSequenceValue( connection, "hibernate_sequence" ) );
@@ -341,7 +342,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						}
 					}
 				}
-				if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table ) ) {
+				if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table ) && !isEmbeddedObjectTable( table ) ) {
 					PrimaryKey primaryKey = table.getPrimaryKey();
 					if ( primaryKey != null ) {
 						log.debugf( "primaryKey: %s ", primaryKey.getTable().getName() );
@@ -516,6 +517,10 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return table.getPrimaryKey() == null && tableColumns == 2;
 	}
 
+	private boolean isEmbeddedObjectTable(Table table) {
+		return table.getName().contains( "_" );
+	}
+
 	private boolean isEmbeddedListTable(Table table) {
 		int p1 = table.getName().indexOf( "_" );
 		int p2 = table.getName().indexOf( ".", p1 );
@@ -555,8 +560,8 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		SessionFactoryImplementor sessionFactoryImplementor = context.getSessionFactory();
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
 		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
-                Connection connection =provider.getConnection();
-                createEntities( connection, context );
+		Connection connection = provider.getConnection();
+		createEntities( connection, context );
 	}
 
 	@Override

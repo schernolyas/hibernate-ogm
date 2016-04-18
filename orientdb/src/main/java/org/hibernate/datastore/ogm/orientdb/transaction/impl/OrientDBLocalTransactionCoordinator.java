@@ -41,26 +41,28 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 
 	private void success() {
 		if ( currentOrientDBTransaction != null && currentOrientDBTransaction.isActive() ) {
-                    log.debugf("commit transaction (Id: %d) for database %s  is %d.", 
-                                    currentOrientDBTransaction.getId(),
-                                    currentOrientDBTransaction.getDatabase().getName());
+			log.debugf( "commit transaction (Id: %d) for database %s  is %d.",
+					currentOrientDBTransaction.getId(),
+					currentOrientDBTransaction.getDatabase().getName() );
 			currentOrientDBTransaction.commit();
 			close();
-		} else {
-                    currentOrientDBTransaction = null;
-                }
+		}
+		else {
+			currentOrientDBTransaction = null;
+		}
 	}
 
 	private void failure() {
 		if ( currentOrientDBTransaction != null && currentOrientDBTransaction.isActive() ) {
-                    log.debugf("rollback transaction (Id: %d) for database %s  is %d.", 
-                                    currentOrientDBTransaction.getId(),
-                                    currentOrientDBTransaction.getDatabase().getName());
+			log.debugf( "rollback transaction (Id: %d) for database %s  is %d.",
+					currentOrientDBTransaction.getId(),
+					currentOrientDBTransaction.getDatabase().getName() );
 			currentOrientDBTransaction.rollback();
 			close();
-		}else {
-                    currentOrientDBTransaction = null;
-                }
+		}
+		else {
+			currentOrientDBTransaction = null;
+		}
 	}
 
 	private void close() {
@@ -79,45 +81,46 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 		}
 
 		@Override
-		public void begin() {  
-                    Connection sqlConnection = datastoreProvider.getConnection();
+		public void begin() {
+			Connection sqlConnection = datastoreProvider.getConnection();
 			OrientJdbcConnection orientDbConn = (OrientJdbcConnection) sqlConnection;
-			ODatabaseDocumentTx database = orientDbConn.getDatabase();                        
-                        log.debugf("begin transaction for database %s", database.getName());
-			super.begin();                        
-                        currentOrientDBTransaction =database.activateOnCurrentThread().begin().getTransaction();
-                        if (currentOrientDBTransaction instanceof OTransactionNoTx) {
-                            //no active transaction. create it!!
-                            log.debugf("no active transactions for database %s . Create new transaction!", database.getName());
-                            currentOrientDBTransaction = database.getTransaction();
-                            log.debugf("Id of new transaction for database %s  is %d.", database.getName(),
-                                    currentOrientDBTransaction.getId());
-                        } else {
-                            log.debugf("Id of current transaction for database %s  is %d. (transaction: %s)", database.getName(),
-                                    currentOrientDBTransaction.getId(),currentOrientDBTransaction);
-                            OTransactionOptimistic op = (OTransactionOptimistic) currentOrientDBTransaction;
-                            
-                        }
+			ODatabaseDocumentTx database = orientDbConn.getDatabase();
+			log.debugf( "begin transaction for database %s", database.getName() );
+			super.begin();
+			currentOrientDBTransaction = database.activateOnCurrentThread().begin().getTransaction();
+			if ( currentOrientDBTransaction instanceof OTransactionNoTx ) {
+				// no active transaction. create it!!
+				log.debugf( "no active transactions for database %s . Create new transaction!", database.getName() );
+				currentOrientDBTransaction = database.getTransaction();
+				log.debugf( "Id of new transaction for database %s  is %d.", database.getName(),
+						currentOrientDBTransaction.getId() );
+			}
+			else {
+				log.debugf( "Id of current transaction for database %s  is %d. (transaction: %s)", database.getName(),
+						currentOrientDBTransaction.getId(), currentOrientDBTransaction );
+				OTransactionOptimistic op = (OTransactionOptimistic) currentOrientDBTransaction;
+
+			}
 		}
 
 		@Override
 		public void commit() {
 			try {
-                                log.debugf("commit transaction N %s for database %s. Transaction acvite? %s", 
-                                        String.valueOf(currentOrientDBTransaction.getId()),
-                                        currentOrientDBTransaction.getDatabase().getName(),
-                                        String.valueOf(currentOrientDBTransaction.isActive()));
-                                //if (currentOrientDBTransaction.isActive()) {
-                                    super.commit();
-                                    success();    
-                                //}
-				
+				if ( currentOrientDBTransaction != null && currentOrientDBTransaction.isActive() ) {
+					log.debugf( "commit transaction N %s for database %s. Transaction acvite? %s",
+							String.valueOf( currentOrientDBTransaction.getId() ),
+							currentOrientDBTransaction.getDatabase().getName(),
+							String.valueOf( currentOrientDBTransaction.isActive() ) );
+					super.commit();
+					success();
+				}
+
 			}
 			catch (Exception e) {
-                            log.error("Cannot commit transaction!", e);
-				try {                                    
-				    rollback();
-                                }
+				log.error( "Cannot commit transaction!", e );
+				try {
+					rollback();
+				}
 				catch (Exception re) {
 				}
 				throw e;
@@ -127,17 +130,19 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 		@Override
 		public void rollback() {
 			try {
-                            log.debugf("rollback  transaction N %s for database %s. Transaction acvite? %s", 
-                                        String.valueOf(currentOrientDBTransaction.getId()),
-                                        currentOrientDBTransaction.getDatabase().getName(),
-                                        String.valueOf(currentOrientDBTransaction.isActive()));
-                                if (currentOrientDBTransaction.isActive()) {
-                                    super.rollback();
-                                }				
+				if ( currentOrientDBTransaction != null && currentOrientDBTransaction.isActive() ) {
+					log.debugf( "rollback  transaction N %s for database %s. Transaction acvite? %s",
+							String.valueOf( currentOrientDBTransaction.getId() ),
+							currentOrientDBTransaction.getDatabase().getName(),
+							String.valueOf( currentOrientDBTransaction.isActive() ) );
+					if ( currentOrientDBTransaction.isActive() ) {
+						super.rollback();
+					}
+				}
 			}
-                        catch (Exception e) {
-                            log.error("Cannot rollback transaction!", e);
-                        }
+			catch (Exception e) {
+				log.error( "Cannot rollback transaction!", e );
+			}
 			finally {
 				failure();
 			}
@@ -145,4 +150,3 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 	}
 
 }
-

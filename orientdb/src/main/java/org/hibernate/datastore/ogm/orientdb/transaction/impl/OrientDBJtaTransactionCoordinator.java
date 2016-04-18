@@ -6,19 +6,21 @@
  */
 package org.hibernate.datastore.ogm.orientdb.transaction.impl;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
-import com.orientechnologies.orient.core.tx.OTransaction;
-import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.sql.Connection;
-import java.sql.SQLException;
+
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
+
 import org.hibernate.datastore.ogm.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.transaction.impl.ForwardingTransactionCoordinator;
 import org.hibernate.resource.transaction.TransactionCoordinator;
 import org.hibernate.resource.transaction.spi.TransactionStatus;
+
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.tx.OTransaction;
+import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
@@ -47,7 +49,7 @@ public class OrientDBJtaTransactionCoordinator extends ForwardingTransactionCoor
 	}
 
 	private void join() {
-		Connection sqlConnection = datastoreProvider.getConnection();                
+		Connection sqlConnection = datastoreProvider.getConnection();
 		OrientJdbcConnection orientDbConn = (OrientJdbcConnection) sqlConnection;
 		ODatabaseDocumentTx database = orientDbConn.getDatabase();
 		if ( currentOrientDBTransaction == null && delegate.isActive() ) {

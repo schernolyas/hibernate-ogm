@@ -521,11 +521,11 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		log.debugf( "removeAssociation: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
 		StringBuilder deleteQuery = null;
 		String columnName = null;
-                log.debugf( "removeAssociation:%s",associationKey.getMetadata().getAssociationKind() );
-                log.debugf( "removeAssociation:getRoleOnMainSide:%s", associationContext.getAssociationTypeContext().getRoleOnMainSide() );
-                log.debugf( "removeAssociation:getAssociationType:%s", associationKey.getMetadata().getAssociationType() );
+		log.debugf( "removeAssociation:%s", associationKey.getMetadata().getAssociationKind() );
+		log.debugf( "removeAssociation:getRoleOnMainSide:%s", associationContext.getAssociationTypeContext().getRoleOnMainSide() );
+		log.debugf( "removeAssociation:getAssociationType:%s", associationKey.getMetadata().getAssociationType() );
 		switch ( associationKey.getMetadata().getAssociationKind() ) {
-			case EMBEDDED_COLLECTION:				
+			case EMBEDDED_COLLECTION:
 				deleteQuery = new StringBuilder( "delete vertex " );
 				deleteQuery.append( associationKey.getTable() ).append( " where " );
 				columnName = associationKey.getColumnNames()[0];
@@ -536,8 +536,9 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 				String tableName = associationKey.getTable();
 				columnName = associationKey.getColumnNames()[0];
 				deleteQuery = new StringBuilder( 100 );
-				if ( associationKey.getMetadata().getAssociationType().equals(AssociationType.BAG) ) {
-					// it is ManyToMany
+				if ( associationKey.getMetadata().getAssociationType().equals( AssociationType.BAG ) ||
+						associationKey.getMetadata().getAssociationType().equals( AssociationType.LIST ) ) {
+					// it is ManyToMany or Embedded Collection
 					deleteQuery.append( "delete vertex " ).append( tableName );
 				}
 				else {

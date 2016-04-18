@@ -6,10 +6,7 @@
  */
 package org.hibernate.datastore.ogm.orientdb.impl;
 
-import com.orientechnologies.orient.core.tx.OTransactionNoTx;
-import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Properties;
@@ -18,6 +15,8 @@ import org.hibernate.datastore.ogm.orientdb.OrientDBDialect;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.datastore.ogm.orientdb.transaction.impl.OrientDbTransactionCoordinatorBuilder;
+import org.hibernate.datastore.ogm.orientdb.utils.ConnectionHolder;
 import org.hibernate.datastore.ogm.orientdb.utils.MemoryDBUtil;
 import org.hibernate.engine.jndi.spi.JndiService;
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
@@ -26,6 +25,7 @@ import org.hibernate.ogm.datastore.spi.SchemaDefiner;
 import org.hibernate.ogm.dialect.spi.GridDialect;
 import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 import org.hibernate.ogm.util.configurationreader.spi.PropertyReaderContext;
+import org.hibernate.resource.transaction.TransactionCoordinatorBuilder;
 import org.hibernate.service.spi.Configurable;
 import org.hibernate.service.spi.ServiceRegistryAwareService;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
@@ -33,56 +33,23 @@ import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
-import org.hibernate.datastore.ogm.orientdb.transaction.impl.OrientDbTransactionCoordinatorBuilder;
-import org.hibernate.resource.transaction.TransactionCoordinatorBuilder;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 public class OrientDBDatastoreProvider extends BaseDatastoreProvider
-implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
-    private final ThreadLocal<Connection> connectionHolder = new ThreadLocal<Connection>() {
-        private Connection connection;
-
-        @Override
-        protected Connection initialValue() {
-            try {
-                log.debugf("create connection for thread %s", Thread.currentThread().getName());
-            connection = DriverManager.getConnection( jdbcUrl, info );
-            connection.setAutoCommit( false );
-	    setDateFormats( connection );
-            } catch (SQLException sqle) {
-                    throw log.cannotCreateConnection(sqle);
-                }
-            return connection; 
-        }
-        
-        @Override
-        public Connection get() {
-             log.debugf("get connection for thread %s", Thread.currentThread().getName());
-             if (connection==null) {
-                 connection = initialValue();
-             }
-             OrientJdbcConnection oc = (OrientJdbcConnection) connection;
-             if (oc.getDatabase().getTransaction() instanceof OTransactionNoTx) {
-                 log.debug("no transaction");
-             } else {
-                 log.debugf("transaction: %s",oc.getDatabase().getTransaction());
-                 
-             } 
-            return connection; 
-        }
-    };
+		implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	private static boolean isInmemoryDB = false;
 	private static Log log = LoggerFactory.getLogger();
 	private static OrientGraphFactory factory;
+	private ConnectionHolder connectionHolder;
 	private ConfigurationPropertyReader propertyReader;
 	private ServiceRegistryImplementor registry;
 	private JtaPlatform jtaPlatform;
 	private JndiService jndiService;
-        private  String jdbcUrl;
-        private Properties info;
+	private String jdbcUrl;
+	private Properties info;
 
 	@Override
 	public Class<? extends GridDialect> getDefaultDialect() {
@@ -102,8 +69,9 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 				info.put( "user", propertyReader.property( "javax.persistence.jdbc.user", String.class ).getValue() );
 				info.put( "password", propertyReader.property( "javax.persistence.jdbc.password", String.class ).getValue() );
 				createInMemoryDB();
+				connectionHolder = new ConnectionHolder( jdbcUrl, info );
 			}
-                        
+
 		}
 		catch (Exception e) {
 			throw log.unableToStartDatastoreProvider( e );
@@ -142,11 +110,9 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	}
 
-	public Connection getConnection()  {
-                return connectionHolder.get();                
+	public Connection getConnection() {
+		return connectionHolder.get();
 	}
-
-	
 
 	@Override
 	public void stop() {
@@ -162,14 +128,14 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	@Override
 	public void configure(Map cfg) {
-		log.debugf( "config map: %s" ,cfg.toString() );
+		log.debugf( "config map: %s", cfg.toString() );
 		propertyReader = new ConfigurationPropertyReader( cfg );
 
 	}
 
 	@Override
 	public void injectServices(ServiceRegistryImplementor serviceRegistry) {
-                log.debug( "injectServices");
+		log.debug( "injectServices" );
 		this.registry = serviceRegistry;
 		jtaPlatform = serviceRegistry.getService( JtaPlatform.class );
 		jndiService = serviceRegistry.getService( JndiService.class );
@@ -179,9 +145,9 @@ implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 	public Class<? extends SchemaDefiner> getSchemaDefinerType() {
 		return OrientDBSchemaDefiner.class;
 	}
-        
-        @Override
+
+	@Override
 	public TransactionCoordinatorBuilder getTransactionCoordinatorBuilder(TransactionCoordinatorBuilder coordinatorBuilder) {
 		return new OrientDbTransactionCoordinatorBuilder( coordinatorBuilder, this );
 	}
-}        
+}

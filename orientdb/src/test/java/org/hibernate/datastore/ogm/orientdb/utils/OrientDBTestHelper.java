@@ -8,7 +8,6 @@ package org.hibernate.datastore.ogm.orientdb.utils;
 
 import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -41,7 +40,7 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 public class OrientDBTestHelper implements TestableGridDialect {
 
 	private static final Log log = LoggerFactory.getLogger();
-        private static final String COUNT_QUERY = "select @class,count(@rid) as c from V group by @class";
+	private static final String COUNT_QUERY = "select @class,count(@rid) as c from V group by @class";
 
 	private static final String JDBC_URL = "jdbc:orient:".concat( OrientDBSimpleTest.MEMORY_TEST );
 	private static OrientGraph graph;
@@ -57,15 +56,15 @@ public class OrientDBTestHelper implements TestableGridDialect {
 	public long getNumberOfEntities(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		OrientJdbcConnection connection = (OrientJdbcConnection) provider.getConnection();
-                long result = 0;
+		long result = 0;
 		try {
 			ResultSet rs = connection.createStatement().executeQuery( COUNT_QUERY );
 			while ( rs.next() ) {
-                                String className = rs.getString( 1 );
-                                log.debugf( "Vertex class %s. count: %d", className,rs.getLong( 2 ) );
-                                if (!className.contains("_")) {
-                                   result += rs.getLong( 2 ); 
-                                }
+				String className = rs.getString( 1 );
+				log.debugf( "Vertex class %s. count: %d", className, rs.getLong( 2 ) );
+				if ( !className.contains( "_" ) ) {
+					result += rs.getLong( 2 );
+				}
 			}
 		}
 		catch (SQLException e) {
@@ -78,16 +77,16 @@ public class OrientDBTestHelper implements TestableGridDialect {
 	public long getNumberOfAssociations(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		OrientJdbcConnection connection = (OrientJdbcConnection) provider.getConnection();
-                long result = 0;
-                
+		long result = 0;
+
 		try {
 			ResultSet rs = connection.createStatement().executeQuery( COUNT_QUERY );
 			while ( rs.next() ) {
-                                String className = rs.getString( 1 );
-                                log.debugf( "Vertex class %s. count: %d", className,rs.getLong( 2 ) );
-                                if (className.contains("_")) {
-                                   result += rs.getLong( 2 ); 
-                                }
+				String className = rs.getString( 1 );
+				log.debugf( "Vertex class %s. count: %d", className, rs.getLong( 2 ) );
+				if ( className.contains( "_" ) ) {
+					result += rs.getLong( 2 );
+				}
 			}
 		}
 		catch (SQLException e) {
