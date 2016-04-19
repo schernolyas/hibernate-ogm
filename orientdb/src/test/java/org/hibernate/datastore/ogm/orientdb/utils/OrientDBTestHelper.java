@@ -33,6 +33,7 @@ import org.hibernate.ogm.utils.GridDialectOperationContexts;
 import org.hibernate.ogm.utils.TestableGridDialect;
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
+import org.hibernate.metadata.ClassMetadata;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -51,18 +52,35 @@ public class OrientDBTestHelper implements TestableGridDialect {
 		graph = MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
 
 	}
+        
+        private ClassMetadata searchMetadata(Map<String,ClassMetadata> meta, String simpleClassName) {
+            ClassMetadata metadata = null;
+            for (Map.Entry<String, ClassMetadata> entry : meta.entrySet()) {
+                String currentFullClassName = entry.getKey();
+                ClassMetadata currentMetadata = entry.getValue();
+                if (currentFullClassName.toUpperCase().endsWith(".".concat(simpleClassName.toUpperCase()))) {
+                    metadata = currentMetadata;
+                    break;
+                }                
+            }            
+            return metadata;
+        }
 
 	@Override
 	public long getNumberOfEntities(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		OrientJdbcConnection connection = (OrientJdbcConnection) provider.getConnection();
 		long result = 0;
+                Map<String,ClassMetadata> meta = sessionFactory.getAllClassMetadata();
+                log.debugf( "1.Class set: %s. ", meta.keySet() );        
 		try {
 			ResultSet rs = connection.createStatement().executeQuery( COUNT_QUERY );
 			while ( rs.next() ) {
 				String className = rs.getString( 1 );
 				log.debugf( "Vertex class %s. count: %d", className, rs.getLong( 2 ) );
-				if ( !className.contains( "_" ) ) {
+                                ClassMetadata metadata = searchMetadata(meta, className);
+                                log.debugf( "Metadata for class %s : %s", className, metadata );
+				if ( metadata!=null) {
 					result += rs.getLong( 2 );
 				}
 			}
@@ -78,13 +96,17 @@ public class OrientDBTestHelper implements TestableGridDialect {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		OrientJdbcConnection connection = (OrientJdbcConnection) provider.getConnection();
 		long result = 0;
+                Map<String,ClassMetadata> meta = sessionFactory.getAllClassMetadata();
+                log.debugf( "2.Class set: %s. ", meta.keySet() );        
 
 		try {
 			ResultSet rs = connection.createStatement().executeQuery( COUNT_QUERY );
 			while ( rs.next() ) {
 				String className = rs.getString( 1 );
 				log.debugf( "Vertex class %s. count: %d", className, rs.getLong( 2 ) );
-				if ( className.contains( "_" ) ) {
+                                ClassMetadata metadata = searchMetadata(meta, className);
+                                log.debugf( "Metadata for class %s : %s", className, metadata );
+				if ( metadata == null) {
 					result += rs.getLong( 2 );
 				}
 			}
@@ -122,6 +144,8 @@ public class OrientDBTestHelper implements TestableGridDialect {
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
 		log.infof( "call dropSchemaAndDatabase! db closed: %b ", graph.isClosed() );
+                // show all classes
+                //select expand(classes) from metadata:schema
 		/*
 		 * if ( graphNoTx.countVertices() > 0 ) { MemoryDBUtil.recrateInMemoryDn( OrientDBSimpleTest.MEMORY_TEST ); }
 		 */

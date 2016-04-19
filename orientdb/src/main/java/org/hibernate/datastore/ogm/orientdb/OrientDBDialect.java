@@ -148,95 +148,6 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return embeddedFieldValue;
 	}
 
-	private void setJsonValue(Map<String, JSONObject> embeddedColumnValues, EmbeddedColumnInfo ec, Object value) {
-		JSONObject json = embeddedColumnValues.get( ec.getClassNames().get( 0 ) );
-		for ( int i = 1; i < ec.getClassNames().size(); i++ ) {
-			if ( !json.containsKey( ec.getClassNames().get( i ) ) ) {
-				json.put( ec.getClassNames().get( i ), getDefaultEmbeddedRow( ec.getClassNames().get( i ) ) );
-			}
-			json = (JSONObject) json.get( ec.getClassNames().get( i ) );
-		}
-		json.put( ec.getPropertyName(), value );
-	}
-
-	/**
-	 * util method for settings Tuple's keys to query. If primaryKeyName has value then all columns will add to buffer
-	 * except primaryKeyColumn
-	 *
-	 * @param queryBuffer buffer for query
-	 * @param tuple tuple
-	 * @param primaryKeyName primary key column name
-	 * @return list of query parameters
-	 */
-	@Deprecated
-	private List<Object> addTupleFields(StringBuilder queryBuffer, Tuple tuple, String primaryKeyName, boolean forInsert) {
-		Map<String, JSONObject> embeddedColumnValues = new HashMap<>();
-		LinkedList<Object> preparedStatementParams = new LinkedList<>();
-		int currentBufferLenght = -1;
-		for ( String columnName : tuple.getColumnNames() ) {
-			if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) ||
-					columnName.equals( "version" ) ||
-					( primaryKeyName != null && columnName.equals( primaryKeyName ) ) ) {
-				continue;
-			}
-			log.debugf( "addTupleFields: Set value for column %s ", columnName );
-
-			if ( EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
-				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
-				if ( !forInsert ) {
-					queryBuffer.append( ec.getClassNames().get( 0 ) ).append( "=" );
-				}
-
-				String className = ec.getClassNames().get( 0 );
-				if ( !embeddedColumnValues.containsKey( className ) ) {
-					JSONObject embeddedFieldValue = getDefaultEmbeddedRow( className );
-					embeddedColumnValues.put( className, embeddedFieldValue );
-					currentBufferLenght = queryBuffer.length();
-				}
-
-				queryBuffer.setLength( currentBufferLenght );
-
-				// embeddedColumnValues.get( ec.getClassNames().get( 0 ) ).put( ec.getPropertyName(), tuple.get(
-				// columnName ) );
-				setJsonValue( embeddedColumnValues, ec, tuple.get( columnName ) );
-
-				queryBuffer.append( embeddedColumnValues.get( ec.getClassNames().get( 0 ) ).toJSONString() ).append( " ," );
-			}
-			else {
-				if ( !forInsert ) {
-					queryBuffer.append( columnName ).append( "=" );
-				}
-				if ( tuple.get( columnName ) instanceof byte[] ) {
-					queryBuffer.append( "?" );
-					preparedStatementParams.add( tuple.get( columnName ) );
-				}
-				else if ( tuple.get( columnName ) instanceof BigInteger ) {
-					queryBuffer.append( "?" );
-					BigInteger bi = (BigInteger) tuple.get( columnName );
-					preparedStatementParams.add( bi.toByteArray() );
-				}
-				else if ( tuple.get( columnName ) instanceof BigDecimal ) {
-					queryBuffer.append( "?" );
-					preparedStatementParams.add( tuple.get( columnName ) );
-				}
-				else if ( tuple.get( columnName ) instanceof String ) {
-					queryBuffer.append( "?" );
-					preparedStatementParams.add( tuple.get( columnName ) );
-				}
-				else {
-					EntityKeyUtil.setFieldValue( queryBuffer, tuple.get( columnName ) );
-				}
-				queryBuffer.append( " ," );
-			}
-
-		}
-		if ( forInsert ) {
-			queryBuffer.setLength( queryBuffer.length() - 1 );
-		}
-
-		return preparedStatementParams;
-	}
-
 	@Override
 	public void insertOrUpdateTuple(EntityKey key, Tuple tuple, TupleContext tupleContext) throws TupleAlreadyExistsException {
 
@@ -441,7 +352,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 
 	private void putAssociationOperation(Association association, AssociationKey associationKey, AssociationOperation action,
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
-		log.debugf( "putAssociationOperation: : action: %s ; metadata: %s", action, associationKey.getMetadata() );
+		log.debugf( "putAssociationOperation: : action: %s ; metadata: %s; association:%s", action, associationKey.getMetadata(),association );                
 		Connection connection = provider.getConnection();
 		if ( associationQueries.containsKey( associationKey.getMetadata() ) ) {
 			List<Map<String, Object>> relationship = associationQueries.get( associationKey.getMetadata() ).findRelationship( connection,
@@ -467,6 +378,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	private void createRelationship(AssociationKey associationKey, Tuple associationRow, AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
 		log.debugf( "createRelationship: associationKey.getMetadata(): %s ; associationRow: %s", associationKey.getMetadata(), associationRow );
 		log.debugf( "createRelationship: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
+                log.debugf( "createRelationship: getAssociationType:%s", associationKey.getMetadata().getAssociationType() );
 		switch ( associationKey.getMetadata().getAssociationKind() ) {
 			case EMBEDDED_COLLECTION:
 				log.debug( "createRelationship:EMBEDDED_COLLECTION" );
