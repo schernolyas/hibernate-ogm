@@ -72,13 +72,16 @@ import org.hibernate.usertype.UserType;
 
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.exception.OSequenceException;
+import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.CharBuffer;
 import org.hibernate.boot.model.relational.Sequence;
+import org.hibernate.datastore.ogm.orientdb.constant.OrientDBMapping;
 import org.hibernate.type.ComponentType;
+import org.hibernate.type.descriptor.converter.AttributeConverterTypeAdapter;
 
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
@@ -95,45 +98,10 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 	private static final Set<Class> SEQ_TYPES;
 
-	private static final Map<Class, String> TYPE_MAPPING;
-
 	private OrientDBDatastoreProvider provider;
 
 	static {
-		Map<Class, String> map = new HashMap<>();
-
-		map.put( ByteType.class, "byte" );
-		map.put( IntegerType.class, "integer" );
-		map.put( NumericBooleanType.class, "short" );
-		map.put( ShortType.class, "short" );
-		map.put( LongType.class, "long" );
-		map.put( FloatType.class, "float" );
-		map.put( DoubleType.class, "double" );
-		map.put( DateType.class, "date" );
-		map.put( CalendarDateType.class, "date" );
-		map.put( TimestampType.class, "datetime" );
-		map.put( CalendarType.class, "datetime" );
-		map.put( TimeType.class, "datetime" );
-
-		map.put( BooleanType.class, "boolean" );
-
-		map.put( TrueFalseType.class, "string" );
-		map.put( YesNoType.class, "string" );
-		map.put( StringType.class, "string" );
-		map.put( UrlType.class, "string" );
-
-		map.put( CharacterType.class, "string" );
-		map.put( UUIDBinaryType.class, "string" );
-
-		map.put( BinaryType.class, "binary" ); // byte[]
-		map.put( MaterializedBlobType.class, "binary" ); // byte[]
-		map.put( SerializableToBlobType.class, "binary" ); // byte[]
-		map.put( BigIntegerType.class, "binary" );
-		map.put( MaterializedClobType.class, "binary" );
-
-		map.put( BigDecimalType.class, "decimal" );
-
-		TYPE_MAPPING = Collections.unmodifiableMap( map );
+		
 
 		Map<Class, Class> map1 = new HashMap<>();
 		map1.put( Long.class, LongType.class );
@@ -197,17 +165,25 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 	private void createGetTableSeqValueFunc(Connection connection) {
 		try {
+                        OrientJdbcConnection orientDBConnection = (OrientJdbcConnection) connection;  
+                        Set<String> functions = orientDBConnection.getDatabase().getMetadata().
+                                getFunctionLibrary().getFunctionNames();
+                        log.debugf( " functions : %s",functions );
+                        if (functions.contains("getTableSeqValue".toUpperCase())) {
+                            log.debug( " function 'getTableSeqValue' exists!" );
+                            return;
+                        }
 			InputStream is = OrientDBSchemaDefiner.class.getResourceAsStream( "getTableSeq.sql" );
 			Reader reader = new InputStreamReader( is, "utf-8" );
 			char[] chars = new char[2000];
 			CharBuffer buffer = CharBuffer.wrap( chars );
 			int realReadChars = reader.read( buffer );
-			log.debugf( "getTableSeq query: %s ; realReadChars: %d", new String( buffer.array() ).trim(), realReadChars );
+			log.debugf( "getTableSeqValue query: %s ; realReadChars: %d", new String( buffer.array() ).trim(), realReadChars );
 			connection.createStatement().execute( new String( buffer.array() ).trim() );
 		}
 		catch (SQLException | OException | IOException e) {
 			log.error( "Error!", e );
-			throw log.cannotCreateStoredProcedure( "getTableSeq", e );
+			throw log.cannotCreateStoredProcedure( "getTableSeqValue", e );
 		}
 	}
 
@@ -274,7 +250,8 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						provider.getConnection().createStatement().execute( classQuery );
 						tables.add( tableName );
 					}
-					catch (SQLException e) {
+					catch (SQLException | OException e) {
+                                                log.error("cannotGenerateClass!", e);
 						throw log.cannotGenerateClass( table.getName(), e );
 					}
 				}
@@ -475,15 +452,25 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			if ( userType instanceof EnumType ) {
 				EnumType enumType = (EnumType) type.getUserType();
 				query = MessageFormat.format( CREATE_PROPERTY_TEMPLATE,
-						className, propertyName, TYPE_MAPPING.get( enumType.isOrdinal() ? IntegerType.class : StringType.class ) );
+						className, propertyName, OrientDBMapping.TYPE_MAPPING.get( enumType.isOrdinal() ? IntegerType.class : StringType.class ) );
 
 			}
 			else {
 				throw new UnsupportedOperationException( "Unsupported user type: " + userType.getClass() );
 			}
-		}
+		} else if ( targetTypeClass.equals( AttributeConverterTypeAdapter.class ) ) {
+                    	log.debug( "3.Column  name: " + column.getName() + " ; className: " + column.getValue().getType().getClass() );
+                        AttributeConverterTypeAdapter type = (AttributeConverterTypeAdapter) column.getValue().getType();
+                        int sqlType = type.getSqlTypeDescriptor().getSqlType();
+                        log.debugf( "3.sql type: %d",sqlType);
+                        if ( !OrientDBMapping.SQL_TYPE_MAPPING.containsKey(sqlType)  ) {
+				throw new UnsupportedOperationException( "Unsupported SQL type: " + sqlType );
+			}
+                        query = MessageFormat.format( CREATE_PROPERTY_TEMPLATE,
+						className, propertyName, OrientDBMapping.SQL_TYPE_MAPPING.get(sqlType) );
+                }
 		else {
-			String orientDbTypeName = TYPE_MAPPING.get( targetTypeClass );
+			String orientDbTypeName = OrientDBMapping.TYPE_MAPPING.get( targetTypeClass );
 			if ( orientDbTypeName == null ) {
 				throw new UnsupportedOperationException( "Unsupported type: " + targetTypeClass );
 			}

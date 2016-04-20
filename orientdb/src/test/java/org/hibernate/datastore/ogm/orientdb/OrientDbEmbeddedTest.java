@@ -34,8 +34,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import com.tinkerpop.blueprints.impls.orient.OrientGraph;
-
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
  */
@@ -46,11 +44,10 @@ public class OrientDbEmbeddedTest {
 	private static final Logger log = Logger.getLogger( OrientDBSimpleTest.class.getName() );
 	private static EntityManager em;
 	private static EntityManagerFactory emf;
-	private static OrientGraph graph;
 
 	@BeforeClass
 	public static void setUpClass() {
-		graph = MemoryDBUtil.createDbFactory( MEMORY_TEST );
+		MemoryDBUtil.createDbFactory( MEMORY_TEST );
 		emf = Persistence.createEntityManagerFactory( "hibernateOgmJpaUnit" );
 		em = emf.createEntityManager();
 		em.setFlushMode( FlushModeType.COMMIT );
@@ -62,9 +59,8 @@ public class OrientDbEmbeddedTest {
 			em.close();
 			emf.close();
 
-		}
-		graph.shutdown();
-		MemoryDBUtil.recrateInMemoryDn( MEMORY_TEST );
+		}		
+		MemoryDBUtil.dropInMemoryDb( MEMORY_TEST );
 	}
 
 	@Before

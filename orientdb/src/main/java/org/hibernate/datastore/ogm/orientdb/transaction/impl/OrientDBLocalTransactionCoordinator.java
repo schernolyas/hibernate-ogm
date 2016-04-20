@@ -86,7 +86,7 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 			OrientJdbcConnection orientDbConn = (OrientJdbcConnection) sqlConnection;
 			ODatabaseDocumentTx database = orientDbConn.getDatabase();
 			log.debugf( "begin transaction for database %s", database.getName() );
-			super.begin();
+			super.begin();                        
 			currentOrientDBTransaction = database.activateOnCurrentThread().begin().getTransaction();
 			if ( currentOrientDBTransaction instanceof OTransactionNoTx ) {
 				// no active transaction. create it!!

@@ -6,6 +6,10 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.index.OIndex;
+import com.orientechnologies.orient.core.metadata.schema.OClass;
+import com.orientechnologies.orient.core.metadata.sequence.OSequenceLibrary;
 import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.io.IOException;
 import java.sql.ResultSet;
@@ -18,7 +22,6 @@ import java.util.Properties;
 import org.hibernate.SessionFactory;
 import org.hibernate.datastore.ogm.orientdb.OrientDB;
 import org.hibernate.datastore.ogm.orientdb.OrientDBDialect;
-import org.hibernate.datastore.ogm.orientdb.OrientDBSimpleTest;
 import org.hibernate.datastore.ogm.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
@@ -32,7 +35,6 @@ import org.hibernate.ogm.model.spi.TupleSnapshot;
 import org.hibernate.ogm.utils.GridDialectOperationContexts;
 import org.hibernate.ogm.utils.TestableGridDialect;
 
-import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import org.hibernate.metadata.ClassMetadata;
 
 /**
@@ -43,17 +45,7 @@ public class OrientDBTestHelper implements TestableGridDialect {
 	private static final Log log = LoggerFactory.getLogger();
 	private static final String COUNT_QUERY = "select @class,count(@rid) as c from V group by @class";
 
-	private static final String JDBC_URL = "jdbc:orient:".concat( OrientDBSimpleTest.MEMORY_TEST );
-	private static OrientGraph graph;
-
-	public OrientDBTestHelper() {
-		log.info( "call me" );
-		// create OrientDB in memory
-		graph = MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
-
-	}
-        
-        private ClassMetadata searchMetadata(Map<String,ClassMetadata> meta, String simpleClassName) {
+	private ClassMetadata searchMetadata(Map<String,ClassMetadata> meta, String simpleClassName) {
             ClassMetadata metadata = null;
             for (Map.Entry<String, ClassMetadata> entry : meta.entrySet()) {
                 String currentFullClassName = entry.getKey();
@@ -143,13 +135,40 @@ public class OrientDBTestHelper implements TestableGridDialect {
 
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
-		log.infof( "call dropSchemaAndDatabase! db closed: %b ", graph.isClosed() );
-                // show all classes
-                //select expand(classes) from metadata:schema
-		/*
-		 * if ( graphNoTx.countVertices() > 0 ) { MemoryDBUtil.recrateInMemoryDn( OrientDBSimpleTest.MEMORY_TEST ); }
-		 */
-
+            OrientDBDatastoreProvider provider = getProvider( sessionFactory );
+		OrientJdbcConnection connection = (OrientJdbcConnection) provider.getConnection();                
+		log.infof( "call dropSchemaAndDatabase! db closed: %b ", connection.getDatabase().isClosed() );
+                if (!connection.getDatabase().isClosed()) {
+                    ODatabaseDocumentTx db = connection.getDatabase();
+                    if (!db.isActiveOnCurrentThread()) {
+                        db.activateOnCurrentThread();
+                    }
+                    db.getMetadata().getFunctionLibrary().dropFunction("getTableSeqValue".toUpperCase());
+                    if ( !db.getMetadata().getIndexManager().getIndexes().isEmpty()) {
+                    for (OIndex<?> index : db.getMetadata().getIndexManager().getIndexes()) {
+                        log.infof( "delete index %s ",index.getName());
+                        if (!index.getName().toUpperCase().startsWith("O")) {
+                            index.delete();
+                        }
+                        
+                    }
+                    }
+                    if (db.getMetadata().getSequenceLibrary().getSequenceCount()>0) {
+                        OSequenceLibrary sequenceLibrary = db.getMetadata().getSequenceLibrary();
+                        log.infof( "sequence count: %d ",sequenceLibrary.getSequenceCount());
+                        log.infof( "sequences : %s ",sequenceLibrary.getSequenceNames());
+                    /*for (String sequenceName : sequenceLibrary.) {
+                        sequenceLibrary.dropSequence(sequenceName);
+                    } */
+                    }
+                    
+                    db.drop();                    
+                    try {
+                    connection.close();
+                    } catch (SQLException e) {
+                    }
+                    log.info( "call dropSchemaAndDatabase! db droped! ");
+                }                
 	}
 
 	@Override

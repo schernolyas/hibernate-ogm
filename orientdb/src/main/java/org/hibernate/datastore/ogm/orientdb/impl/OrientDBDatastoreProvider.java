@@ -58,7 +58,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 
 	@Override
 	public void start() {
-		log.debug( "start" );
+		log.debug( "---start---" );
 		try {
 			PropertyReaderContext<String> jdbcUrlPropery = propertyReader.property( "javax.persistence.jdbc.url", String.class );
 			if ( jdbcUrlPropery != null ) {
@@ -78,19 +78,6 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 		}
 	}
 
-	private static void setDateFormats(Connection connection) {
-		String[] queries = new String[]{ "ALTER DATABASE DATETIMEFORMAT \"" + OrientDBConstant.DATETIME_FORMAT + "\"",
-				"ALTER DATABASE DATEFORMAT \"" + OrientDBConstant.DATE_FORMAT + "\"" };
-		for ( String query : queries ) {
-			try {
-				connection.createStatement().execute( query );
-			}
-			catch (SQLException sqle) {
-				throw log.cannotExecuteQuery( query, sqle );
-			}
-		}
-	}
-
 	private void createInMemoryDB() {
 
 		String orientDbUrl = propertyReader.property( "javax.persistence.jdbc.url", String.class ).getValue().substring( "jdbc:orient:".length() );
@@ -98,14 +85,17 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 
 		if ( orientDbUrl.startsWith( "memory" ) ) {
 			isInmemoryDB = true;
-			log.debugf( "in-memory database exists: %b ",
-					( MemoryDBUtil.getOrientGraphFactory() != null ? MemoryDBUtil.getOrientGraphFactory().exists() : false ) );
-			if ( ( MemoryDBUtil.getOrientGraphFactory() != null ? MemoryDBUtil.getOrientGraphFactory().exists() : false ) && restart ) {
+                        MemoryDBUtil.createDbFactory(orientDbUrl);
+			log.debugf( "in-memory database exists: %b ",MemoryDBUtil.getOrientGraphFactory().exists() );
+                        if (!MemoryDBUtil.getOrientGraphFactory().exists()) {
+                            log.debugf( " create new in-memory database : %s ",MemoryDBUtil.getOrientGraphFactory().getTx() );
+                        }
+			/*if ( ( MemoryDBUtil.getOrientGraphFactory() != null ? MemoryDBUtil.getOrientGraphFactory().exists() : false ) && restart ) {
 				log.debugf( "try to recreate in-memory database %s", orientDbUrl );
 				MemoryDBUtil.getOrientGraphFactory().close();
 				MemoryDBUtil.getOrientGraphFactory().drop();
 			}
-			MemoryDBUtil.createDbFactory( orientDbUrl );
+			MemoryDBUtil.createDbFactory( orientDbUrl ); */
 		}
 
 	}
@@ -116,14 +106,10 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 
 	@Override
 	public void stop() {
-
-		log.debug( "stop" );
-		if ( MemoryDBUtil.getOrientGraphFactory() != null ) {
-			if ( MemoryDBUtil.getOrientGraphFactory().exists() ) {
-				MemoryDBUtil.getOrientGraphFactory().close();
-				MemoryDBUtil.getOrientGraphFactory().drop();
-			}
-		}
+		log.debug( "---stop---" );
+                /*if ( jdbcUrl.contains("memory:" ) ) {
+                MemoryDBUtil.dropInMemoryDb(jdbcUrl);
+                } */
 	}
 
 	@Override

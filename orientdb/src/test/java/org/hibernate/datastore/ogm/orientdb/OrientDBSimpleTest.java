@@ -33,7 +33,6 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import com.orientechnologies.orient.core.id.ORecordId;
-import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import org.apache.log4j.Logger;
 
 /**
@@ -47,12 +46,11 @@ public class OrientDBSimpleTest {
 	public static final String MEMORY_TEST = "memory:test";
 	private static final Logger log = Logger.getLogger( OrientDBSimpleTest.class.getName() );
 	private static EntityManager em;
-	private static EntityManagerFactory emf;
-	private static OrientGraph graph;
+	private static EntityManagerFactory emf;	
 
 	@BeforeClass
 	public static void setUpClass() {
-		graph = MemoryDBUtil.createDbFactory( MEMORY_TEST );
+		MemoryDBUtil.createDbFactory( MEMORY_TEST );
 		emf = Persistence.createEntityManagerFactory( "hibernateOgmJpaUnit" );
 		em = emf.createEntityManager();
 		em.setFlushMode( FlushModeType.COMMIT );
@@ -63,10 +61,9 @@ public class OrientDBSimpleTest {
 		if ( em != null ) {
 			em.close();
 			emf.close();
-
 		}
-		graph.shutdown();
-		MemoryDBUtil.recrateInMemoryDn( MEMORY_TEST );
+		
+		MemoryDBUtil.dropInMemoryDb( MEMORY_TEST );
 	}
 
 	@Before

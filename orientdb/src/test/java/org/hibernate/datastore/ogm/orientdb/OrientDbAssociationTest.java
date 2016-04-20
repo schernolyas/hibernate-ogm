@@ -39,8 +39,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import com.tinkerpop.blueprints.impls.orient.OrientGraph;
-
 /**
  * Test checks CRUD for entities with associations (with links with other entities)
  *
@@ -52,11 +50,10 @@ public class OrientDbAssociationTest {
 	private static final Logger log = Logger.getLogger( OrientDbAssociationTest.class.getName() );
 	private static EntityManager em;
 	private static EntityManagerFactory emf;
-	private static OrientGraph graph;
-
+	
 	@BeforeClass
 	public static void setUpClass() {
-		graph = MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
+		MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
 		emf = Persistence.createEntityManagerFactory( "hibernateOgmJpaUnit" );
 		em = emf.createEntityManager();
 		em.setFlushMode( FlushModeType.COMMIT );
@@ -68,9 +65,7 @@ public class OrientDbAssociationTest {
 			em.close();
 			emf.close();
 		}
-		graph.shutdown();
-		MemoryDBUtil.recrateInMemoryDn( OrientDBSimpleTest.MEMORY_TEST );
-
+		MemoryDBUtil.dropInMemoryDb( OrientDBSimpleTest.MEMORY_TEST );
 	}
 
 	@Before
