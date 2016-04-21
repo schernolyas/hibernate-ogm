@@ -23,7 +23,6 @@ import java.util.regex.Pattern;
 
 import org.hibernate.HibernateException;
 import org.hibernate.boot.model.relational.Namespace;
-import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
@@ -38,36 +37,14 @@ import org.hibernate.mapping.Value;
 import org.hibernate.ogm.datastore.spi.BaseSchemaDefiner;
 import org.hibernate.ogm.datastore.spi.DatastoreProvider;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
-import org.hibernate.type.BigDecimalType;
-import org.hibernate.type.BigIntegerType;
-import org.hibernate.type.BinaryType;
-import org.hibernate.type.BooleanType;
-import org.hibernate.type.ByteType;
-import org.hibernate.type.CalendarDateType;
-import org.hibernate.type.CalendarType;
-import org.hibernate.type.CharacterType;
 import org.hibernate.type.CustomType;
-import org.hibernate.type.DateType;
-import org.hibernate.type.DoubleType;
 import org.hibernate.type.EntityType;
 import org.hibernate.type.EnumType;
-import org.hibernate.type.FloatType;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.LongType;
 import org.hibernate.type.ManyToOneType;
-import org.hibernate.type.MaterializedBlobType;
-import org.hibernate.type.MaterializedClobType;
-import org.hibernate.type.NumericBooleanType;
 import org.hibernate.type.OneToOneType;
-import org.hibernate.type.SerializableToBlobType;
-import org.hibernate.type.ShortType;
 import org.hibernate.type.StringType;
-import org.hibernate.type.TimeType;
-import org.hibernate.type.TimestampType;
-import org.hibernate.type.TrueFalseType;
-import org.hibernate.type.UUIDBinaryType;
-import org.hibernate.type.UrlType;
-import org.hibernate.type.YesNoType;
 import org.hibernate.usertype.UserType;
 
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
@@ -79,6 +56,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.CharBuffer;
 import org.hibernate.boot.model.relational.Sequence;
+import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBMapping;
 import org.hibernate.type.ComponentType;
 import org.hibernate.type.descriptor.converter.AttributeConverterTypeAdapter;
@@ -101,7 +79,6 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	private OrientDBDatastoreProvider provider;
 
 	static {
-		
 
 		Map<Class, Class> map1 = new HashMap<>();
 		map1.put( Long.class, LongType.class );
@@ -165,14 +142,13 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 	private void createGetTableSeqValueFunc(Connection connection) {
 		try {
-                        OrientJdbcConnection orientDBConnection = (OrientJdbcConnection) connection;  
-                        Set<String> functions = orientDBConnection.getDatabase().getMetadata().
-                                getFunctionLibrary().getFunctionNames();
-                        log.debugf( " functions : %s",functions );
-                        if (functions.contains("getTableSeqValue".toUpperCase())) {
-                            log.debug( " function 'getTableSeqValue' exists!" );
-                            return;
-                        }
+			OrientJdbcConnection orientDBConnection = (OrientJdbcConnection) connection;
+			Set<String> functions = orientDBConnection.getDatabase().getMetadata().getFunctionLibrary().getFunctionNames();
+			log.debugf( " functions : %s", functions );
+			if ( functions.contains( "getTableSeqValue".toUpperCase() ) ) {
+				log.debug( " function 'getTableSeqValue' exists!" );
+				return;
+			}
 			InputStream is = OrientDBSchemaDefiner.class.getResourceAsStream( "getTableSeq.sql" );
 			Reader reader = new InputStreamReader( is, "utf-8" );
 			char[] chars = new char[2000];
@@ -251,7 +227,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						tables.add( tableName );
 					}
 					catch (SQLException | OException e) {
-                                                log.error("cannotGenerateClass!", e);
+						log.error( "cannotGenerateClass!", e );
 						throw log.cannotGenerateClass( table.getName(), e );
 					}
 				}
@@ -458,17 +434,18 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			else {
 				throw new UnsupportedOperationException( "Unsupported user type: " + userType.getClass() );
 			}
-		} else if ( targetTypeClass.equals( AttributeConverterTypeAdapter.class ) ) {
-                    	log.debug( "3.Column  name: " + column.getName() + " ; className: " + column.getValue().getType().getClass() );
-                        AttributeConverterTypeAdapter type = (AttributeConverterTypeAdapter) column.getValue().getType();
-                        int sqlType = type.getSqlTypeDescriptor().getSqlType();
-                        log.debugf( "3.sql type: %d",sqlType);
-                        if ( !OrientDBMapping.SQL_TYPE_MAPPING.containsKey(sqlType)  ) {
+		}
+		else if ( targetTypeClass.equals( AttributeConverterTypeAdapter.class ) ) {
+			log.debug( "3.Column  name: " + column.getName() + " ; className: " + column.getValue().getType().getClass() );
+			AttributeConverterTypeAdapter type = (AttributeConverterTypeAdapter) column.getValue().getType();
+			int sqlType = type.getSqlTypeDescriptor().getSqlType();
+			log.debugf( "3.sql type: %d", sqlType );
+			if ( !OrientDBMapping.SQL_TYPE_MAPPING.containsKey( sqlType ) ) {
 				throw new UnsupportedOperationException( "Unsupported SQL type: " + sqlType );
 			}
-                        query = MessageFormat.format( CREATE_PROPERTY_TEMPLATE,
-						className, propertyName, OrientDBMapping.SQL_TYPE_MAPPING.get(sqlType) );
-                }
+			query = MessageFormat.format( CREATE_PROPERTY_TEMPLATE,
+					className, propertyName, OrientDBMapping.SQL_TYPE_MAPPING.get( sqlType ) );
+		}
 		else {
 			String orientDbTypeName = OrientDBMapping.TYPE_MAPPING.get( targetTypeClass );
 			if ( orientDbTypeName == null ) {

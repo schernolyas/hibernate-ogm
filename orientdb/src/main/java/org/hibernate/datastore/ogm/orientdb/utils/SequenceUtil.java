@@ -51,7 +51,7 @@ public class SequenceUtil {
 			}
 		}
 		catch (SQLException | OException sqle) {
-                        log.error("Error!", sqle);
+			log.error( "Error!", sqle );
 			throw log.cannotExecuteStoredProcedure( "getTableSeqValue", sqle );
 		}
 		log.debugf( "nextValue %d ", nextValue );

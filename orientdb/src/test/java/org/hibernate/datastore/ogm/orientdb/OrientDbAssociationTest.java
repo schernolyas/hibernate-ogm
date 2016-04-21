@@ -50,7 +50,7 @@ public class OrientDbAssociationTest {
 	private static final Logger log = Logger.getLogger( OrientDbAssociationTest.class.getName() );
 	private static EntityManager em;
 	private static EntityManagerFactory emf;
-	
+
 	@BeforeClass
 	public static void setUpClass() {
 		MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );

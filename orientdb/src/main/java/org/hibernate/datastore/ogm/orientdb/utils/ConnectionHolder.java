@@ -15,9 +15,6 @@ import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 
-import com.orientechnologies.orient.core.tx.OTransactionNoTx;
-import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
-
 /**
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
  */
@@ -36,7 +33,7 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 	@Override
 	protected Connection initialValue() {
 		try {
-			log.debugf( "create connection %s for thread %s",jdbcUrl, Thread.currentThread().getName() );
+			log.debugf( "create connection %s for thread %s", jdbcUrl, Thread.currentThread().getName() );
 			connection = DriverManager.getConnection( jdbcUrl, info );
 			connection.setAutoCommit( false );
 			setDateFormats( connection );
@@ -53,14 +50,6 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 		if ( connection == null ) {
 			connection = initialValue();
 		}
-		OrientJdbcConnection oc = (OrientJdbcConnection) connection;
-		/*if ( oc.getDatabase().getTransaction() instanceof OTransactionNoTx ) {
-			log.debug( "no transaction" );
-		}
-		else {
-			log.debugf( "transaction: %s", oc.getDatabase().getTransaction() );
-
-		} */
 		return connection;
 	}
 
@@ -79,11 +68,9 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 
 	@Override
 	public void remove() {
-		/*try {
-			connection.close();
-		}
-		catch (SQLException e) {
-		} */
+		/*
+		 * try { connection.close(); } catch (SQLException e) { }
+		 */
 	}
 
 }

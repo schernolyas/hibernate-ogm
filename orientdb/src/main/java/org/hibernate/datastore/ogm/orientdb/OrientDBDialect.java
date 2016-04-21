@@ -7,8 +7,6 @@
 package org.hibernate.datastore.ogm.orientdb;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,7 +14,6 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +26,6 @@ import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBEntityQueries;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBTupleAssociationSnapshot;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.OrientDBTupleSnapshot;
 import org.hibernate.datastore.ogm.orientdb.dialect.impl.ResultSetTupleIterator;
-import org.hibernate.datastore.ogm.orientdb.dto.EmbeddedColumnInfo;
 import org.hibernate.datastore.ogm.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.datastore.ogm.orientdb.impl.OrientDBSchemaDefiner;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
@@ -352,7 +348,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 
 	private void putAssociationOperation(Association association, AssociationKey associationKey, AssociationOperation action,
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
-		log.debugf( "putAssociationOperation: : action: %s ; metadata: %s; association:%s", action, associationKey.getMetadata(),association );                
+		log.debugf( "putAssociationOperation: : action: %s ; metadata: %s; association:%s", action, associationKey.getMetadata(), association );
 		Connection connection = provider.getConnection();
 		if ( associationQueries.containsKey( associationKey.getMetadata() ) ) {
 			List<Map<String, Object>> relationship = associationQueries.get( associationKey.getMetadata() ).findRelationship( connection,
@@ -378,7 +374,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	private void createRelationship(AssociationKey associationKey, Tuple associationRow, AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
 		log.debugf( "createRelationship: associationKey.getMetadata(): %s ; associationRow: %s", associationKey.getMetadata(), associationRow );
 		log.debugf( "createRelationship: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
-                log.debugf( "createRelationship: getAssociationType:%s", associationKey.getMetadata().getAssociationType() );
+		log.debugf( "createRelationship: getAssociationType:%s", associationKey.getMetadata().getAssociationType() );
 		switch ( associationKey.getMetadata().getAssociationKind() ) {
 			case EMBEDDED_COLLECTION:
 				log.debug( "createRelationship:EMBEDDED_COLLECTION" );

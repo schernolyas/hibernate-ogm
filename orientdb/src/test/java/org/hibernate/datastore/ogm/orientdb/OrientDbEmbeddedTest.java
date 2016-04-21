@@ -59,7 +59,7 @@ public class OrientDbEmbeddedTest {
 			em.close();
 			emf.close();
 
-		}		
+		}
 		MemoryDBUtil.dropInMemoryDb( MEMORY_TEST );
 	}
 

@@ -46,7 +46,7 @@ public class OrientDBSimpleTest {
 	public static final String MEMORY_TEST = "memory:test";
 	private static final Logger log = Logger.getLogger( OrientDBSimpleTest.class.getName() );
 	private static EntityManager em;
-	private static EntityManagerFactory emf;	
+	private static EntityManagerFactory emf;
 
 	@BeforeClass
 	public static void setUpClass() {
@@ -62,7 +62,7 @@ public class OrientDBSimpleTest {
 			em.close();
 			emf.close();
 		}
-		
+
 		MemoryDBUtil.dropInMemoryDb( MEMORY_TEST );
 	}
 

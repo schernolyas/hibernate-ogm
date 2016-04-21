@@ -7,7 +7,6 @@
 package org.hibernate.datastore.ogm.orientdb.utils;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
-import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import static org.hibernate.datastore.ogm.orientdb.OrientDBSimpleTest.MEMORY_TEST;
 
 import org.jboss.logging.Logger;
@@ -30,8 +29,8 @@ import org.junit.runner.RunWith;
 public class OrientDBBackendTckHelper {
 
 	private static final Logger log = Logger.getLogger( OrientDBBackendTckHelper.class.getName() );
-        
-        private static ODatabaseDocumentTx db;
+
+	private static ODatabaseDocumentTx db;
 
 	@BeforeClass
 	public static void setUpClass() {
@@ -42,7 +41,7 @@ public class OrientDBBackendTckHelper {
 	@AfterClass
 	public static void tearDownClass() {
 		log.info( "tearDownClass" );
-                db.drop();
+		db.drop();
 	}
 
 	@Before

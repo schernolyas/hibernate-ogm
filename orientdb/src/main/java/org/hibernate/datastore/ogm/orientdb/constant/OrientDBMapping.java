@@ -37,41 +37,39 @@ import org.hibernate.type.UrlType;
 import org.hibernate.type.YesNoType;
 
 /**
- *
  * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
  */
 public class OrientDBMapping {
-    public static final Map<Class, String> TYPE_MAPPING;
-    public static final Map<Integer, String> SQL_TYPE_MAPPING;
-    static {
-        TYPE_MAPPING = Collections.unmodifiableMap( getTypeMapping() );
-        SQL_TYPE_MAPPING = Collections.unmodifiableMap( getSqlTypeMapping() );
-    }
-    
-    private static Map<Integer, String> getSqlTypeMapping() {
-        Map<Integer, String> map = new HashMap<>();
-        map.put(Types.VARCHAR, "string");
-        map.put(Types.CHAR, "string");
-        
-        map.put(Types.FLOAT, "float");
-        map.put(Types.DOUBLE, "double");
-        map.put(Types.INTEGER, "integer");
-        map.put(Types.SMALLINT, "short");
-        map.put(Types.DECIMAL, "decimal");
-        
-        map.put(Types.BINARY, "binary");
-        map.put(Types.LONGVARBINARY, "binary");
-        
-        map.put(Types.BOOLEAN, "boolean");
-        map.put(Types.DATE, "date");
-        
-        return map;
-    }
-    
-    
-    
-    private static Map<Class, String> getTypeMapping() {
-        Map<Class, String> map = new HashMap<>();
+
+	public static final Map<Class, String> TYPE_MAPPING;
+	public static final Map<Integer, String> SQL_TYPE_MAPPING;
+	static {
+		TYPE_MAPPING = Collections.unmodifiableMap( getTypeMapping() );
+		SQL_TYPE_MAPPING = Collections.unmodifiableMap( getSqlTypeMapping() );
+	}
+
+	private static Map<Integer, String> getSqlTypeMapping() {
+		Map<Integer, String> map = new HashMap<>();
+		map.put( Types.VARCHAR, "string" );
+		map.put( Types.CHAR, "string" );
+
+		map.put( Types.FLOAT, "float" );
+		map.put( Types.DOUBLE, "double" );
+		map.put( Types.INTEGER, "integer" );
+		map.put( Types.SMALLINT, "short" );
+		map.put( Types.DECIMAL, "decimal" );
+
+		map.put( Types.BINARY, "binary" );
+		map.put( Types.LONGVARBINARY, "binary" );
+
+		map.put( Types.BOOLEAN, "boolean" );
+		map.put( Types.DATE, "date" );
+
+		return map;
+	}
+
+	private static Map<Class, String> getTypeMapping() {
+		Map<Class, String> map = new HashMap<>();
 
 		map.put( ByteType.class, "byte" );
 		map.put( IntegerType.class, "integer" );
@@ -103,10 +101,8 @@ public class OrientDBMapping {
 		map.put( MaterializedClobType.class, "binary" );
 
 		map.put( BigDecimalType.class, "decimal" );
-                return map;
+		return map;
 
-		
-    }
-    
-    
+	}
+
 }

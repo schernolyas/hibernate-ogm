@@ -7,9 +7,7 @@
 package org.hibernate.datastore.ogm.orientdb.utils;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
-import com.tinkerpop.blueprints.impls.orient.OrientConfigurableGraph;
 import org.jboss.logging.Logger;
-import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
 
 /**
@@ -21,25 +19,25 @@ public class MemoryDBUtil {
 	private static OrientGraphFactory factory;
 
 	public static void dropInMemoryDb(String url) {
-                LOG.log(Logger.Level.WARN, "drop database "+url);
+		LOG.log( Logger.Level.WARN, "drop database " + url );
 		if ( getOrientGraphFactory().exists() ) {
-                    	getOrientGraphFactory().drop();
-                        LOG.log(Logger.Level.WARN, "database "+url+" droped!");
+			getOrientGraphFactory().drop();
+			LOG.log( Logger.Level.WARN, "database " + url + " droped!" );
 			getOrientGraphFactory().close();
-                        LOG.log(Logger.Level.WARN, "database "+url+" closed!");
+			LOG.log( Logger.Level.WARN, "database " + url + " closed!" );
 		}
-		//return createDbFactory( url );
+		// return createDbFactory( url );
 	};
 
 	public static ODatabaseDocumentTx createDbFactory(String url) {
-                if (factory!=null && factory.exists() ) {                    
-                    return factory.getDatabase();
-                }
+		if ( factory != null && factory.exists() ) {
+			return factory.getDatabase();
+		}
 		factory = new OrientGraphFactory( url );
 		// see https://github.com/orientechnologies/orientdb/issues/5688
 		factory.setStandardElementConstraints( false );
-                factory.setUseLog(true);
-                return factory.getDatabase(true, true);
+		factory.setUseLog( true );
+		return factory.getDatabase( true, true );
 	}
 
 	public static OrientGraphFactory getOrientGraphFactory() {
