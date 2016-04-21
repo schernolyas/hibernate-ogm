@@ -49,6 +49,7 @@ import org.hibernate.usertype.UserType;
 
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.exception.OSequenceException;
+import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.io.IOException;
 import java.io.InputStream;
@@ -128,7 +129,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	public static void createTableSequence(Connection connection, String seqTable, String pkColumnName, String pkColumnValue, String valueColumnName) {
+	private void createTableSequence(Connection connection, String seqTable, String pkColumnName, String valueColumnName) {
 		try {
 			connection.createStatement().execute( String.format( "create class %s extends V", seqTable ) );
 			connection.createStatement().execute( String.format( "create property %s.%s string ", seqTable, pkColumnName ) );
@@ -139,10 +140,10 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			throw log.cannotGenerateClass( seqTable, e );
 		}
 	}
-
+        
 	private void createGetTableSeqValueFunc(Connection connection) {
 		try {
-			OrientJdbcConnection orientDBConnection = (OrientJdbcConnection) connection;
+			OrientJdbcConnection orientDBConnection = (OrientJdbcConnection) connection;                        
 			Set<String> functions = orientDBConnection.getDatabase().getMetadata().getFunctionLibrary().getFunctionNames();
 			log.debugf( " functions : %s", functions );
 			if ( functions.contains( "getTableSeqValue".toUpperCase() ) ) {
@@ -164,16 +165,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	private void createEntities(Connection connection, SchemaDefinitionContext context) {
-		// check exists sequence
-		try {
-			log.debugf( "default hibernate sequence value: %s", SequenceUtil.getNextSequenceValue( connection, "hibernate_sequence" ) );
-		}
-		catch (HibernateException he) {
-			createSequence( connection, "hibernate_sequence", 0, 1 );
-		}
-
-		createGetTableSeqValueFunc( connection );
-
+		
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
 			Set<String> tables = new HashSet<>();
@@ -204,7 +196,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 							String classQuery = createClassQuery( className );
 							log.debugf( "create class query: %s", classQuery );
 							try {
-								provider.getConnection().createStatement().execute( classQuery );
+								connection.createStatement().execute( classQuery );
 								tables.add( className );
 							}
 							catch (SQLException e) {
@@ -525,6 +517,16 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
 		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
 		Connection connection = provider.getConnection();
+                // check exists sequence
+		/* try {
+			log.debugf( "default hibernate sequence value: %s", SequenceUtil.getNextSequenceValue( connection, "hibernate_sequence" ) );
+		}
+		catch (HibernateException he) {
+			createSequence( connection, "hibernate_sequence", 0, 1 );
+		} */
+                createSequence( connection, OrientDBConstant.HIBERNATE_SEQUENCE, 0, 1 );
+                createTableSequence(connection,OrientDBConstant.HIBERNATE_SEQUENCE_TABLE,"key","seed");
+		createGetTableSeqValueFunc( connection );
 		createEntities( connection, context );
 	}
 

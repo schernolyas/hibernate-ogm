@@ -487,12 +487,11 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			case SEQUENCE:
 				String seqName = request.getKey().getMetadata().getName();
 				nextValue = SequenceUtil.getNextSequenceValue( connection, seqName );
-
 				break;
 			case TABLE:
-				String seqTableName = request.getKey().getMetadata().getName();
-				String pkColumnName = request.getKey().getMetadata().getKeyColumnName();
-				String valueColumnName = request.getKey().getMetadata().getValueColumnName();
+				String seqTableName = "sequences";
+				String pkColumnName = "key";
+				String valueColumnName = "seed";
 				String pkColumnValue = (String) request.getKey().getColumnValues()[0];
 				log.debugf( "seqTableName:%s, pkColumnName:%s, pkColumnValue:%s, valueColumnName:%s",
 						seqTableName, pkColumnName, pkColumnValue, valueColumnName );

@@ -8,6 +8,7 @@ package org.hibernate.datastore.ogm.orientdb.utils;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.index.OIndex;
+import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.sequence.OSequenceLibrary;
 import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.io.IOException;
@@ -21,6 +22,7 @@ import java.util.Properties;
 import org.hibernate.SessionFactory;
 import org.hibernate.datastore.ogm.orientdb.OrientDB;
 import org.hibernate.datastore.ogm.orientdb.OrientDBDialect;
+import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
 import org.hibernate.datastore.ogm.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
@@ -143,10 +145,33 @@ public class OrientDBTestHelper implements TestableGridDialect {
 				db.activateOnCurrentThread();
 			}
 			db.getMetadata().getFunctionLibrary().dropFunction( "getTableSeqValue".toUpperCase() );
+                        
+                        /*for (OClass dbClass : db.getMetadata().getSchema().getClasses()) {
+                            log.infof( "class: %s ", dbClass );
+                            if (!OrientDBConstant.SYSTEM_CLASS_SET.contains(dbClass.getName())) {
+                                try {
+                                    connection.createStatement().execute("delete vertex from "+dbClass.getName());
+                                    connection.createStatement().execute("drop class "+dbClass.getName());
+                                }
+			catch (SQLException e) {
+                            log.error("Cannot drop class "+dbClass.getName(), e);
+			}
+                            }
+                        } */
+                        
+                        
 			if ( !db.getMetadata().getIndexManager().getIndexes().isEmpty() ) {
 				for ( OIndex<?> index : db.getMetadata().getIndexManager().getIndexes() ) {
-					log.infof( "delete index %s ", index.getName() );
-					if ( !index.getName().toUpperCase().startsWith( "O" ) ) {
+                                        boolean isSystemIndex = false;
+                                        for (String systemClassName : OrientDBConstant.SYSTEM_CLASS_SET) {
+                                            if (index.getName().startsWith(systemClassName)) {
+                                                isSystemIndex = true;
+                                                break;
+                                            }
+                                        
+                                    }
+					if ( !isSystemIndex ) {                                            
+                                            log.infof( "delete index %s ", index.getName() );
 						index.delete();
 					}
 
@@ -156,10 +181,12 @@ public class OrientDBTestHelper implements TestableGridDialect {
 				OSequenceLibrary sequenceLibrary = db.getMetadata().getSequenceLibrary();
 				log.infof( "sequence count: %d ", sequenceLibrary.getSequenceCount() );
 				log.infof( "sequences : %s ", sequenceLibrary.getSequenceNames() );
+                                sequenceLibrary.dropSequence(OrientDBConstant.HIBERNATE_SEQUENCE);
 				/*
 				 * for (String sequenceName : sequenceLibrary.) { sequenceLibrary.dropSequence(sequenceName); }
 				 */
 			}
+                        
 
 			db.drop();
 			try {
