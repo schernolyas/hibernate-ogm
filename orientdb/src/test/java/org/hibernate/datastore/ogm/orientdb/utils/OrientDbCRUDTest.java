@@ -6,12 +6,9 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import static org.hibernate.datastore.ogm.orientdb.OrientDBSimpleTest.MEMORY_TEST;
 import org.hibernate.ogm.backendtck.simpleentity.CRUDTest;
-import org.junit.BeforeClass;
 
 /**
  * @author Davide D'Alto
@@ -19,17 +16,4 @@ import org.junit.BeforeClass;
 public class OrientDbCRUDTest extends CRUDTest {
 
 	private static final Logger LOG = Logger.getLogger( OrientDbCRUDTest.class.getName() );
-
-	@BeforeClass
-	public static void setUpClass() {
-		LOG.log( Level.INFO, "call me!!!" );
-	}
-
-	@Override
-	protected void configure(Map<String, Object> cfg) {
-		LOG.log( Level.INFO, "call me!!!" );
-		MemoryDBUtil.createDbFactory( MEMORY_TEST );
-		super.configure( cfg ); // To change body of generated methods, choose Tools | Templates.
-	}
-
 }

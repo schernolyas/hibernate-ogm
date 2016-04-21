@@ -16,22 +16,26 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
 public class MemoryDBUtil {
 
 	private static final Logger LOG = Logger.getLogger( MemoryDBUtil.class.getName() );
-	private static OrientGraphFactory factory;
+        private static OrientGraphFactory factory;
 
-	public static void dropInMemoryDb(String url) {
-		LOG.log( Logger.Level.WARN, "drop database " + url );
-		if ( getOrientGraphFactory().exists() ) {
-			getOrientGraphFactory().drop();
-			LOG.log( Logger.Level.WARN, "database " + url + " droped!" );
-			getOrientGraphFactory().close();
-			LOG.log( Logger.Level.WARN, "database " + url + " closed!" );
-		}
-		// return createDbFactory( url );
+	public static void dropInMemoryDb() {
+		LOG.log( Logger.Level.WARN, "drop current database " );
+		if ( getOrientGraphFactory().getDatabase().exists() ) {
+			getOrientGraphFactory().getDatabase().drop();
+			LOG.log( Logger.Level.WARN, "current database  droped!" );
+			getOrientGraphFactory().getDatabase().close();
+			LOG.log( Logger.Level.WARN, "current database  closed!" );
+		} 
+                factory.drop();
+                factory = null;
 	};
-
-	public static ODatabaseDocumentTx createDbFactory(String url) {
+        public static void cleanDbFactory(String url) {            
+        }
+        
+	public static ODatabaseDocumentTx createDbFactory(String url) {            
 		if ( factory != null && factory.exists() ) {
-			return factory.getDatabase();
+			factory.drop();
+                        factory = null;
 		}
 		factory = new OrientGraphFactory( url );
 		// see https://github.com/orientechnologies/orientdb/issues/5688

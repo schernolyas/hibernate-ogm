@@ -10,6 +10,7 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.sequence.OSequenceLibrary;
+import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.io.IOException;
 import java.sql.ResultSet;
@@ -144,51 +145,10 @@ public class OrientDBTestHelper implements TestableGridDialect {
 			if ( !db.isActiveOnCurrentThread() ) {
 				db.activateOnCurrentThread();
 			}
-			db.getMetadata().getFunctionLibrary().dropFunction( "getTableSeqValue".toUpperCase() );
-                        
-                        /*for (OClass dbClass : db.getMetadata().getSchema().getClasses()) {
-                            log.infof( "class: %s ", dbClass );
-                            if (!OrientDBConstant.SYSTEM_CLASS_SET.contains(dbClass.getName())) {
-                                try {
-                                    connection.createStatement().execute("delete vertex from "+dbClass.getName());
-                                    connection.createStatement().execute("drop class "+dbClass.getName());
-                                }
-			catch (SQLException e) {
-                            log.error("Cannot drop class "+dbClass.getName(), e);
-			}
-                            }
-                        } */
-                        
-                        
-			if ( !db.getMetadata().getIndexManager().getIndexes().isEmpty() ) {
-				for ( OIndex<?> index : db.getMetadata().getIndexManager().getIndexes() ) {
-                                        boolean isSystemIndex = false;
-                                        for (String systemClassName : OrientDBConstant.SYSTEM_CLASS_SET) {
-                                            if (index.getName().startsWith(systemClassName)) {
-                                                isSystemIndex = true;
-                                                break;
-                                            }
-                                        
-                                    }
-					if ( !isSystemIndex ) {                                            
-                                            log.infof( "delete index %s ", index.getName() );
-						index.delete();
-					}
-
-				}
-			}
-			if ( db.getMetadata().getSequenceLibrary().getSequenceCount() > 0 ) {
-				OSequenceLibrary sequenceLibrary = db.getMetadata().getSequenceLibrary();
-				log.infof( "sequence count: %d ", sequenceLibrary.getSequenceCount() );
-				log.infof( "sequences : %s ", sequenceLibrary.getSequenceNames() );
-                                sequenceLibrary.dropSequence(OrientDBConstant.HIBERNATE_SEQUENCE);
-				/*
-				 * for (String sequenceName : sequenceLibrary.) { sequenceLibrary.dropSequence(sequenceName); }
-				 */
-			}
-                        
-
-			db.drop();
+                        if (db.getTransaction().isActive() ) {
+                            db.getTransaction().close();
+                        }
+			MemoryDBUtil.dropInMemoryDb();
 			try {
 				connection.close();
 			}
