@@ -6,12 +6,16 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
+import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
-
 import org.hibernate.datastore.ogm.orientdb.constant.OrientDBConstant;
+
 import org.hibernate.datastore.ogm.orientdb.logging.impl.Log;
 import org.hibernate.datastore.ogm.orientdb.logging.impl.LoggerFactory;
 
@@ -23,7 +27,7 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 	private static Log log = LoggerFactory.getLogger();
 	private final String jdbcUrl;
 	private final Properties info;
-	private Connection connection;
+	private final Map<Long,OrientJdbcConnection> CONNECTIONS = Collections.<Long,OrientJdbcConnection>synchronizedMap(new HashMap<Long,OrientJdbcConnection>());
 
 	public ConnectionHolder(String jdbcUrl, Properties info) {
 		this.jdbcUrl = jdbcUrl;
@@ -31,29 +35,28 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 	}
 
 	@Override
-	protected Connection initialValue() {
+	public Connection get() {            
+		log.debugf( "get connection for thread %s", Thread.currentThread().getName() );	
+                if (!CONNECTIONS.containsKey(Thread.currentThread().getId())) {
+                    CONNECTIONS.put(Thread.currentThread().getId(),createConnectionForCurrentThread());
+                }                
+                return CONNECTIONS.get(Thread.currentThread().getId());
+	}
+
+        private OrientJdbcConnection createConnectionForCurrentThread() {
+            Connection connection = null;
 		try {
 			log.debugf( "create connection %s for thread %s", jdbcUrl, Thread.currentThread().getName() );
 			connection = DriverManager.getConnection( jdbcUrl, info );
 			connection.setAutoCommit( false );
-			setDateFormats( connection );
+			initConnection( connection );
 		}
 		catch (SQLException sqle) {
 			throw log.cannotCreateConnection( sqle );
 		}
-		return connection;
+		return (OrientJdbcConnection) connection;
 	}
-
-	@Override
-	public Connection get() {
-		log.debugf( "get connection for thread %s", Thread.currentThread().getName() );
-		if ( connection == null ) {
-			connection = initialValue();
-		}
-		return connection;
-	}
-
-	private void setDateFormats(Connection connection) {
+        private void initConnection(Connection connection) {
 		String[] queries = new String[]{ "ALTER DATABASE DATETIMEFORMAT \"" + OrientDBConstant.DATETIME_FORMAT + "\"",
 				"ALTER DATABASE DATEFORMAT \"" + OrientDBConstant.DATE_FORMAT + "\"" };
 		for ( String query : queries ) {
@@ -64,13 +67,6 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 				throw log.cannotExecuteQuery( query, sqle );
 			}
 		}
-	}
-
-	@Override
-	public void remove() {
-		/*
-		 * try { connection.close(); } catch (SQLException e) { }
-		 */
 	}
 
 }

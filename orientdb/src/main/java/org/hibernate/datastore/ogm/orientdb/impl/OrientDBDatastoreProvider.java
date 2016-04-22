@@ -6,6 +6,7 @@
  */
 package org.hibernate.datastore.ogm.orientdb.impl;
 
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import java.sql.Connection;
 import java.util.Map;
 import java.util.Properties;
@@ -82,25 +83,18 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 		Boolean restart = propertyReader.property( "restart.inmemorydb", Boolean.class ).withDefault( Boolean.FALSE ).getValue();
 
 		if ( orientDbUrl.startsWith( "memory" ) ) {
-			isInmemoryDB = true;
-			MemoryDBUtil.createDbFactory( orientDbUrl );
-			log.debugf( "in-memory database exists: %b ", MemoryDBUtil.getOrientGraphFactory().exists() );
-			if ( !MemoryDBUtil.getOrientGraphFactory().exists() ) {
-				log.debugf( " create new in-memory database : %s ", MemoryDBUtil.getOrientGraphFactory().getTx() );
-			}
-			/*
-			 * if ( ( MemoryDBUtil.getOrientGraphFactory() != null ? MemoryDBUtil.getOrientGraphFactory().exists() :
-			 * false ) && restart ) { log.debugf( "try to recreate in-memory database %s", orientDbUrl );
-			 * MemoryDBUtil.getOrientGraphFactory().close(); MemoryDBUtil.getOrientGraphFactory().drop(); }
-			 * MemoryDBUtil.createDbFactory( orientDbUrl );
-			 */
+			isInmemoryDB = true;                        
+			ODatabaseDocumentTx db =  MemoryDBUtil.createDbFactory( orientDbUrl );
+			log.debugf( "in-memory database exists: %b ", db.exists() );
+                        log.debugf( "in-memory database closed: %b ", db.isClosed() );					
 		}
 
 	}
 
 	public Connection getConnection() {
-		return connectionHolder.get();
+                return connectionHolder.get();                
 	}
+        
 
 	@Override
 	public void stop() {

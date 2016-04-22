@@ -6,6 +6,7 @@
  */
 package org.hibernate.datastore.ogm.orientdb;
 
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -50,7 +51,8 @@ public class OrientDBSimpleTest {
 
 	@BeforeClass
 	public static void setUpClass() {
-		MemoryDBUtil.createDbFactory( MEMORY_TEST );
+		ODatabaseDocumentTx db = MemoryDBUtil.createDbFactory( MEMORY_TEST );
+                log.info("db.isClosed(): "+db.isClosed());
 		emf = Persistence.createEntityManagerFactory( "hibernateOgmJpaUnit" );
 		em = emf.createEntityManager();
 		em.setFlushMode( FlushModeType.COMMIT );
