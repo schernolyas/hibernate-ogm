@@ -269,11 +269,14 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					}
 					else {
 						String propertyQuery = createValueProperyQuery( tableName, column );
-						log.debugf( "create property query: %s" , propertyQuery );
+						log.debug( "create property query: " + propertyQuery );
 						try {
 							provider.getConnection().createStatement().execute( propertyQuery );
 						}
-                                                catch (OCommandExecutionException oe) {
+						catch (SQLException e) {
+							throw log.cannotGenerateProperty( column.getName(), table.getName(), e );
+						}
+						catch (OCommandExecutionException oe) {
 							log.debugf( "orientdb message: %s; ", oe.getMessage() );
 							if ( oe.getMessage().contains( "already exists" ) ) {
 								log.debugf( "property %s already exists. Continue ", column.getName() );
@@ -282,11 +285,6 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 								throw log.cannotExecuteQuery( propertyQuery, oe );
 							}
 						}
-						catch (SQLException | OException e) {
-                                                        log.error( "Exception:",e  );
-							throw log.cannotGenerateProperty( column.getName(), table.getName(), e );
-						}
-						
 					}
 				}
 				if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table ) && !isEmbeddedObjectTable( table ) ) {

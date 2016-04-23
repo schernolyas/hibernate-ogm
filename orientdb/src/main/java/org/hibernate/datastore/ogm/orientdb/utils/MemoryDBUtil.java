@@ -6,8 +6,6 @@
  */
 package org.hibernate.datastore.ogm.orientdb.utils;
 
-import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentPool;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import org.jboss.logging.Logger;
 import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
@@ -35,7 +33,7 @@ public class MemoryDBUtil {
         }
         
 	public static ODatabaseDocumentTx createDbFactory(String url) {            
-		if ( factory != null ) {
+		if ( factory != null && factory.exists() ) {
 			factory.drop();
                         factory = null;
 		}
@@ -43,8 +41,7 @@ public class MemoryDBUtil {
 		// see https://github.com/orientechnologies/orientdb/issues/5688
 		factory.setStandardElementConstraints( false );
 		factory.setUseLog( true );
-                ODatabaseDocumentTx db = factory.getDatabase( true, true );                
-		return db;
+		return factory.getDatabase( true, true );
 	}
 
 	public static OrientGraphFactory getOrientGraphFactory() {
