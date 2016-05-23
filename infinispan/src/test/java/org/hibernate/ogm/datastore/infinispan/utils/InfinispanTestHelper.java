@@ -120,4 +120,8 @@ public class InfinispanTestHelper implements TestableGridDialect {
 	public Class<? extends DatastoreConfiguration<?>> getDatastoreConfigurationType() {
 		return Infinispan.class;
 	}
+
+	@Override
+	public void prepareDatabase(SessionFactory sessionFactory) {
+	}
 }

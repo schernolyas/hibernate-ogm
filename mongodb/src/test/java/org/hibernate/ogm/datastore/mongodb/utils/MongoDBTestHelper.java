@@ -293,4 +293,8 @@ public class MongoDBTestHelper implements TestableGridDialect {
 	public Class<? extends DatastoreConfiguration<?>> getDatastoreConfigurationType() {
 		return MongoDB.class;
 	}
+
+	@Override
+	public void prepareDatabase(SessionFactory sessionFactory) {
+	}
 }

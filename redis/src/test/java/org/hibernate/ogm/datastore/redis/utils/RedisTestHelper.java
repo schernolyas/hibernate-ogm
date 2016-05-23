@@ -278,4 +278,8 @@ public class RedisTestHelper implements TestableGridDialect {
 	public Class<? extends DatastoreConfiguration<?>> getDatastoreConfigurationType() {
 		return Redis.class;
 	}
+
+	@Override
+	public void prepareDatabase(SessionFactory sessionFactory) {
+	}
 }

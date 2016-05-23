@@ -147,4 +147,8 @@ public class Neo4jTestHelper implements TestableGridDialect {
 	public GridDialect getGridDialect(DatastoreProvider datastoreProvider) {
 		return new Neo4jDialect( (Neo4jDatastoreProvider) datastoreProvider );
 	}
+
+	@Override
+	public void prepareDatabase(SessionFactory sessionFactory) {
+	}
 }

@@ -53,7 +53,7 @@ public class HashMapTestHelper implements TestableGridDialect {
 		return MapDatastoreProvider.class.cast( provider );
 	}
 
-	private static Map<AssociationKey, Map<RowKey, Map<String, Object>>> getAssociationCache( SessionFactory sessionFactory) {
+	private static Map<AssociationKey, Map<RowKey, Map<String, Object>>> getAssociationCache(SessionFactory sessionFactory) {
 		MapDatastoreProvider castProvider = getProvider( sessionFactory );
 		return castProvider.getAssociationsMap();
 	}
@@ -65,6 +65,11 @@ public class HashMapTestHelper implements TestableGridDialect {
 
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
+		// Nothing to do
+	}
+
+	@Override
+	public void prepareDatabase(SessionFactory sessionFactory) {
 		// Nothing to do
 	}
 

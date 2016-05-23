@@ -292,4 +292,8 @@ public class CouchDBTestHelper implements TestableGridDialect {
 			throw new RuntimeException( e );
 		}
 	}
+
+	@Override
+	public void prepareDatabase(SessionFactory sessionFactory) {
+	}
 }

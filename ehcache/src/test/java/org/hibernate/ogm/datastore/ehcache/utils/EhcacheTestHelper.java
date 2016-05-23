@@ -135,4 +135,8 @@ public class EhcacheTestHelper implements TestableGridDialect {
 	public Class<? extends DatastoreConfiguration<?>> getDatastoreConfigurationType() {
 		return Ehcache.class;
 	}
+
+	@Override
+	public void prepareDatabase(SessionFactory sessionFactory) {
+	}
 }

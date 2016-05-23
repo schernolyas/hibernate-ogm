@@ -65,6 +65,13 @@ public interface TestableGridDialect {
 	boolean backendSupportsTransactions();
 
 	/**
+	 * Initialize the database on start-up.
+	 *
+	 * @param sessionFactory
+	 */
+	void prepareDatabase(SessionFactory sessionFactory);
+
+	/**
 	 * Used to clean up all the stored data. The cleaning can be done by dropping
 	 * the database and/or the schema.
 	 * Each implementor can so define its own way to delete all data inserted by
