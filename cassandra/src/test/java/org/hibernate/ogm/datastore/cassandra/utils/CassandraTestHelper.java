@@ -332,5 +332,4 @@ public class CassandraTestHelper implements GridDialectTestHelper {
 		}
 
 	}
-
 }
