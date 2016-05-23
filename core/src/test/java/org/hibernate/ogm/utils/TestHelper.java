@@ -204,6 +204,18 @@ public class TestHelper {
 		}
 	}
 
+	public static void prepareDatabase(SessionFactory sessionFactory) {
+		// if the factory is closed, we don't have access to the service registry
+		if ( sessionFactory != null && !sessionFactory.isClosed() ) {
+			try {
+				helper.prepareDatabase( sessionFactory );
+			}
+			catch ( Exception e ) {
+				log.warn( "Exception while dropping schema and database in test", e );
+			}
+		}
+	}
+
 	public static void checkCleanCache(SessionFactory sessionFactory) {
 		assertThat( getNumberOfEntities( sessionFactory ) ).as( "Entity cache should be empty" ).isEqualTo( 0 );
 		assertThat( getNumberOfAssociations( sessionFactory ) ).as( "Association cache should be empty" ).isEqualTo( 0 );
