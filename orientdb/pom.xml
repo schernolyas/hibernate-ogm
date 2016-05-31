@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
- ~ Hibernate OGM, Domain model persistence for NoSQL datastores
- ~
- ~ License: GNU Lesser General Public License (LGPL), version 2.1 or later
- ~ See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
-  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<!-- ~ Hibernate OGM, Domain model persistence for NoSQL datastores ~ ~ License: 
+    GNU Lesser General Public License (LGPL), version 2.1 or later ~ See the 
+    lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.hibernate.ogm</groupId>
@@ -38,7 +36,7 @@
                 </configuration>
             </plugin>
             <plugin>
-                 <artifactId>maven-checkstyle-plugin</artifactId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
@@ -57,7 +55,8 @@
         <dependency>
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging-processor</artifactId>
-            <!-- "provided" is used as "compile-only" here; It's NOT needed at runtime -->
+            <!-- "provided" is used as "compile-only" here; It's NOT needed 
+                at runtime -->
             <scope>provided</scope>
         </dependency>
 
@@ -84,7 +83,7 @@
             <artifactId>commons-codec</artifactId>
             <version>1.10</version>
         </dependency>
-    
+
         <!-- Testing -->
         <dependency>
             <groupId>junit</groupId>
@@ -98,8 +97,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.jboss.jbossts</groupId>
-            <artifactId>jbossjta</artifactId>
+            <groupId>org.jboss.narayana.jta</groupId>
+            <artifactId>narayana-jta</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
