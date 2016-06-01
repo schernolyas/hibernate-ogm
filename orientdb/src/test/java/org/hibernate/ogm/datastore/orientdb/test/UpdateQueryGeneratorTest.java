@@ -13,39 +13,15 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hibernate.ogm.datastore.orientdb.utils.AbstractQueryGenerator;
 import org.hibernate.ogm.datastore.orientdb.utils.UpdateQueryGenerator;
-import org.hibernate.ogm.datastore.orientdb.utils.AbstractQueryGenerator.GenerationResult;
 import org.hibernate.ogm.model.impl.DefaultEntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.EntityKey;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class UpdateQueryGeneratorTest {
-
-	public UpdateQueryGeneratorTest() {
-	}
-
-	@BeforeClass
-	public static void setUpClass() {
-	}
-
-	@AfterClass
-	public static void tearDownClass() {
-	}
-
-	@Before
-	public void setUp() {
-	}
-
-	@After
-	public void tearDown() {
-	}
 
 	/**
 	 * Test of generate method, of class UpdateQueryGenerator.
@@ -62,12 +38,10 @@ public class UpdateQueryGeneratorTest {
 		EntityKey primaryKey = new EntityKey( new DefaultEntityKeyMetadata( tableName, new String[]{ "id" } ), new Object[]{ 1 } );
 		UpdateQueryGenerator instance = new UpdateQueryGenerator();
 		AbstractQueryGenerator.GenerationResult result = instance.generate( tableName, valuesMap, primaryKey, 1 );
-		System.out.println( "update query: " + result.getExecutionQuery() );
 		Assert.assertThat( result.getExecutionQuery(), new BaseMatcher<String>() {
 
 			@Override
 			public boolean matches(Object o) {
-				System.out.println( " o: " + o );
 				String query = (String) o;
 				return query.contains( "AQID" ) && query.contains( "field3.subfield2" );
 			}
