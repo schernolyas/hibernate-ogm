@@ -1,39 +1,10 @@
-sudo: required
-dist: trusty
+sudo: false
 language: java
-addons:
-  apt:
-    packages:
-      - oracle-java8-installer
-# might be useful to push reports to an S3 bucket
-#  artifacts:
-#    paths:
-#      - $(find $HOME -name surefire-reports | tr "\n" ":")
-#      - $(find $HOME -name failsafe-reports | tr "\n" ":")
-#  s3_region: 'us-west-2'
-services:
-  - redis-server
-cache:
-  directories:
-    - $HOME/.m2
-env:
-  - REDIS_HOSTNAME=localhost COUCHDB_HOSTNAME=localhost CASSANDRA_VERSION=2.2.5 CASSANDRA_HOSTNAME=localhost
-install:
-  - sudo apt-get install -qq couchdb
-  - bash travis/setup-cassandra.sh 2>&1 > cassandra.log
-  # The Maven install provided by Travis is outdated, use Maven wrapper to get the latest version
-  - mvn -N io.takari:maven:wrapper
-  - ./mvnw -v
-  # Use the Google mirror for central - we also declare explicitly central as the JBoss repository takes precedences over it
-  - sed -i settings-example.xml -e "s@</mirrors>@<mirror><id>google-maven-central</id><name>Google Maven Central</name><url>https://maven-central.storage.googleapis.com</url><mirrorOf>central</mirrorOf></mirror></mirrors>@"
-  - sed -i settings-example.xml -e "s@<repositories>@<repositories><repository><id>central</id><name>Central</name><url>https://maven-central.storage.googleapis.com/</url></repository>@"
-  - sed -i settings-example.xml -e "s@<pluginRepositories>@<pluginRepositories><pluginRepository><id>central</id><name>Central</name><url>https://maven-central.storage.googleapis.com/</url></pluginRepository>@"
-  # first run to download all the Maven dependencies without logging
-  - travis_wait ./mvnw -B -q -s settings-example.xml -Ptest -DskipTests=true -Dmaven.javadoc.skip=true -DskipDistro=true install
-  # we run checkstyle first to fail fast if there is a styling error
-  - ./mvnw -s settings-example.xml -DskipDistro=true checkstyle:check
-before_script:
-script:
-  - ./mvnw -s settings-example.xml -Ptest clean install
-after_script:
-  - rm -rf $HOME/.m2/repository/org/hibernate/ogm/
+install: /bin/true
+script: mvn clean install -pl orientdb -am  
+branches:
+  only:
+  - core_tests
+jdk:
+  - oraclejdk8
+ 
