@@ -9,8 +9,6 @@ package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 
 import java.util.Map;
 
-import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
-import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.model.key.spi.RowKey;
 import org.hibernate.ogm.model.spi.AssociationSnapshot;
 import org.hibernate.ogm.model.spi.Tuple;
