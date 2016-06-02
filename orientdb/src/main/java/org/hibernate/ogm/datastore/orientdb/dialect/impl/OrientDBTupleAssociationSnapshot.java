@@ -88,7 +88,7 @@ public class OrientDBTupleAssociationSnapshot implements TupleSnapshot {
 
 	@Override
 	public Object get(String columnName) {
-		log.debugf( "targetColumnName:  %s", columnName );
+		//log.debugf( "targetColumnName:  %s", columnName );
 
 		Object value = properties.get( columnName );
 		if ( value == null && EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
@@ -101,13 +101,11 @@ public class OrientDBTupleAssociationSnapshot implements TupleSnapshot {
 
 	@Override
 	public Set<String> getColumnNames() {
-		log.debug( "getColumnNames " );
 		return properties.keySet();
 	}
 
 	@Override
 	public boolean isEmpty() {
-		log.debug( "isEmpty " );
 		return properties.isEmpty();
 	}
 
