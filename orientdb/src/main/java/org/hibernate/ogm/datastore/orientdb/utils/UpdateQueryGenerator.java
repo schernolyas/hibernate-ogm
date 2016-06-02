@@ -23,6 +23,11 @@ import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.spi.Tuple;
 
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import static org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil.setFieldValue;
+import org.hibernate.ogm.model.key.spi.AssociationKey;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -32,11 +37,52 @@ public class UpdateQueryGenerator extends AbstractQueryGenerator {
 
 	private static final Log log = LoggerFactory.getLogger();
 
+	public GenerationResult generate(AssociationKey associationKey, Tuple tuple) {
+		Set<String> whereColumnNames = new HashSet<>();
+		whereColumnNames.addAll( Arrays.asList( associationKey.getColumnNames() ) );
+		whereColumnNames.addAll( Arrays.asList( associationKey.getMetadata().getRowKeyColumnNames() ) );
+		whereColumnNames.addAll( Arrays.asList( associationKey.getMetadata().getRowKeyIndexColumnNames() ) );
+
+		log.debugf( "generate: whereColumnNames : %s", whereColumnNames );
+
+		StringBuilder updateQuery = generateMainPart( associationKey.getTable(),
+				TupleUtil.toMap( tuple ), whereColumnNames.toArray( new String[1] ) );
+		// generate 'where' part
+		updateQuery.append( " where " );
+
+		for ( Iterator<String> iterator = whereColumnNames.iterator(); iterator.hasNext(); ) {
+			String whereColumnName = iterator.next();
+			Object value = tuple.get( whereColumnName );
+			updateQuery.append( whereColumnName ).append( "=" );
+			setFieldValue( updateQuery, value );
+			if ( iterator.hasNext() ) {
+				updateQuery.append( " and " );
+			}
+		}
+
+		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
+	}
+
 	public GenerationResult generate(String tableName, Tuple tuple, EntityKey primaryKey, Integer currentVersion) {
 		return generate( tableName, TupleUtil.toMap( tuple ), primaryKey, currentVersion );
 	}
 
 	public GenerationResult generate(String tableName, Map<String, Object> valuesMap, EntityKey primaryKey, Integer currentVersion) {
+		StringBuilder updateQuery = generateMainPart( tableName, valuesMap, primaryKey.getColumnNames() );
+
+		updateQuery.append( " where " );
+		// @TODO support multi column primary keys
+		log.debugf( "generate: primaryKey : %s", primaryKey );
+		updateQuery.append( EntityKeyUtil.generatePrimaryKeyPredicate( primaryKey ) );
+		// and version protection
+		if ( currentVersion != null && currentVersion > 0 ) {
+			log.debugf( "version of entity : %d", currentVersion );
+			updateQuery.append( " AND " ).append( OrientDBConstant.SYSTEM_VERSION ).append( "=" ).append( currentVersion );
+		}
+		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
+	}
+
+	private StringBuilder generateMainPart(String tableName, Map<String, Object> valuesMap, String[] primaryKeyColumnNames) {
 		StringBuilder updateQuery = new StringBuilder( 200 );
 		updateQuery.append( "update " ).append( tableName ).append( " set " );
 
@@ -51,12 +97,12 @@ public class UpdateQueryGenerator extends AbstractQueryGenerator {
 			}
 		}
 
-		LinkedHashSet<String> columnNames = new LinkedHashSet<>( allValuesMap.keySet() );
-		columnNames.removeAll( Arrays.asList( primaryKey.getColumnNames() ) );
-		columnNames.removeAll( OrientDBConstant.SYSTEM_FIELDS );
-		columnNames.removeAll( OrientDBConstant.MAPPING_FIELDS.keySet() );
+		LinkedHashSet<String> allColumnNames = new LinkedHashSet<>( allValuesMap.keySet() );
+		allColumnNames.removeAll( Arrays.asList( primaryKeyColumnNames ) );
+		allColumnNames.removeAll( OrientDBConstant.SYSTEM_FIELDS );
+		allColumnNames.removeAll( OrientDBConstant.MAPPING_FIELDS.keySet() );
 
-		for ( String columnName : columnNames ) {
+		for ( String columnName : allColumnNames ) {
 			Object columnValue = allValuesMap.get( columnName );
 			log.debugf( " field name: %s; value class: %s", columnName, ( columnValue != null ? columnValue.getClass() : "null" ) );
 			updateQuery.append( columnName ).append( "=" );
@@ -100,15 +146,7 @@ public class UpdateQueryGenerator extends AbstractQueryGenerator {
 			updateQuery.append( "," );
 		}
 		updateQuery.setCharAt( updateQuery.lastIndexOf( "," ), ' ' );
-		updateQuery.append( " where " );
-		// @TODO support multi column primary keys
-		updateQuery.append( EntityKeyUtil.generatePrimaryKeyPredicate( primaryKey ) );
-		// and version protection
-		if ( currentVersion != null && currentVersion > 0 ) {
-			log.debugf( "version of entity : %d", currentVersion );
-			updateQuery.append( " AND " ).append( OrientDBConstant.SYSTEM_VERSION ).append( "=" ).append( currentVersion );
-		}
-		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
+		return updateQuery;
 	}
 
 }

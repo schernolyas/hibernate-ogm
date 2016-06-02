@@ -12,7 +12,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,7 +25,6 @@ import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
-import org.hibernate.ogm.model.spi.Tuple;
 
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -133,6 +131,8 @@ public class OrientDBEntityQueries extends QueriesBase {
 			AssociationContext associationContext) {
 		List<Map<String, Object>> association = new LinkedList<>();
 		log.debugf( "findAssociation: associationKey: %s; associationContext: %s", associationKey, associationContext );
+		log.debugf( "findAssociation: associationKeyMetadata: %s", associationKey.getMetadata() );
+
 		StringBuilder query = new StringBuilder( 100 );
 		query.append( "SELECT FROM " ).append( associationKey.getTable() ).append( " WHERE " );
 		for ( int i = 0; i < associationKey.getColumnNames().length; i++ ) {
@@ -141,6 +141,16 @@ public class OrientDBEntityQueries extends QueriesBase {
 			query.append( name ).append( "=" );
 			EntityKeyUtil.setFieldValue( query, value );
 		}
+
+		String[] indexColumns = associationKey.getMetadata().getRowKeyIndexColumnNames();
+		if ( indexColumns != null && indexColumns.length > 0 ) {
+			query.append( " order by " );
+			for ( String indexColumn : indexColumns ) {
+				query.append( indexColumn ).append( " asc " ).append( "," );
+			}
+			query.setLength( query.length() - 1 );
+		}
+
 		log.debugf( "findAssociation: query: %s", query );
 		try {
 			Statement stmt = connection.createStatement();
@@ -159,11 +169,15 @@ public class OrientDBEntityQueries extends QueriesBase {
 					}
 					Object dbValue = rs.getObject( dbColumnName );
 					dbValues.put( dbColumnName, dbValue );
+					if ( dbValue instanceof ODocument ) {
+						dbValues.remove( dbColumnName );
+						dbValues.putAll( ODocumentUtil.extractNamesTree( dbColumnName, (ODocument) dbValue ) );
+					}
 				}
 				log.debugf( " entiry values from db: %s", dbValues );
 				association.add( dbValues );
 			}
-			log.debugf( "findAssociation: rows %s:" + association.size() );
+			log.debugf( "findAssociation: rows :  %d", association.size() );
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( query.toString(), sqle );
@@ -171,31 +185,4 @@ public class OrientDBEntityQueries extends QueriesBase {
 		}
 		return association;
 	}
-
-	private ORecordId extractRid(AssociationContext associationContext) {
-		Tuple tuple = associationContext.getEntityTuple();
-		return (ORecordId) tuple.get( OrientDBConstant.SYSTEM_RID );
-	}
-
-	private String getRelationshipType(AssociationContext associationContext) {
-		return associationContext.getAssociationTypeContext().getRoleOnMainSide();
-	}
-
-	/**
-	 * no links of the type (class) in DB. this is not error
-	 *
-	 * @param sqle
-	 * @return
-	 */
-	private boolean isClassNotFoundInDB(SQLException sqle) {
-		boolean result = false;
-		for ( Iterator<Throwable> iterator = sqle.iterator(); ( iterator.hasNext() || result ); ) {
-			Throwable t = iterator.next();
-			// log.debug( "findAssociation: Throwable message :"+t.getMessage());
-			result = t.getMessage().contains( "was not found in database" );
-		}
-
-		return result;
-	}
-
 }

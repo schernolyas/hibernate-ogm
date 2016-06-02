@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.hibernate.AssertionFailure;
 import org.hibernate.StaleObjectStateException;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.dialect.impl.OrientDBAssociationQueries;
@@ -75,6 +74,7 @@ import com.orientechnologies.orient.core.exception.OConcurrentModificationExcept
 import com.orientechnologies.orient.core.id.ORecordId;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import org.hibernate.ogm.datastore.orientdb.query.impl.BigDecimalParamValueSetter;
 import org.hibernate.ogm.datastore.orientdb.query.impl.BooleanParamValueSetter;
 import org.hibernate.ogm.datastore.orientdb.query.impl.ByteParamValueSetter;
@@ -302,7 +302,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			return ASSOCIATION_NOT_FOUND;
 		}
 		Map<RowKey, Tuple> tuples = createAssociationMap( associationKey, associationContext );
-		log.debugf( "getAssociation:tuples map: %s ; ", tuples );
+		log.debugf( "getAssociation:tuples keys: %s ; ", tuples.keySet() );
 		return new Association( new OrientDBAssociationSnapshot( tuples ) );
 	}
 
@@ -312,7 +312,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		List<Map<String, Object>> relationships = entityQueries.get( associationKey.getEntityKey().getMetadata() )
 				.findAssociation( connection, associationKey, associationContext );
 
-		Map<RowKey, Tuple> tuples = new HashMap<>();
+		Map<RowKey, Tuple> tuples = new LinkedHashMap<>();
 
 		for ( Map<String, Object> relationship : relationships ) {
 			OrientDBTupleAssociationSnapshot snapshot = new OrientDBTupleAssociationSnapshot( relationship, associationKey,
@@ -403,13 +403,12 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 					associationKey, action.getKey() );
 			if ( relationship.isEmpty() ) {
 				// create
-				createRelationship( associationKey, action.getValue(), associatedEntityKeyMetadata );
+				createRelationshipWithNode( associationKey, action.getValue(), associatedEntityKeyMetadata );
 			}
 			else {
-				log.debugf( "putAssociationOperation: :  associations for  metadata: %s is %d", associationKey.getMetadata(), relationship.size() );
-				// relationship = createRelationship( associationKey, action.getValue(), associatedEntityKeyMetadata );
-				// throw new UnsupportedOperationException("putAssociationOperation: relations not empty not
-				// supported!");
+				log.debugf( "!!!!!putAssociationOperation: :  associationKey: %s ", associationKey );
+				log.debugf( "!!!!!putAssociationOperation: :  associations for  metadata: %s is %d", associationKey.getMetadata(), relationship.size() );
+				updateRelationshipWithNode( associationKey, action.getValue(), associatedEntityKeyMetadata );
 			}
 		}
 		else {
@@ -418,51 +417,32 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 
 	}
 
-	private void createRelationship(AssociationKey associationKey, Tuple associationRow, AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
-		log.debugf( "createRelationship: associationKey.getMetadata(): %s ; associationRow: %s", associationKey.getMetadata(), associationRow );
-		log.debugf( "createRelationship: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
-		log.debugf( "createRelationship: getAssociationType:%s", associationKey.getMetadata().getAssociationType() );
-		switch ( associationKey.getMetadata().getAssociationKind() ) {
-			case EMBEDDED_COLLECTION:
-				log.debug( "createRelationship:EMBEDDED_COLLECTION" );
-				createRelationshipWithEmbeddedNode( associationKey, associationRow, associatedEntityKeyMetadata );
-				break;
-			case ASSOCIATION:
-				log.debug( "createRelationship:ASSOCIATION" );
-				createRelationshipWithEntityNode( associationKey, associationRow, associatedEntityKeyMetadata );
-				break;
-			default:
-				throw new AssertionFailure( "Unrecognized associationKind: " + associationKey.getMetadata().getAssociationKind() );
-		}
-	}
-
-	private void createRelationshipWithEntityNode(AssociationKey associationKey, Tuple associationRow,
+	private void createRelationshipWithNode(AssociationKey associationKey, Tuple associationRow,
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
 		log.debugf( "createRelationshipWithEntityNode: associationKey.getMetadata(): %s ; associationRow: %s ; associatedEntityKeyMetadata: %s",
 				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
-		// @TODO equals with createRelationshipWithEmbeddedNode?
 		GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow, false, Collections.<String>emptySet() );
-		log.debugf( "createRelationshipWithEntityNode: query: %s", result.getExecutionQuery() );
+		log.debugf( "createRelationshipWithNode: query: %s", result.getExecutionQuery() );
 		try {
 			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
 			QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
-			log.debugf( "createRelationshipWithEntityNode: execute insert query: %d", pstmt.executeUpdate() );
+			log.debugf( "createRelationshipWithNode: execute insert query: %d", pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( result.getExecutionQuery(), sqle );
 		}
 	}
 
-	private void createRelationshipWithEmbeddedNode(AssociationKey associationKey, Tuple associationRow,
+	private void updateRelationshipWithNode(AssociationKey associationKey, Tuple associationRow,
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
-		log.debugf( "createRelationshipWithEmbeddedNode: associationKey.getMetadata(): %s ; associationRow: %s ; associatedEntityKeyMetadata: %s",
+		log.debugf( "updateRelationshipWithNode: associationKey.getMetadata(): %s ; associationRow: %s ; associatedEntityKeyMetadata: %s",
 				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
-		GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow, false, Collections.<String>emptySet() );
-		log.debugf( "createRelationshipWithEmbeddedNode: query: %s", result.getExecutionQuery() );
+		GenerationResult result = UPDATE_QUERY_GENERATOR.generate( associationKey, associationRow );
+		log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
 		try {
 			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
 			QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
-			log.debugf( "createRelationshipWithEmbeddedNode: execute insert query: %d", pstmt.executeUpdate() );
+			log.debugf( "updateRelationshipWithNode: execute update query: %d", pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( result.getExecutionQuery(), sqle );
@@ -504,6 +484,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return true;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public int executeBackendUpdateQuery(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
 		Map<String, Object> parameters = getNamedParameterValuesConvertedByGridType( queryParameters );
