@@ -11,10 +11,10 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.hibernate.ogm.datastore.map.impl.MapTupleSnapshot;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.ogm.datastore.map.impl.MapTupleSnapshot;
 import org.hibernate.ogm.dialect.query.spi.ClosableIterator;
 import org.hibernate.ogm.model.spi.Tuple;
 

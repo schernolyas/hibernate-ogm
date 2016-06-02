@@ -65,6 +65,23 @@ public class OrientDBTupleAssociationSnapshot implements TupleSnapshot {
 		properties.putAll( relationship );
 
 		log.debug( "1.collectProperties: " + properties );
+
+		// Properties stored in the target side of the association
+		/*
+		 * AssociatedEntityKeyMetadata associatedEntityKeyMetadata =
+		 * associationContext.getAssociationTypeContext().getAssociatedEntityKeyMetadata(); for ( String
+		 * associationColumn : associatedEntityKeyMetadata.getAssociationKeyColumns() ) { String targetColumnName =
+		 * associatedEntityKeyMetadata.getCorrespondingEntityKeyColumn( associationColumn ); if (
+		 * targetNode.containsField( targetColumnName ) ) { properties.put( associationColumn,
+		 * targetNode.getOriginalValue( targetColumnName ) ); } }
+		 */
+
+		// Property stored in the owner side of the association
+		/*
+		 * for ( int i = 0; i < associationKey.getColumnNames().length; i++ ) { if ( ownerNode.containsField(
+		 * associationKey.getEntityKey().getColumnNames()[i] ) ) { properties.put( associationKey.getColumnNames()[i],
+		 * ownerNode.getOriginalValue(associationKey.getEntityKey().getColumnNames()[i] ) ); } }
+		 */
 		log.debug( "collectProperties: " + properties );
 		return properties;
 	}

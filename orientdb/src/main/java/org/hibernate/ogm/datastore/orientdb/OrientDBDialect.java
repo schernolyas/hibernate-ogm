@@ -11,17 +11,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
 import org.hibernate.AssertionFailure;
 import org.hibernate.StaleObjectStateException;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.dialect.impl.OrientDBAssociationQueries;
 import org.hibernate.ogm.datastore.orientdb.dialect.impl.OrientDBAssociationSnapshot;
@@ -33,30 +30,12 @@ import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBSchemaDefiner;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
-import org.hibernate.ogm.datastore.orientdb.query.impl.BigDecimalParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.BooleanParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.ByteParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.CharacterParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.DateParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.DoubleParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.FloatParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.IntegerParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.LongParamValueSetter;
 import org.hibernate.ogm.datastore.orientdb.query.impl.OrientDBParameterMetadataBuilder;
-import org.hibernate.ogm.datastore.orientdb.query.impl.ParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.ShortParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.StringParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.TimestampParamValueSetter;
 import org.hibernate.ogm.datastore.orientdb.type.spi.ORecordIdGridType;
 import org.hibernate.ogm.datastore.orientdb.type.spi.ORidBagGridType;
-import org.hibernate.ogm.datastore.orientdb.utils.AbstractQueryGenerator.GenerationResult;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
-import org.hibernate.ogm.datastore.orientdb.utils.InsertQueryGenerator;
-import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner;
-import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner.QueryType;
-import org.hibernate.ogm.datastore.orientdb.utils.QueryUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.SequenceUtil;
-import org.hibernate.ogm.datastore.orientdb.utils.UpdateQueryGenerator;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.ogm.dialect.identity.spi.IdentityColumnAwareGridDialect;
 import org.hibernate.ogm.dialect.query.spi.BackendQuery;
 import org.hibernate.ogm.dialect.query.spi.ClosableIterator;
@@ -84,6 +63,37 @@ import org.hibernate.ogm.model.spi.AssociationOperation;
 import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.persister.impl.OgmCollectionPersister;
 import org.hibernate.ogm.persister.impl.OgmEntityPersister;
+import org.hibernate.ogm.type.spi.GridType;
+import org.hibernate.persister.collection.CollectionPersister;
+import org.hibernate.persister.entity.EntityPersister;
+import org.hibernate.service.spi.ServiceRegistryAwareService;
+import org.hibernate.service.spi.ServiceRegistryImplementor;
+import org.hibernate.type.Type;
+
+import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
+import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
+import com.orientechnologies.orient.core.id.ORecordId;
+import java.util.Arrays;
+import java.util.HashSet;
+import org.hibernate.ogm.datastore.orientdb.query.impl.BigDecimalParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.BooleanParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.ByteParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.CharacterParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.DateParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.DoubleParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.FloatParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.IntegerParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.LongParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.ParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.ShortParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.StringParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.TimestampParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.utils.InsertQueryGenerator;
+import org.hibernate.ogm.datastore.orientdb.utils.QueryUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.UpdateQueryGenerator;
+import org.hibernate.ogm.datastore.orientdb.utils.AbstractQueryGenerator.GenerationResult;
+import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner;
+import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner.QueryType;
 import org.hibernate.ogm.type.impl.BigDecimalType;
 import org.hibernate.ogm.type.impl.BooleanType;
 import org.hibernate.ogm.type.impl.ByteType;
@@ -96,16 +106,6 @@ import org.hibernate.ogm.type.impl.LongType;
 import org.hibernate.ogm.type.impl.ShortType;
 import org.hibernate.ogm.type.impl.StringType;
 import org.hibernate.ogm.type.impl.TimestampType;
-import org.hibernate.ogm.type.spi.GridType;
-import org.hibernate.persister.collection.CollectionPersister;
-import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.service.spi.ServiceRegistryAwareService;
-import org.hibernate.service.spi.ServiceRegistryImplementor;
-import org.hibernate.type.Type;
-
-import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
-import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
-import com.orientechnologies.orient.core.id.ORecordId;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -113,6 +113,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>,
 		ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
+	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
 	private static final Association ASSOCIATION_NOT_FOUND = null;
 	private static final InsertQueryGenerator INSERT_QUERY_GENERATOR = new InsertQueryGenerator();
@@ -165,14 +166,14 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	}
 
 	@Override
-	public void forEachTuple(ModelConsumer consumer, TupleContext tupleContext, EntityKeyMetadata entityKeyMetadata) {
-		throw new UnsupportedOperationException( "Not implemented yet!" );
-	}
-
-	@Override
 	public Tuple createTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "createTuple:EntityKey: %s ; tupleContext: %s ", key, tupleContext );
 		return new Tuple( new OrientDBTupleSnapshot( tupleContext.getAllAssociatedEntityKeyMetadata(), tupleContext.getAllRoles(), key.getMetadata() ) );
+	}
+
+	@Override
+	public void forEachTuple(ModelConsumer consumer, TupleContext tupleContext, EntityKeyMetadata entityKeyMetadata) {
+		throw new UnsupportedOperationException( "Not supported yet." );
 	}
 
 	@Override
@@ -504,9 +505,50 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	}
 
 	@Override
+	public int executeBackendUpdateQuery(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
+		Map<String, Object> parameters = getNamedParameterValuesConvertedByGridType( queryParameters );
+		log.debugf( "executeBackendQuery: parameters: %s ; ",
+				parameters.keySet() );
+		String nativeQuery = backendQuery.getQuery();
+		log.debugf( "executeBackendQuery: nativeQuery: %s ; metadata: %s",
+				backendQuery.getQuery(), backendQuery.getSingleEntityMetadataInformationOrNull() );
+
+		try {
+			PreparedStatement pstmt = provider.getConnection().prepareStatement( nativeQuery );
+			int paramIndex = 1;
+			for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
+				String key = entry.getKey();
+				TypedGridValue value = entry.getValue();
+				log.debugf( "executeBackendQuery: key: %s ; type: %s ; value: %s; type class: %s ",
+						key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
+				try {
+					if ( SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) ) {
+						SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
+					}
+					else {
+						// @TODO: support dates!
+						throw new UnsupportedOperationException( "Type " + value.getType() + " is not supported!" );
+					}
+
+				}
+				catch (SQLException sqle) {
+					throw log.cannotSetValueForParameter( paramIndex, sqle );
+				}
+				paramIndex++;
+			}
+			return pstmt.executeUpdate();
+		}
+		catch (SQLException e) {
+			throw log.cannotExecuteQuery( nativeQuery, e );
+		}
+	}
+
+	@SuppressWarnings(value = { "unchecked", "rawtypes" })
+	@Override
 	public ClosableIterator<Tuple> executeBackendQuery(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
 		Map<String, Object> parameters = getNamedParameterValuesConvertedByGridType( queryParameters );
-		log.debugf( "executeBackendQuery: parameters: %s ; ", parameters.keySet() );
+		log.debugf( "executeBackendQuery: parameters: %s ; ",
+				parameters.keySet() );
 		String nativeQuery = backendQuery.getQuery();
 		log.debugf( "executeBackendQuery: nativeQuery: %s ; metadata: %s",
 				backendQuery.getQuery(), backendQuery.getSingleEntityMetadataInformationOrNull() );
@@ -566,6 +608,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	@Override
 	public String parseNativeQuery(String nativeQuery) {
 		return nativeQuery;
+
 	}
 
 	@Override
@@ -640,8 +683,4 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return gridType;
 	}
 
-	@Override
-	public int executeBackendUpdateQuery(BackendQuery<String> query, QueryParameters queryParameters) {
-		throw new UnsupportedOperationException( "Not yet supported" );
-	}
 }

@@ -9,7 +9,6 @@ package org.hibernate.ogm.datastore.orientdb.utils;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
-
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 

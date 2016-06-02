@@ -6,9 +6,9 @@
  */
 package org.hibernate.ogm.datastore.orientdb.query.impl;
 
-import org.hibernate.engine.query.spi.ParameterParser;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.engine.query.spi.ParameterParser;
 import org.hibernate.ogm.dialect.query.spi.RecognizerBasedParameterMetadataBuilder;
 import org.parboiled.Parboiled;
 import org.parboiled.parserunners.RecoveringParseRunner;

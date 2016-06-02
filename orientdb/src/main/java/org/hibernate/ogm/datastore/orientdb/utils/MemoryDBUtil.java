@@ -7,6 +7,7 @@
 package org.hibernate.ogm.datastore.orientdb.utils;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import org.jboss.logging.Logger;
 import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
 
 /**
@@ -14,12 +15,16 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
  */
 public class MemoryDBUtil {
 
+	private static final Logger LOG = Logger.getLogger( MemoryDBUtil.class.getName() );
 	private static OrientGraphFactory factory;
 
 	public static void dropInMemoryDb() {
+		LOG.log( Logger.Level.WARN, "drop current database " );
 		if ( getOrientGraphFactory().getDatabase().exists() ) {
 			getOrientGraphFactory().getDatabase().drop();
+			LOG.log( Logger.Level.WARN, "current database  droped!" );
 			getOrientGraphFactory().getDatabase().close();
+			LOG.log( Logger.Level.WARN, "current database  closed!" );
 		}
 		factory.drop();
 		factory = null;

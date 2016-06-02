@@ -10,15 +10,20 @@ package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 import java.util.Map;
 import java.util.Set;
 
+import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
+import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.model.key.spi.RowKey;
 import org.hibernate.ogm.model.spi.AssociationSnapshot;
 import org.hibernate.ogm.model.spi.Tuple;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @see org.hibernate.ogm.datastore.neo4j.dialect.impl.Neo4jAssociationSnapshot
  */
+
 public class OrientDBAssociationSnapshot implements AssociationSnapshot {
 
+	private static Log log = LoggerFactory.getLogger();
 	private final Map<RowKey, Tuple> tuples;
 
 	public OrientDBAssociationSnapshot(Map<RowKey, Tuple> tuples) {
@@ -27,17 +32,20 @@ public class OrientDBAssociationSnapshot implements AssociationSnapshot {
 
 	@Override
 	public boolean containsKey(RowKey rowKey) {
+		log.debug( "containsKey: rowKey :" + rowKey );
 		return tuples.containsKey( rowKey );
 	}
 
 	@Override
 	public Tuple get(RowKey rowKey) {
+		log.debug( "get: rowKey :" + rowKey );
 		return tuples.get( rowKey );
 	}
 
 	@Override
 	public Set<RowKey> getRowKeys() {
 		return tuples.keySet();
+
 	}
 
 	@Override

@@ -42,7 +42,7 @@ public class InsertQueryGenerator extends AbstractQueryGenerator {
 		return new GenerationResult( queryResult.getPreparedStatementParams(), insertQuery.toString() );
 	}
 
-	public QueryResult createJSON(boolean isStoreTuple, Set<String> keyColumnNames, Map<String, Object> valuesMap) {
+	protected QueryResult createJSON(boolean isStoreTuple, Set<String> keyColumnNames, Map<String, Object> valuesMap) {
 		QueryResult result = new QueryResult();
 		for ( Map.Entry<String, Object> entry : valuesMap.entrySet() ) {
 			String columnName = entry.getKey();
@@ -119,7 +119,7 @@ public class InsertQueryGenerator extends AbstractQueryGenerator {
 		return embeddedFieldValue;
 	}
 
-	public class QueryResult {
+	protected class QueryResult {
 
 		private List<Object> preparedStatementParams = new LinkedList<>();
 		private JSONObject json = new JSONObject();
