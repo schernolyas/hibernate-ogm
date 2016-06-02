@@ -6,13 +6,13 @@
  */
 package org.hibernate.ogm.datastore.orientdb.impl;
 
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import java.sql.Connection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 import java.util.Properties;
 
-import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
@@ -21,25 +21,32 @@ import org.hibernate.ogm.datastore.orientdb.transaction.impl.OrientDbTransaction
 import org.hibernate.ogm.datastore.orientdb.utils.ConnectionHolder;
 import org.hibernate.ogm.datastore.orientdb.utils.FormatterUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.MemoryDBUtil;
+import org.hibernate.engine.jndi.spi.JndiService;
+import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
+import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.spi.BaseDatastoreProvider;
 import org.hibernate.ogm.datastore.spi.SchemaDefiner;
 import org.hibernate.ogm.dialect.spi.GridDialect;
 import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 import org.hibernate.resource.transaction.TransactionCoordinatorBuilder;
 import org.hibernate.service.spi.Configurable;
+import org.hibernate.service.spi.ServiceRegistryAwareService;
+import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
-
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
-public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements Startable, Stoppable, Configurable {
+public class OrientDBDatastoreProvider extends BaseDatastoreProvider
+		implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	private static Log log = LoggerFactory.getLogger();
 	private ConnectionHolder connectionHolder;
 	private ConfigurationPropertyReader propertyReader;
+	private ServiceRegistryImplementor registry;
+	private JtaPlatform jtaPlatform;
+	private JndiService jndiService;
 	private Properties info;
 
 	@Override
@@ -136,6 +143,14 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		log.debugf( "config map: %s", cfg.toString() );
 		propertyReader = new ConfigurationPropertyReader( cfg );
 
+	}
+
+	@Override
+	public void injectServices(ServiceRegistryImplementor serviceRegistry) {
+		log.debug( "injectServices" );
+		this.registry = serviceRegistry;
+		jtaPlatform = serviceRegistry.getService( JtaPlatform.class );
+		jndiService = serviceRegistry.getService( JndiService.class );
 	}
 
 	@Override

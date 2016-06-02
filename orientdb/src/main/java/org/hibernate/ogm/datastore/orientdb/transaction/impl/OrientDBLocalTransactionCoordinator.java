@@ -12,7 +12,6 @@ import com.orientechnologies.orient.core.tx.OTransactionNoTx;
 import com.orientechnologies.orient.core.tx.OTransactionOptimistic;
 import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.sql.Connection;
-
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;

@@ -15,13 +15,13 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.UUID;
 
-import org.hibernate.mapping.Column;
-import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.mapping.Column;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 
 import com.orientechnologies.orient.core.id.ORecordId;
+import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;

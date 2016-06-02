@@ -7,11 +7,6 @@
 
 package org.hibernate.ogm.datastore.orientdb.impl;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.CharBuffer;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.MessageFormat;
@@ -25,23 +20,19 @@ import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.boot.model.relational.Namespace;
-import org.hibernate.boot.model.relational.Sequence;
+import org.hibernate.ogm.datastore.orientdb.dto.EmbeddedColumnInfo;
+import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
+import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.PrimaryKey;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
-import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
-import org.hibernate.ogm.datastore.orientdb.constant.OrientDBMapping;
-import org.hibernate.ogm.datastore.orientdb.dto.EmbeddedColumnInfo;
-import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
-import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
-import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
 import org.hibernate.ogm.datastore.spi.BaseSchemaDefiner;
 import org.hibernate.ogm.datastore.spi.DatastoreProvider;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
-import org.hibernate.type.ComponentType;
 import org.hibernate.type.CustomType;
 import org.hibernate.type.EntityType;
 import org.hibernate.type.EnumType;
@@ -50,22 +41,28 @@ import org.hibernate.type.LongType;
 import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.OneToOneType;
 import org.hibernate.type.StringType;
-import org.hibernate.type.descriptor.converter.AttributeConverterTypeAdapter;
 import org.hibernate.usertype.UserType;
 
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.exception.OSequenceException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.CharBuffer;
+import org.hibernate.boot.model.relational.Sequence;
+import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
+import org.hibernate.ogm.datastore.orientdb.constant.OrientDBMapping;
+import org.hibernate.type.ComponentType;
+import org.hibernate.type.descriptor.converter.AttributeConverterTypeAdapter;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 
 public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
-
-	private static final String EXECUTE_QUERY_SQL = "executeQuery.sql";
-	private static final String GET_TABLE_SEQ_VALUE = "getTableSeqValue";
 
 	private static final String CREATE_PROPERTY_TEMPLATE = "create property {0}.{1} {2}";
 	private static final String CREATE_EMBEDDED_PROPERTY_TEMPLATE = "create property {0}.{1} embedded {2}";
@@ -129,6 +126,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 				catch (SQLException sqle1) {
 					throw log.cannotGenerateSequence( name, sqle1 );
 				}
+
 			}
 			else {
 				throw log.cannotGenerateSequence( name, sqle );
@@ -153,7 +151,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			OrientJdbcConnection orientDBConnection = (OrientJdbcConnection) connection;
 			Set<String> functions = orientDBConnection.getDatabase().getMetadata().getFunctionLibrary().getFunctionNames();
 			log.debugf( " functions : %s", functions );
-			if ( functions.contains( GET_TABLE_SEQ_VALUE.toUpperCase() ) ) {
+			if ( functions.contains( "getTableSeqValue".toUpperCase() ) ) {
 				log.debug( " function 'getTableSeqValue' exists!" );
 				return;
 			}
@@ -168,7 +166,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			connection.createStatement().execute( new String( buffer.array() ).trim() );
 		}
 		catch (SQLException | IOException e) {
-			throw log.cannotCreateStoredProcedure( GET_TABLE_SEQ_VALUE, e );
+			throw log.cannotCreateStoredProcedure( "getTableSeqValue", e );
 		}
 	}
 
@@ -184,7 +182,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			for ( OClass oc : orientDBConnection.getDatabase().getMetadata().getSchema().getClasses() ) {
 				log.debugf( " class: %s", oc.getName() );
 			}
-			InputStream is = OrientDBSchemaDefiner.class.getResourceAsStream( EXECUTE_QUERY_SQL );
+			InputStream is = OrientDBSchemaDefiner.class.getResourceAsStream( "executeQuery.sql" );
 			Reader reader = new InputStreamReader( is, "utf-8" );
 			char[] chars = new char[2000];
 			CharBuffer buffer = CharBuffer.wrap( chars );
@@ -192,7 +190,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			connection.createStatement().execute( new String( buffer.array() ).trim() );
 		}
 		catch (SQLException | IOException e) {
-			throw log.cannotCreateStoredProcedure( GET_TABLE_SEQ_VALUE, e );
+			throw log.cannotCreateStoredProcedure( "getTableSeqValue", e );
 		}
 	}
 

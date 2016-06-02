@@ -12,7 +12,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -22,14 +22,16 @@ import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
-import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
+import org.hibernate.ogm.model.spi.Tuple;
 
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import java.util.Arrays;
+import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -108,6 +110,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 
 	private void reCastValues(Map<String, Object> map) {
 		for ( Map.Entry<String, Object> entry : map.entrySet() ) {
+			String key = entry.getKey();
 			Object value = entry.getValue();
 			if ( value instanceof BigDecimal ) {
 				BigDecimal bd = (BigDecimal) value;
@@ -161,10 +164,38 @@ public class OrientDBEntityQueries extends QueriesBase {
 				association.add( dbValues );
 			}
 			log.debugf( "findAssociation: rows %s:" + association.size() );
-			return association;
 		}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( query.toString(), sqle );
+
 		}
+		return association;
 	}
+
+	private ORecordId extractRid(AssociationContext associationContext) {
+		Tuple tuple = associationContext.getEntityTuple();
+		return (ORecordId) tuple.get( OrientDBConstant.SYSTEM_RID );
+	}
+
+	private String getRelationshipType(AssociationContext associationContext) {
+		return associationContext.getAssociationTypeContext().getRoleOnMainSide();
+	}
+
+	/**
+	 * no links of the type (class) in DB. this is not error
+	 *
+	 * @param sqle
+	 * @return
+	 */
+	private boolean isClassNotFoundInDB(SQLException sqle) {
+		boolean result = false;
+		for ( Iterator<Throwable> iterator = sqle.iterator(); ( iterator.hasNext() || result ); ) {
+			Throwable t = iterator.next();
+			// log.debug( "findAssociation: Throwable message :"+t.getMessage());
+			result = t.getMessage().contains( "was not found in database" );
+		}
+
+		return result;
+	}
+
 }
