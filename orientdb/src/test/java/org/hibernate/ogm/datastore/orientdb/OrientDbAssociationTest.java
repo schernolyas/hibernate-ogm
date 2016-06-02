@@ -203,7 +203,42 @@ public class OrientDbAssociationTest {
 	}
 
 	@Test
-	public void test3RemoveAssociations() throws Exception {
+	public void test3EditAssociations() throws Exception {
+		log.debug( "start" );
+		try {
+			em.getTransaction().begin();
+
+			Query query = em.createNativeQuery( "select from Customer where name='Ivahoe'", Customer.class );
+			Customer customer = (Customer) query.getResultList().get( 0 );
+
+			List<BuyingOrder> orders = customer.getOrders();
+			assertEquals( 3l, orders.size() );
+
+			BuyingOrder order = orders.get( 0 );
+			order.setOrderKey( "2233-55" );
+			em.merge( order );
+			em.getTransaction().commit();
+			em.clear();
+
+			em.getTransaction().begin();
+
+			query = em.createNativeQuery( "select from Customer where name='Ivahoe'", Customer.class );
+			customer = (Customer) query.getResultList().get( 0 );
+			orders = customer.getOrders();
+			assertEquals( 3l, orders.size() );
+			assertEquals( "2233-55", orders.get( 0 ).getOrderKey() );
+			em.getTransaction().commit();
+
+		}
+		catch (Exception e) {
+			log.error( "Error", e );
+			em.getTransaction().rollback();
+			throw e;
+		}
+	}
+
+	@Test
+	public void test4RemoveAssociations() throws Exception {
 		log.debug( "start" );
 		try {
 			em.getTransaction().begin();
@@ -247,7 +282,7 @@ public class OrientDbAssociationTest {
 	}
 
 	@Test
-	public void test4ReadAllAssociations() throws Exception {
+	public void test5ReadAllAssociations() throws Exception {
 		log.debug( "start" );
 		try {
 			em.getTransaction().begin();
@@ -268,7 +303,7 @@ public class OrientDbAssociationTest {
 				orderKeySet.add( order.getOrderKey() );
 			}
 			log.debug( "OrderKeys : " + orderKeySet );
-			assertTrue( "OrderKey 2233 must be linked!", orderKeySet.contains( "2233" ) );
+			assertTrue( "OrderKey 3322 must be linked!", orderKeySet.contains( "3322" ) );
 
 			BuyingOrder order = customer.getOrders().get( 0 );
 			assertNotNull( "Order with id '" + order.getbKey() + "' must to have owner!", order.getOwner() );

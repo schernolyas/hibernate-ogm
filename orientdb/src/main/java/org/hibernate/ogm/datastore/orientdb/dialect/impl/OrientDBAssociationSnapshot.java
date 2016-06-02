@@ -8,7 +8,6 @@
 package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 
 import java.util.Map;
-import java.util.Set;
 
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
@@ -32,24 +31,23 @@ public class OrientDBAssociationSnapshot implements AssociationSnapshot {
 
 	@Override
 	public boolean containsKey(RowKey rowKey) {
-		log.debug( "containsKey: rowKey :" + rowKey );
 		return tuples.containsKey( rowKey );
 	}
 
 	@Override
 	public Tuple get(RowKey rowKey) {
-		log.debug( "get: rowKey :" + rowKey );
+		log.debugf( "get: rowKey : %s", rowKey );
 		return tuples.get( rowKey );
-	}
-
-	@Override
-	public Set<RowKey> getRowKeys() {
-		return tuples.keySet();
-
 	}
 
 	@Override
 	public int size() {
 		return tuples.size();
 	}
+
+	@Override
+	public Iterable<RowKey> getRowKeys() {
+		return tuples.keySet();
+	}
+
 }

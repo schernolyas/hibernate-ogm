@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
+ * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
  */
 
 public class OrientDBConstant {
