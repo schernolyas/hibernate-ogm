@@ -86,7 +86,7 @@ public class UpdateQueryGenerator extends AbstractQueryGenerator {
 		StringBuilder updateQuery = new StringBuilder( 200 );
 		updateQuery.append( "update " ).append( tableName ).append( " set " );
 
-		Map<String, Object> allValuesMap = new LinkedHashMap<>( valuesMap );
+		Map<String, Object> allValuesMap = new LinkedHashMap<>( valuesMap.size() );
 		for ( Map.Entry<String, Object> entry : valuesMap.entrySet() ) {
 			String fieldName = entry.getKey();
 			Object value = entry.getValue();
@@ -95,12 +95,16 @@ public class UpdateQueryGenerator extends AbstractQueryGenerator {
 				allValuesMap.remove( fieldName );
 				allValuesMap.putAll( ODocumentUtil.extractNamesTree( fieldName, (ODocument) value ) );
 			}
+			else {
+				allValuesMap.put( fieldName, value );
+			}
 		}
 
 		LinkedHashSet<String> allColumnNames = new LinkedHashSet<>( allValuesMap.keySet() );
 		allColumnNames.removeAll( Arrays.asList( primaryKeyColumnNames ) );
 		allColumnNames.removeAll( OrientDBConstant.SYSTEM_FIELDS );
 		allColumnNames.removeAll( OrientDBConstant.MAPPING_FIELDS.keySet() );
+		log.debugf( " generateMainPart: allColumnNames: %s;", allColumnNames );
 
 		for ( String columnName : allColumnNames ) {
 			Object columnValue = allValuesMap.get( columnName );

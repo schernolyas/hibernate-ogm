@@ -142,7 +142,10 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 	public void configure(Map cfg) {
 		log.debugf( "config map: %s", cfg.toString() );
 		propertyReader = new ConfigurationPropertyReader( cfg );
+	}
 
+	public ConfigurationPropertyReader getPropertyReader() {
+		return propertyReader;
 	}
 
 	@Override

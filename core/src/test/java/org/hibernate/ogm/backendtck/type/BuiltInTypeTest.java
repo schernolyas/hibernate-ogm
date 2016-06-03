@@ -207,8 +207,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 
 		Bookmark loadedBookmark = saveAndGet( bookmark );
 		assertEquals(
-				"String mapped enum value does not match", bookmark.getClassifier(), loadedBookmark.getClassifier()
-		);
+				"String mapped enum value does not match", bookmark.getClassifier(), loadedBookmark.getClassifier() );
 	}
 
 	@Test
@@ -218,8 +217,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		Bookmark loadedBookmark = saveAndGet( bookmark );
 		assertEquals(
 				"Ordinal mapped enum value does not match", bookmark.getClassifierAsOrdinal(),
-				loadedBookmark.getClassifierAsOrdinal()
-		);
+				loadedBookmark.getClassifierAsOrdinal() );
 	}
 
 	// Date/time types
@@ -280,9 +278,10 @@ public class BuiltInTypeTest extends OgmTestCase {
 
 		Bookmark loadedBookmark = saveAndGet( bookmark );
 
-		assertEquals( "Year value does not match", bookmark.getDestructionDate(), loadedBookmark.getDestructionDate() );
+		assertEquals( "Timestamp value does not match", bookmark.getDestructionDate().getTime(), loadedBookmark.getDestructionDate().getTime() );
 	}
 
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "OrientDB not support Calendar")
 	@Test
 	public void testCalendarTemporalTypeTimestampSupport() throws Exception {
 		bookmark.setDestructionCalendar( Calendar.getInstance() );
@@ -291,10 +290,10 @@ public class BuiltInTypeTest extends OgmTestCase {
 
 		assertEquals(
 				"Calendar value does not match", bookmark.getDestructionCalendar().getTime(),
-				loadedBookmark.getDestructionCalendar().getTime()
-		);
+				loadedBookmark.getDestructionCalendar().getTime() );
 	}
 
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "OrientDB not support Calendar")
 	@Test
 	public void testCalendarPersistedAsTemporalTypeDateSupport() throws Exception {
 		Calendar creationCalendar = Calendar.getInstance();
@@ -372,7 +371,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] {
+		return new Class<?>[]{
 				Bookmark.class
 		};
 	}

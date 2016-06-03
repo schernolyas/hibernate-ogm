@@ -70,4 +70,7 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 
 	@Message(id = 1716, value = "Key: %s. Version %d not actual.")
 	HibernateException versionNotActual(EntityKey key, Integer version);
+
+	@Message(id = 1717, value = "Cannot alter database properties")
+	HibernateException cannotAlterDatabaseProperties(@Cause Exception cause);
 }

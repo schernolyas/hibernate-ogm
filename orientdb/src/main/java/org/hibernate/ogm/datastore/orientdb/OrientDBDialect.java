@@ -94,6 +94,7 @@ import org.hibernate.ogm.datastore.orientdb.utils.UpdateQueryGenerator;
 import org.hibernate.ogm.datastore.orientdb.utils.AbstractQueryGenerator.GenerationResult;
 import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner;
 import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner.QueryType;
+import org.hibernate.ogm.model.key.spi.AssociationKind;
 import org.hibernate.ogm.type.impl.BigDecimalType;
 import org.hibernate.ogm.type.impl.BooleanType;
 import org.hibernate.ogm.type.impl.ByteType;
@@ -437,16 +438,22 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
 		log.debugf( "updateRelationshipWithNode: associationKey.getMetadata(): %s ; associationRow: %s ; associatedEntityKeyMetadata: %s",
 				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
-		GenerationResult result = UPDATE_QUERY_GENERATOR.generate( associationKey, associationRow );
-		log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
-		try {
-			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
-			QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
-			log.debugf( "updateRelationshipWithNode: execute update query: %d", pstmt.executeUpdate() );
+		if ( AssociationKind.EMBEDDED_COLLECTION.equals( associationKey.getMetadata().getAssociationKind() ) ) {
+			GenerationResult result = UPDATE_QUERY_GENERATOR.generate( associationKey, associationRow );
+			log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
+			try {
+				PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
+				QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
+				log.debugf( "updateRelationshipWithNode: execute update query: %d", pstmt.executeUpdate() );
+			}
+			catch (SQLException sqle) {
+				throw log.cannotExecuteQuery( result.getExecutionQuery(), sqle );
+			}
 		}
-		catch (SQLException sqle) {
-			throw log.cannotExecuteQuery( result.getExecutionQuery(), sqle );
+		else {
+			log.debugf( "updateRelationshipWithNode: update  association  not needs!" );
 		}
+
 	}
 
 	@Override
