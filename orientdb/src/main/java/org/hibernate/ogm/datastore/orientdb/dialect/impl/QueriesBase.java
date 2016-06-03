@@ -6,7 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -19,7 +19,7 @@ public class QueriesBase {
 	}
 
 	protected Map<String, Object> params(Object[] columnValues, int offset) {
-		Map<String, Object> params = new HashMap<String, Object>( columnValues.length );
+		Map<String, Object> params = new LinkedHashMap<String, Object>( columnValues.length );
 		for ( int i = 0; i < columnValues.length; i++ ) {
 			params.put( String.valueOf( offset + i ), columnValues[i] );
 		}

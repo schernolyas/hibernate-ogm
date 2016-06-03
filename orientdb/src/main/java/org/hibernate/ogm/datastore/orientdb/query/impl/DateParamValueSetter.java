@@ -11,7 +11,7 @@ import java.sql.SQLException;
 import java.util.Date;
 
 /**
- * @author Sergey Chernolyas <sergey.chernolyas@gmail.com>
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class DateParamValueSetter implements ParamValueSetter<Date> {
 
