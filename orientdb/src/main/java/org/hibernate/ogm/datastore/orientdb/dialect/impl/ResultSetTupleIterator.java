@@ -8,7 +8,7 @@ package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
@@ -53,7 +53,7 @@ public class ResultSetTupleIterator implements ClosableIterator<Tuple> {
 	}
 
 	protected Tuple convert() {
-		Map<String, Object> map = new HashMap<>();
+		Map<String, Object> map = new LinkedHashMap<>();
 		try {
 			for ( int i = 0; i < resultSet.getMetaData().getColumnCount(); i++ ) {
 				int fieldNum = i + 1;

@@ -514,7 +514,6 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 						SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
 					}
 					else {
-						// @TODO: support dates!
 						throw new UnsupportedOperationException( "Type " + value.getType() + " is not supported!" );
 					}
 
@@ -540,6 +539,10 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		String nativeQuery = backendQuery.getQuery();
 		log.debugf( "executeBackendQuery: nativeQuery: %s ; metadata: %s",
 				backendQuery.getQuery(), backendQuery.getSingleEntityMetadataInformationOrNull() );
+		for ( Map.Entry<String, TypedGridValue> parameter : queryParameters.getNamedParameters().entrySet() ) {
+			log.debugf( "executeBackendQuery: parameter: %s ; type: %s; value: %s",
+					parameter.getKey(), parameter.getValue().getType(), parameter.getValue().getValue() );
+		}
 
 		try {
 			PreparedStatement pstmt = provider.getConnection().prepareStatement( nativeQuery );
@@ -547,14 +550,14 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
 				String key = entry.getKey();
 				TypedGridValue value = entry.getValue();
-				log.debugf( "executeBackendQuery: key: %s ; type: %s ; value: %s; type class: %s ",
-						key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
+				log.debugf( "executeBackendQuery: key: %s ; type: %s ; value: %s; type class: %s. is simple value: %s ",
+						key, value.getType(), value.getValue(), value.getType().getReturnedClass(),
+						SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) );
 				try {
 					if ( SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) ) {
 						SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
 					}
 					else {
-						// @TODO: support dates!
 						throw new UnsupportedOperationException( "Type " + value.getType() + " is not supported!" );
 					}
 
@@ -577,7 +580,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	 * corresponding to each parameter type.
 	 */
 	private Map<String, Object> getNamedParameterValuesConvertedByGridType(QueryParameters queryParameters) {
-		Map<String, Object> parameterValues = new HashMap<>( queryParameters.getNamedParameters().size() );
+		Map<String, Object> parameterValues = new LinkedHashMap<>( queryParameters.getNamedParameters().size() );
 		Tuple dummy = new Tuple();
 
 		for ( Map.Entry<String, TypedGridValue> parameter : queryParameters.getNamedParameters().entrySet() ) {
