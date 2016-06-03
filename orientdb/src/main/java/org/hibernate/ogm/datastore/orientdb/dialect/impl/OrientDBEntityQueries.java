@@ -83,7 +83,8 @@ public class OrientDBEntityQueries extends QueriesBase {
 					int dbFieldNo = i + 1;
 					String dbColumnName = metadata.getColumnName( dbFieldNo );
 					Object dbValue = rs.getObject( dbColumnName );
-					log.debugf( "%d dbColumnName: %s dbValue class:", i, dbColumnName, ( dbValue != null ? dbValue.getClass() : null ) );
+					log.debugf( "%d dbColumnName: %s; dbValue class: %s; dbvalue: %s", i, dbColumnName, ( dbValue != null ? dbValue.getClass() : null ),
+							dbValue );
 					log.debugf( "%d dbColumnName: %s ; sql type: %s", i, dbColumnName, rs.getMetaData().getColumnTypeName( dbFieldNo ) );
 					dbValues.put( dbColumnName, dbValue );
 					if ( dbValue instanceof ODocument ) {

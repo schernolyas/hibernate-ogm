@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.utils;
 
+import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.io.IOException;
@@ -34,6 +35,8 @@ import org.hibernate.ogm.utils.GridDialectOperationContexts;
 import org.hibernate.ogm.utils.TestableGridDialect;
 
 import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
+import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 
 /**
  * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
@@ -102,7 +105,7 @@ public class OrientDBTestHelper implements TestableGridDialect {
 			}
 		}
 		catch (SQLException e) {
-			log.cannotExecuteQuery( COUNT_QUERY, e );
+			throw log.cannotExecuteQuery( COUNT_QUERY, e );
 		}
 		return result;
 
@@ -132,14 +135,20 @@ public class OrientDBTestHelper implements TestableGridDialect {
 	@Override
 	public void prepareDatabase(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
+		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
 		OrientJdbcConnection connection = (OrientJdbcConnection) provider.getConnection();
 		log.infof( "call prepareDatabase! db closed: %s ", connection.getDatabase().isClosed() );
 		try {
 			Statement stmt = connection.createStatement();
 			stmt.execute( "ALTER DATABASE TIMEZONE UTC" );
+			stmt.execute( "ALTER DATABASE DATEFORMAT '"
+					.concat( propertyReader.property( OrientDBProperties.DATE_FORMAT, String.class ).withDefault( "yyyy-MM-dd" ).getValue() ).concat( "'" ) );
+			stmt.execute( "ALTER DATABASE DATETIMEFORMAT '"
+					.concat( propertyReader.property( OrientDBProperties.DATETIME_FORMAT, String.class ).withDefault( "yyyy-MM-dd HH:mm:ss" ).getValue() )
+					.concat( "'" ) );
 		}
-		catch (SQLException sqle) {
-			throw new RuntimeException( "Cannot set default timezone!", sqle );
+		catch (SQLException | OException sqle) {
+			throw log.cannotAlterDatabaseProperties( sqle );
 		}
 	}
 
