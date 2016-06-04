@@ -39,7 +39,7 @@ import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBTestHelper implements TestableGridDialect {
 

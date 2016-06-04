@@ -15,7 +15,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @MessageLogger(projectCode = "OGM")
 public interface Log extends org.hibernate.ogm.util.impl.Log {

@@ -7,7 +7,7 @@
 package org.hibernate.ogm.datastore.orientdb.utils;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 
 public class QueryTypeDefiner {

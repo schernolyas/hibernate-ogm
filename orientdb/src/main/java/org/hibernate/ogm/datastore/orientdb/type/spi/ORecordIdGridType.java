@@ -15,7 +15,7 @@ import org.hibernate.ogm.type.impl.AbstractGenericBasicType;
 import com.orientechnologies.orient.core.id.ORecordId;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class ORecordIdGridType extends AbstractGenericBasicType<ORecordId> {
 

@@ -15,7 +15,7 @@ import org.parboiled.annotations.SuppressSubnodes;
 import org.parboiled.support.StringVar;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBQueryParser extends BaseParser<ParameterParser.Recognizer> {
 
