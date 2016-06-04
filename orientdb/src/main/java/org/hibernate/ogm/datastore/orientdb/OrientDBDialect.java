@@ -9,7 +9,6 @@ package org.hibernate.ogm.datastore.orientdb;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
@@ -492,89 +491,70 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 	}
 
 	/**
+	 * Prepare PreparedStemenet for execute NoSQL query
+	 * @param backendQuery represention of NoSQL query
+	 * @param queryParameters parameters of the query
+	 * @return Prepared PreparedStatement
+	 * @throws SQLException if any database exception occurs
+	 */
+
+	@SuppressWarnings("unchecked")
+	private PreparedStatement prepareStatement(BackendQuery<String> backendQuery, QueryParameters queryParameters) throws SQLException {
+		Map<String, Object> parameters = getNamedParameterValuesConvertedByGridType( queryParameters );
+		log.debugf( "prepareStatement: parameters: %s ; ",
+				parameters.keySet() );
+		String nativeQuery = backendQuery.getQuery();
+		log.debugf( "prepareStatement: nativeQuery: %s ; metadata: %s",
+				backendQuery.getQuery(), backendQuery.getSingleEntityMetadataInformationOrNull() );
+		PreparedStatement pstmt = provider.getConnection().prepareStatement( nativeQuery );
+		int paramIndex = 1;
+		for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
+			String key = entry.getKey();
+			TypedGridValue value = entry.getValue();
+			log.debugf( "prepareStatement: key: %s ; type: %s ; value: %s; type class: %s ",
+					key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
+			try {
+				if ( OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) ) {
+					OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
+				}
+				else {
+					throw new UnsupportedOperationException( "Type " + value.getType() + " is not supported!" );
+				}
+
+			}
+			catch (SQLException sqle) {
+				throw log.cannotSetValueForParameter( paramIndex, sqle );
+			}
+			paramIndex++;
+		}
+		return pstmt;
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public int executeBackendUpdateQuery(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
-		Map<String, Object> parameters = getNamedParameterValuesConvertedByGridType( queryParameters );
-		log.debugf( "executeBackendQuery: parameters: %s ; ",
-				parameters.keySet() );
-		String nativeQuery = backendQuery.getQuery();
-		log.debugf( "executeBackendQuery: nativeQuery: %s ; metadata: %s",
-				backendQuery.getQuery(), backendQuery.getSingleEntityMetadataInformationOrNull() );
-
 		try {
-			PreparedStatement pstmt = provider.getConnection().prepareStatement( nativeQuery );
-			int paramIndex = 1;
-			for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
-				String key = entry.getKey();
-				TypedGridValue value = entry.getValue();
-				log.debugf( "executeBackendQuery: key: %s ; type: %s ; value: %s; type class: %s ",
-						key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
-				try {
-					if ( OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) ) {
-						OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
-					}
-					else {
-						throw new UnsupportedOperationException( "Type " + value.getType() + " is not supported!" );
-					}
-
-				}
-				catch (SQLException sqle) {
-					throw log.cannotSetValueForParameter( paramIndex, sqle );
-				}
-				paramIndex++;
-			}
+			PreparedStatement pstmt = prepareStatement( backendQuery, queryParameters );
 			return pstmt.executeUpdate();
 		}
 		catch (SQLException e) {
-			throw log.cannotExecuteQuery( nativeQuery, e );
+			throw log.cannotExecuteQuery( backendQuery.getQuery(), e );
 		}
 	}
-
-	@SuppressWarnings(value = { "unchecked", "rawtypes" })
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public ClosableIterator<Tuple> executeBackendQuery(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
-		Map<String, Object> parameters = getNamedParameterValuesConvertedByGridType( queryParameters );
-		log.debugf( "executeBackendQuery: parameters: %s ; ",
-				parameters.keySet() );
-		String nativeQuery = backendQuery.getQuery();
-		log.debugf( "executeBackendQuery: nativeQuery: %s ; metadata: %s",
-				backendQuery.getQuery(), backendQuery.getSingleEntityMetadataInformationOrNull() );
-		for ( Map.Entry<String, TypedGridValue> parameter : queryParameters.getNamedParameters().entrySet() ) {
-			log.debugf( "executeBackendQuery: parameter: %s ; type: %s; value: %s",
-					parameter.getKey(), parameter.getValue().getType(), parameter.getValue().getValue() );
-		}
-
 		try {
-			PreparedStatement pstmt = provider.getConnection().prepareStatement( nativeQuery );
-			int paramIndex = 1;
-			for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
-				String key = entry.getKey();
-				TypedGridValue value = entry.getValue();
-				log.debugf( "executeBackendQuery: key: %s ; type: %s ; value: %s; type class: %s. is simple value: %s ",
-						key, value.getType(), value.getValue(), value.getType().getReturnedClass(),
-						OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) );
-				try {
-					if ( OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) ) {
-						OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
-					}
-					else {
-						throw new UnsupportedOperationException( "Type " + value.getType() + " is not supported!" );
-					}
-
-				}
-				catch (SQLException sqle) {
-					throw log.cannotSetValueForParameter( paramIndex, sqle );
-				}
-				paramIndex++;
-			}
-			ResultSet rs = pstmt.executeQuery();
-			return new ResultSetTupleIterator( rs );
+			PreparedStatement pstmt = prepareStatement( backendQuery, queryParameters );
+			return new ResultSetTupleIterator( pstmt.executeQuery() );
 		}
 		catch (SQLException e) {
-			throw log.cannotExecuteQuery( nativeQuery, e );
+			throw log.cannotExecuteQuery( backendQuery.getQuery(), e );
 		}
 	}
 
@@ -585,32 +565,44 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 	private Map<String, Object> getNamedParameterValuesConvertedByGridType(QueryParameters queryParameters) {
 		Map<String, Object> parameterValues = new LinkedHashMap<>( queryParameters.getNamedParameters().size() );
 		Tuple dummy = new Tuple();
-
 		for ( Map.Entry<String, TypedGridValue> parameter : queryParameters.getNamedParameters().entrySet() ) {
 			parameter.getValue().getType().nullSafeSet( dummy, parameter.getValue().getValue(), new String[]{ parameter.getKey() }, null );
 			parameterValues.put( parameter.getKey(), dummy.get( parameter.getKey() ) );
 		}
-
 		return parameterValues;
 	}
-
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public ParameterMetadataBuilder getParameterMetadataBuilder() {
 		return new OrientDBParameterMetadataBuilder();
 	}
-
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public String parseNativeQuery(String nativeQuery) {
 		return nativeQuery;
 
 	}
-
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void sessionFactoryCreated(SessionFactoryImplementor sessionFactoryImplementor) {
 		this.associationQueries = initializeAssociationQueries( sessionFactoryImplementor );
 		this.entityQueries = initializeEntityQueries( sessionFactoryImplementor, associationQueries );
 	}
-
+	/**
+	 * add  queries for associate entities
+	 *
+	 * @param sessionFactoryImplementor session factory
+	 * @param associationQueries map with association
+	 * @return map between {@link EntityKeyMetadata} and {@link OrientDBEntityQueries}
+	 * @see EntityKeyMetadata
+	 * @see OrientDBEntityQueries
+	 */
 	private Map<EntityKeyMetadata, OrientDBEntityQueries> initializeEntityQueries(SessionFactoryImplementor sessionFactoryImplementor,
 			Map<AssociationKeyMetadata, OrientDBAssociationQueries> associationQueries) {
 		Map<EntityKeyMetadata, OrientDBEntityQueries> entityQueries = initializeEntityQueries( sessionFactoryImplementor );
@@ -624,6 +616,14 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		return entityQueries;
 	}
 
+	/**
+	 * initialize queries for CRUD entities
+	 *
+	 * @param sessionFactoryImplementor session factory
+	 * @return map between {@link EntityKeyMetadata} and {@link OrientDBEntityQueries}
+	 * @see EntityKeyMetadata
+	 * @see OrientDBEntityQueries
+	 */
 	private Map<EntityKeyMetadata, OrientDBEntityQueries> initializeEntityQueries(SessionFactoryImplementor sessionFactoryImplementor) {
 		Map<EntityKeyMetadata, OrientDBEntityQueries> queryMap = new HashMap<>();
 		Collection<EntityPersister> entityPersisters = sessionFactoryImplementor.getEntityPersisters().values();
@@ -635,7 +635,14 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		}
 		return queryMap;
 	}
-
+	/**
+	 * initialize queries for associate entities
+	 *
+	 * @param sessionFactoryImplementor session factory
+	 * @return map between {@link AssociationKeyMetadata} and {@link OrientDBAssociationQueries}
+	 * @see AssociationKeyMetadata
+	 * @see OrientDBAssociationQueries
+	 */
 	private Map<AssociationKeyMetadata, OrientDBAssociationQueries> initializeAssociationQueries(SessionFactoryImplementor sessionFactoryImplementor) {
 		Map<AssociationKeyMetadata, OrientDBAssociationQueries> queryMap = new HashMap<>();
 		Collection<CollectionPersister> collectionPersisters = sessionFactoryImplementor.getCollectionPersisters().values();
@@ -655,7 +662,9 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		}
 		return queryMap;
 	}
-
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public GridType overrideType(Type type) {
 		GridType gridType = null;

@@ -16,8 +16,10 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.model.key.spi.AssociatedEntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
+import com.orientechnologies.orient.core.record.impl.ODocument;
 
 /**
+ * {@inheritDoc}
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBTupleSnapshot implements TupleSnapshot {
@@ -50,7 +52,9 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		log.debugf( "2.associatedEntityKeyMetadata: %s", associatedEntityKeyMetadata );
 		log.debugf( "2.rolesByColumn: %s", rolesByColumn );
 	}
-
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Object get(String targetColumnName) {
 		log.debugf( "targetColumnName: %s", targetColumnName );
@@ -84,19 +88,23 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		}
 		return value;
 	}
-
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public boolean isEmpty() {
 		return dbNameValueMap.isEmpty();
 	}
-
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Set<String> getColumnNames() {
 		return dbNameValueMap.keySet();
 	}
 
 	/**
-	 * Whether this snapshot has been newly created (meaning it doesn't have an actual {@link Node} yet) or not. A node
+	 * Whether this snapshot has been newly created (meaning it doesn't have an actual {@link ODocument} yet) or not. A node
 	 * will be in the "new" state between the {@code createTuple()} call and the next {@code insertOrUpdateTuple()}
 	 * call.
 	 */
