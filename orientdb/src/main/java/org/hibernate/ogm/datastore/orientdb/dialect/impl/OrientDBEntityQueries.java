@@ -32,7 +32,7 @@ import java.util.Arrays;
 import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBEntityQueries extends QueriesBase {
 

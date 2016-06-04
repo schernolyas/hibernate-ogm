@@ -31,7 +31,7 @@ import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.RowKey;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBAssociationQueries extends QueriesBase {
 

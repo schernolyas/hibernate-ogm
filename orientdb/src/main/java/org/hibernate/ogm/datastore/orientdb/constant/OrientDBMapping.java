@@ -10,6 +10,20 @@ import java.sql.Types;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import org.hibernate.ogm.datastore.orientdb.query.impl.BigDecimalParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.BooleanParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.ByteParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.CharacterParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.DateParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.DoubleParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.FloatParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.IntegerParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.LongParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.ParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.ShortParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.StringParamValueSetter;
+import org.hibernate.ogm.datastore.orientdb.query.impl.TimestampParamValueSetter;
+import org.hibernate.ogm.type.spi.GridType;
 import org.hibernate.type.BigDecimalType;
 import org.hibernate.type.BigIntegerType;
 import org.hibernate.type.BinaryType;
@@ -37,15 +51,49 @@ import org.hibernate.type.UrlType;
 import org.hibernate.type.YesNoType;
 
 /**
+ * Collection of mappings
+ * 
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBMapping {
 
-	public static final Map<Class, String> TYPE_MAPPING;
-	public static final Map<Integer, String> SQL_TYPE_MAPPING;
-	static {
-		TYPE_MAPPING = Collections.unmodifiableMap( getTypeMapping() );
-		SQL_TYPE_MAPPING = Collections.unmodifiableMap( getSqlTypeMapping() );
+	/**
+	 * Mapping from Hibernate data type to OrientDB data type
+	 */
+	@SuppressWarnings("rawtypes")
+	public static final Map<Class, String> TYPE_MAPPING = getTypeMapping();
+	/**
+	 * Mapping from SQL data type to OrientDB data type
+	 */
+	public static final Map<Integer, String> SQL_TYPE_MAPPING = getSqlTypeMapping();
+	/**
+	 * Mapping from SQL data type to OrientDB data type
+	 */
+	@SuppressWarnings("rawtypes")
+	public static final Map<GridType, ParamValueSetter> SIMPLE_VALUE_SETTER_MAP = getParameterValueTypes();
+
+	@SuppressWarnings("rawtypes")
+	private static Map<GridType, ParamValueSetter> getParameterValueTypes() {
+		Map<GridType, ParamValueSetter> map = new HashMap<>();
+		// string types
+		map.put( org.hibernate.ogm.type.impl.StringType.INSTANCE, new StringParamValueSetter() );
+		map.put( org.hibernate.ogm.type.impl.CharacterType.INSTANCE, new CharacterParamValueSetter() );
+		// numeric types
+		map.put( org.hibernate.ogm.type.impl.ByteType.INSTANCE, new ByteParamValueSetter() );
+		map.put( org.hibernate.ogm.type.impl.ShortType.INSTANCE, new ShortParamValueSetter() );
+		map.put( org.hibernate.ogm.type.impl.IntegerType.INSTANCE, new IntegerParamValueSetter() );
+		map.put( org.hibernate.ogm.type.impl.LongType.INSTANCE, new LongParamValueSetter() );
+
+		map.put( org.hibernate.ogm.type.impl.DoubleType.INSTANCE, new DoubleParamValueSetter() );
+		map.put( org.hibernate.ogm.type.impl.FloatType.INSTANCE, new FloatParamValueSetter() );
+		map.put( org.hibernate.ogm.type.impl.BigDecimalType.INSTANCE, new BigDecimalParamValueSetter() );
+		// boolean types
+		map.put( org.hibernate.ogm.type.impl.BooleanType.INSTANCE, new BooleanParamValueSetter() );
+
+		// date types
+		map.put( org.hibernate.ogm.type.impl.TimestampType.INSTANCE, new TimestampParamValueSetter() );
+		map.put( org.hibernate.ogm.type.impl.DateType.INSTANCE, new DateParamValueSetter() );
+		return Collections.unmodifiableMap( map );
 	}
 
 	private static Map<Integer, String> getSqlTypeMapping() {
@@ -65,9 +113,10 @@ public class OrientDBMapping {
 		map.put( Types.BOOLEAN, "boolean" );
 		map.put( Types.DATE, "date" );
 
-		return map;
+		return Collections.unmodifiableMap( map );
 	}
 
+	@SuppressWarnings("rawtypes")
 	private static Map<Class, String> getTypeMapping() {
 		Map<Class, String> map = new HashMap<>();
 
@@ -101,7 +150,7 @@ public class OrientDBMapping {
 		map.put( MaterializedClobType.class, "binary" );
 
 		map.put( BigDecimalType.class, "decimal" );
-		return map;
+		return Collections.unmodifiableMap( map );
 
 	}
 

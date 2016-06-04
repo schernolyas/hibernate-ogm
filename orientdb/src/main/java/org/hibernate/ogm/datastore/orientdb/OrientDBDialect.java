@@ -75,6 +75,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import org.hibernate.ogm.datastore.orientdb.constant.OrientDBMapping;
 import org.hibernate.ogm.datastore.orientdb.query.impl.BigDecimalParamValueSetter;
 import org.hibernate.ogm.datastore.orientdb.query.impl.BooleanParamValueSetter;
 import org.hibernate.ogm.datastore.orientdb.query.impl.ByteParamValueSetter;
@@ -109,51 +110,40 @@ import org.hibernate.ogm.type.impl.StringType;
 import org.hibernate.ogm.type.impl.TimestampType;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * Implementation of dialect for OrientDB
+ * 
+ * @see QueryableGridDialect
+ * @see SessionFactoryLifecycleAwareDialect
+ * @see IdentityColumnAwareGridDialect
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>,
-		ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+		SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
 	private static final Association ASSOCIATION_NOT_FOUND = null;
 	private static final InsertQueryGenerator INSERT_QUERY_GENERATOR = new InsertQueryGenerator();
 	private static final UpdateQueryGenerator UPDATE_QUERY_GENERATOR = new UpdateQueryGenerator();
-	@SuppressWarnings("rawtypes")
-	private static final Map<GridType, ParamValueSetter> SIMPLE_VALUE_SETTER_MAP;
 
-	static {
-		@SuppressWarnings("rawtypes")
-		Map<GridType, ParamValueSetter> map = new HashMap<>();
-		// string types
-		map.put( StringType.INSTANCE, new StringParamValueSetter() );
-		map.put( CharacterType.INSTANCE, new CharacterParamValueSetter() );
-		// numeric types
-		map.put( ByteType.INSTANCE, new ByteParamValueSetter() );
-		map.put( ShortType.INSTANCE, new ShortParamValueSetter() );
-		map.put( IntegerType.INSTANCE, new IntegerParamValueSetter() );
-		map.put( LongType.INSTANCE, new LongParamValueSetter() );
-
-		map.put( DoubleType.INSTANCE, new DoubleParamValueSetter() );
-		map.put( FloatType.INSTANCE, new FloatParamValueSetter() );
-		map.put( BigDecimalType.INSTANCE, new BigDecimalParamValueSetter() );
-		// boolean types
-		map.put( BooleanType.INSTANCE, new BooleanParamValueSetter() );
-
-		// date types
-		map.put( TimestampType.INSTANCE, new TimestampParamValueSetter() );
-		map.put( DateType.INSTANCE, new DateParamValueSetter() );
-		SIMPLE_VALUE_SETTER_MAP = map;
-	}
-	private OrientDBDatastoreProvider provider;
-	private ServiceRegistryImplementor serviceRegistry;
+	private final OrientDBDatastoreProvider provider;
 	private Map<AssociationKeyMetadata, OrientDBAssociationQueries> associationQueries;
 	private Map<EntityKeyMetadata, OrientDBEntityQueries> entityQueries;
+
+	/**
+	 * Contructor
+	 * 
+	 * @param provider database provider
+	 * @see OrientDBDatastoreProvider
+	 */
 
 	public OrientDBDialect(OrientDBDatastoreProvider provider) {
 		this.provider = provider;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Tuple getTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "getTuple:EntityKey: %s ; tupleContext: %s; current thread: %s ", key, tupleContext, Thread.currentThread().getName() );
@@ -166,23 +156,35 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Tuple createTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "createTuple:EntityKey: %s ; tupleContext: %s ", key, tupleContext );
 		return new Tuple( new OrientDBTupleSnapshot( tupleContext.getAllAssociatedEntityKeyMetadata(), tupleContext.getAllRoles(), key.getMetadata() ) );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void forEachTuple(ModelConsumer consumer, TupleContext tupleContext, EntityKeyMetadata entityKeyMetadata) {
 		throw new UnsupportedOperationException( "Not supported yet." );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Tuple createTuple(EntityKeyMetadata entityKeyMetadata, TupleContext tupleContext) {
 		log.debugf( "createTuple:EntityKeyMetadata: %s ; tupleContext: ", entityKeyMetadata, tupleContext );
 		return new Tuple( new OrientDBTupleSnapshot( tupleContext.getAllAssociatedEntityKeyMetadata(), tupleContext.getAllRoles(), entityKeyMetadata ) );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void insertOrUpdateTuple(EntityKey key, Tuple tuple, TupleContext tupleContext) throws TupleAlreadyExistsException {
 
@@ -238,6 +240,9 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		}
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void insertTuple(EntityKeyMetadata entityKeyMetadata, Tuple tuple, TupleContext tupleContext) {
 		log.debugf( "insertTuple:EntityKeyMetadata: %s ; tupleContext: %s ; tuple: %s ",
@@ -275,6 +280,9 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		}
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void removeTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "removeTuple:EntityKey: %s ; tupleContext %s ; current thread: %s",
@@ -292,6 +300,9 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		}
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Association getAssociation(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "getAssociation:AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
@@ -333,12 +344,18 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return new RowKey( columnNames, values );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Association createAssociation(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "createAssociation: %s ; AssociationContext: %s", associationKey, associationContext );
 		return new Association();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void insertOrUpdateAssociation(AssociationKey associationKey, Association association, AssociationContext associationContext) {
 		log.debugf( "insertOrUpdateAssociation: AssociationKey: %s ; AssociationContext: %s ; association: %s", associationKey, associationContext,
@@ -372,6 +389,9 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		}
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void removeAssociation(AssociationKey key, AssociationContext associationContext) {
 		// Remove the list of tuples corresponding to a given association
@@ -407,8 +427,8 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 				createRelationshipWithNode( associationKey, action.getValue(), associatedEntityKeyMetadata );
 			}
 			else {
-				log.debugf( "!!!!!putAssociationOperation: :  associationKey: %s ", associationKey );
-				log.debugf( "!!!!!putAssociationOperation: :  associations for  metadata: %s is %d", associationKey.getMetadata(), relationship.size() );
+				log.debugf( "putAssociationOperation: :  associationKey: %s ", associationKey );
+				log.debugf( "putAssociationOperation: :  associations for  metadata: %s is %d", associationKey.getMetadata(), relationship.size() );
 				updateRelationshipWithNode( associationKey, action.getValue(), associatedEntityKeyMetadata );
 			}
 		}
@@ -453,14 +473,19 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		else {
 			log.debugf( "updateRelationshipWithNode: update  association  not needs!" );
 		}
-
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public boolean isStoredInEntityStructure(AssociationKeyMetadata associationKeyMetadata, AssociationTypeContext associationTypeContext) {
 		return true;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Number nextValue(NextValueRequest request) {
 		log.debugf( "NextValueRequest: %s", request );
@@ -486,11 +511,17 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return nextValue;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public boolean supportsSequences() {
 		return true;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public int executeBackendUpdateQuery(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
@@ -510,8 +541,8 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 				log.debugf( "executeBackendQuery: key: %s ; type: %s ; value: %s; type class: %s ",
 						key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
 				try {
-					if ( SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) ) {
-						SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
+					if ( OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) ) {
+						OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
 					}
 					else {
 						throw new UnsupportedOperationException( "Type " + value.getType() + " is not supported!" );
@@ -552,10 +583,10 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 				TypedGridValue value = entry.getValue();
 				log.debugf( "executeBackendQuery: key: %s ; type: %s ; value: %s; type class: %s. is simple value: %s ",
 						key, value.getType(), value.getValue(), value.getType().getReturnedClass(),
-						SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) );
+						OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) );
 				try {
-					if ( SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) ) {
-						SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
+					if ( OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.containsKey( value.getType() ) ) {
+						OrientDBMapping.SIMPLE_VALUE_SETTER_MAP.get( value.getType() ).setValue( pstmt, paramIndex, value.getValue() );
 					}
 					else {
 						throw new UnsupportedOperationException( "Type " + value.getType() + " is not supported!" );
@@ -600,11 +631,6 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	public String parseNativeQuery(String nativeQuery) {
 		return nativeQuery;
 
-	}
-
-	@Override
-	public void injectServices(ServiceRegistryImplementor serviceRegistry) {
-		this.serviceRegistry = serviceRegistry;
 	}
 
 	@Override

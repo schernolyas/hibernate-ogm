@@ -14,7 +14,7 @@ import org.parboiled.Parboiled;
 import org.parboiled.parserunners.RecoveringParseRunner;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBParameterMetadataBuilder extends RecognizerBasedParameterMetadataBuilder {
 

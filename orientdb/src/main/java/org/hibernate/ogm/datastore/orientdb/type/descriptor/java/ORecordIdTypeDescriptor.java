@@ -12,7 +12,7 @@ import org.hibernate.type.descriptor.java.AbstractTypeDescriptor;
 import com.orientechnologies.orient.core.id.ORecordId;
 
 /**
- * @author Sergey Chernolyas (sergey.chernolyas@gmail.com)
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class ORecordIdTypeDescriptor extends AbstractTypeDescriptor<ORecordId> {
 
