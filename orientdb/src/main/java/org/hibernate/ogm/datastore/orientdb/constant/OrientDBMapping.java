@@ -52,7 +52,7 @@ import org.hibernate.type.YesNoType;
 
 /**
  * Collection of mappings
- * 
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBMapping {

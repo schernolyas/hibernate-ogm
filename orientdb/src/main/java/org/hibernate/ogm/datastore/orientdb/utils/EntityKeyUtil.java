@@ -40,10 +40,7 @@ public class EntityKeyUtil {
 	}
 
 	public static void setFieldValue(StringBuilder queryBuffer, Object dbKeyValue) {
-		if ( dbKeyValue != null ) {
-			// @TODO not forget remove the code!
-			log.debugf( "dbKeyValue class: %s ; class: %s ", dbKeyValue, dbKeyValue.getClass() );
-		}
+
 		if ( dbKeyValue instanceof String || dbKeyValue instanceof UUID || dbKeyValue instanceof Character ) {
 			queryBuffer.append( "'" ).append( dbKeyValue ).append( "'" );
 		}
@@ -64,33 +61,6 @@ public class EntityKeyUtil {
 		}
 		queryBuffer.append( " " );
 
-	}
-
-	@Deprecated
-	public static Object findPrimaryKeyValue(EntityKey key) {
-		Object dbKeyValue = null;
-		for ( int i = 0; i < key.getColumnNames().length; i++ ) {
-			String columnName = key.getColumnNames()[i];
-			Object columnValue = key.getColumnValues()[i];
-			log.debugf( "EntityKey: columnName: %s ;columnValue: %s (class:%s)", columnName, columnValue, columnValue.getClass().getName() );
-			if ( key.getMetadata().isKeyColumn( columnName ) ) {
-				log.debugf( "EntityKey: columnName: %s is primary key!", columnName );
-				dbKeyValue = columnValue;
-			}
-		}
-		return dbKeyValue;
-	}
-
-	@Deprecated
-	public static String findPrimaryKeyName(EntityKey key) {
-		for ( int i = 0; i < key.getColumnNames().length; i++ ) {
-			String columnName = key.getColumnNames()[i];
-			if ( key.getMetadata().isKeyColumn( columnName ) ) {
-				log.debugf( "EntityKey: columnName: %s is primary key!", columnName );
-				return columnName;
-			}
-		}
-		return null;
 	}
 
 	public static String generatePrimaryKeyPredicate(EntityKey key) {

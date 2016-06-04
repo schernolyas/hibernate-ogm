@@ -65,8 +65,6 @@ import org.hibernate.ogm.persister.impl.OgmEntityPersister;
 import org.hibernate.ogm.type.spi.GridType;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.service.spi.ServiceRegistryAwareService;
-import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.type.Type;
 
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
@@ -76,49 +74,23 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBMapping;
-import org.hibernate.ogm.datastore.orientdb.query.impl.BigDecimalParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.BooleanParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.ByteParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.CharacterParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.DateParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.DoubleParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.FloatParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.IntegerParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.LongParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.ParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.ShortParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.StringParamValueSetter;
-import org.hibernate.ogm.datastore.orientdb.query.impl.TimestampParamValueSetter;
 import org.hibernate.ogm.datastore.orientdb.utils.InsertQueryGenerator;
-import org.hibernate.ogm.datastore.orientdb.utils.QueryUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.PreparedStatementUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.UpdateQueryGenerator;
 import org.hibernate.ogm.datastore.orientdb.utils.AbstractQueryGenerator.GenerationResult;
 import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner;
 import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner.QueryType;
 import org.hibernate.ogm.model.key.spi.AssociationKind;
-import org.hibernate.ogm.type.impl.BigDecimalType;
-import org.hibernate.ogm.type.impl.BooleanType;
-import org.hibernate.ogm.type.impl.ByteType;
-import org.hibernate.ogm.type.impl.CharacterType;
-import org.hibernate.ogm.type.impl.DateType;
-import org.hibernate.ogm.type.impl.DoubleType;
-import org.hibernate.ogm.type.impl.FloatType;
-import org.hibernate.ogm.type.impl.IntegerType;
-import org.hibernate.ogm.type.impl.LongType;
-import org.hibernate.ogm.type.impl.ShortType;
-import org.hibernate.ogm.type.impl.StringType;
-import org.hibernate.ogm.type.impl.TimestampType;
 
 /**
  * Implementation of dialect for OrientDB
- * 
  * @see QueryableGridDialect
  * @see SessionFactoryLifecycleAwareDialect
  * @see IdentityColumnAwareGridDialect
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>,
-		SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -132,7 +104,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 
 	/**
 	 * Contructor
-	 * 
+	 *
 	 * @param provider database provider
 	 * @see OrientDBDatastoreProvider
 	 */
@@ -223,7 +195,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; ", key, queryBuffer );
 			PreparedStatement pstmt = connection.prepareStatement( queryBuffer.toString() );
 			log.debugf( "insertOrUpdateTuple: exist parameters for preparedstatement : %d", preparedStatementParams.size() );
-			QueryUtil.setParameters( pstmt, preparedStatementParams );
+			PreparedStatementUtil.setParameters( pstmt, preparedStatementParams );
 			int updateCount = pstmt.executeUpdate();
 			log.debugf( "insertOrUpdateTuple:Key: %s ;inserted or updated: %d ", key, updateCount );
 			if ( updateCount == 0 && queryType.equals( QueryType.UPDATE ) ) {
@@ -271,7 +243,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		try {
 			PreparedStatement pstmt = connection.prepareStatement( result.getExecutionQuery() );
 			if ( result.getPreparedStatementParams() != null ) {
-				QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
+				PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
 			}
 			log.debugf( "insertTuple:Key: %s (%s) ;inserted or updated: %d ", dbKeyName, dbKeyValue, pstmt.executeUpdate() );
 		}
@@ -446,7 +418,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		log.debugf( "createRelationshipWithNode: query: %s", result.getExecutionQuery() );
 		try {
 			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
-			QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
+			PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
 			log.debugf( "createRelationshipWithNode: execute insert query: %d", pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
@@ -463,7 +435,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
 			try {
 				PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
-				QueryUtil.setParameters( pstmt, result.getPreparedStatementParams() );
+				PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
 				log.debugf( "updateRelationshipWithNode: execute update query: %d", pstmt.executeUpdate() );
 			}
 			catch (SQLException sqle) {

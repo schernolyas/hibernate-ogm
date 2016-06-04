@@ -13,12 +13,20 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 
 /**
+ * Utility class for working with {@link PreparedStatement}
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
-public class QueryUtil {
+public class PreparedStatementUtil {
 
 	private static final Log log = LoggerFactory.getLogger();
 
+	/**
+	 * Set parameter's value of statement
+	 *
+	 * @param pstmt prepared statement
+	 * @param preparedStatementParams list of values
+	 */
 	public static void setParameters(PreparedStatement pstmt, List<Object> preparedStatementParams) {
 		for ( int i = 0; i < preparedStatementParams.size(); i++ ) {
 			Object value = preparedStatementParams.get( i );
