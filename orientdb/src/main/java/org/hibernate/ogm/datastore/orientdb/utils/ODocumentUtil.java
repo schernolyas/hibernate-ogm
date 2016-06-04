@@ -11,14 +11,23 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
+ * Utility class for working with OrientDB's class {@link ODocument}
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class ODocumentUtil {
 
-	public static Map<String, Object> extractNamesTree(String baseFieldName, ODocument document) {
+	/**
+	 * Prepare Map with keys of complex names like 'field1.field2'
+	 *
+	 * @param rootFieldName root name
+	 * @param document document
+	 * @return Map that contains keys with complex names
+	 */
+	public static Map<String, Object> extractNamesTree(String rootFieldName, ODocument document) {
 		Map<String, Object> map = new LinkedHashMap<>();
 		for ( int i = 0; i < document.fields(); i++ ) {
-			String fieldName = baseFieldName.concat( "." ).concat( document.fieldNames()[i] );
+			String fieldName = rootFieldName.concat( "." ).concat( document.fieldNames()[i] );
 			Object fieldValue = document.fieldValues()[i];
 			if ( fieldValue instanceof ODocument ) {
 				map.putAll( extractNamesTree( fieldName, (ODocument) fieldValue ) );

@@ -16,6 +16,8 @@ import org.hibernate.ogm.type.impl.AbstractGenericBasicType;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 
 /**
+ * The class is grid type for OrientDB's type '{@link ORidBag}'
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 
@@ -23,6 +25,9 @@ public class ORidBagGridType extends AbstractGenericBasicType<ORidBag> {
 
 	public static final ORidBagGridType INSTANCE = new ORidBagGridType();
 
+	/**
+	 * The default contructor
+	 */
 	public ORidBagGridType() {
 		super( PassThroughGridTypeDescriptor.INSTANCE, ORidBagTypeDescriptor.INSTANCE );
 	}
