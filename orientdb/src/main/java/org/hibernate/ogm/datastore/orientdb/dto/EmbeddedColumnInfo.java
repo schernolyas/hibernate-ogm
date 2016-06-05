@@ -6,31 +6,27 @@
  */
 package org.hibernate.ogm.datastore.orientdb.dto;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 /**
+ * The class is presentation of embedded column.
+ * <p>
+ * Embedded column has name like 'class1.class2.field1'. The class separates names of class and name of property of leaf
+ * class
+ * </p>
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class EmbeddedColumnInfo {
 
-	private LinkedList<String> classNames;
-	private String propertyName;
-	private String classNamesAdd;
-
-	public EmbeddedColumnInfo(String fullPropertyName, String classNamesAdd) {
-		this( fullPropertyName );
-		if ( classNamesAdd != null && classNamesAdd.trim().length() > 0 ) {
-			classNames.addFirst( classNamesAdd );
-		}
-	}
+	private final LinkedList<String> classNames;
+	private final String propertyName;
 
 	public EmbeddedColumnInfo(String fullPropertyName) {
 		String[] parts = fullPropertyName.split( "\\." );
-		classNames = new LinkedList<>();
-		for ( String part : parts ) {
-			classNames.add( part );
-		}
+		classNames = new LinkedList<>( Arrays.asList( parts ) );
 		propertyName = classNames.getLast();
 		classNames.removeLast();
 	}
@@ -43,12 +39,8 @@ public class EmbeddedColumnInfo {
 		return propertyName;
 	}
 
-	public String getClassNamesAdd() {
-		return classNamesAdd;
-	}
-
 	@Override
 	public String toString() {
-		return "EmbeddedColumnInfo{" + "classNames=" + classNames + ", propertyName=" + propertyName + ", classNamesAdd=" + classNamesAdd + '}';
+		return "EmbeddedColumnInfo{" + "classNames=" + classNames + ", propertyName=" + propertyName + "}'";
 	}
 }

@@ -9,14 +9,37 @@ package org.hibernate.ogm.datastore.orientdb.utils;
 import java.util.List;
 
 /**
+ * The abstract class for query generators
+ *
+ * @see InsertQueryGenerator
+ * @see UpdateQueryGenerator
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public abstract class AbstractQueryGenerator {
 
+	/**
+	 * The class is presentation of generation of query
+	 *
+	 * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
+	 */
+
 	public static class GenerationResult {
 
+		/**
+		 * List of values of query parameters
+		 */
 		private List<Object> preparedStatementParams;
+		/**
+		 * The query
+		 */
 		private String executionQuery;
+
+		/**
+		 * Contractor
+		 *
+		 * @param preparedStatementParams list of parameter's values
+		 * @param executionQuery string presentation of query
+		 */
 
 		public GenerationResult(List<Object> preparedStatementParams, String executionQuery) {
 			this.preparedStatementParams = preparedStatementParams;

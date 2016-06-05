@@ -31,6 +31,7 @@ import org.hibernate.ogm.model.key.spi.AssociationKey;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
+ * @see <a href="http://orientdb.com/docs/last/SQL-Update.html">Update</a>
  */
 
 public class UpdateQueryGenerator extends AbstractQueryGenerator {
@@ -71,7 +72,6 @@ public class UpdateQueryGenerator extends AbstractQueryGenerator {
 		StringBuilder updateQuery = generateMainPart( tableName, valuesMap, primaryKey.getColumnNames() );
 
 		updateQuery.append( " where " );
-		// @TODO support multi column primary keys
 		log.debugf( "generate: primaryKey : %s", primaryKey );
 		updateQuery.append( EntityKeyUtil.generatePrimaryKeyPredicate( primaryKey ) );
 		// and version protection
