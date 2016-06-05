@@ -83,6 +83,13 @@ import org.hibernate.ogm.model.key.spi.AssociationKind;
 
 /**
  * Implementation of dialect for OrientDB
+ * <p>
+ * A {@link Tuple} is saved as a {@link ODocument} where the columns are converted into properties of the node.<br>
+ * In the version, an {@link Association} is stored like relation DBMS and identified by the {@link AssociationKey} and the
+ * {@link RowKey}. The type of the relationship is the value returned by
+ * {@link AssociationKeyMetadata#getCollectionRole()}.
+ * <p>
+ * If the value of a property is set to null the property will be removed (OrientDB does not allow to store null values).
  * @see QueryableGridDialect
  * @see SessionFactoryLifecycleAwareDialect
  * @see IdentityColumnAwareGridDialect
@@ -102,7 +109,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 	private Map<EntityKeyMetadata, OrientDBEntityQueries> entityQueries;
 
 	/**
-	 * Contructor
+	 * Contractor
 	 *
 	 * @param provider database provider
 	 * @see OrientDBDatastoreProvider
