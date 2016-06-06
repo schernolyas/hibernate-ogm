@@ -32,11 +32,9 @@ import org.hibernate.ogm.model.key.spi.AssociationKey;
 
 /**
  * The class is generator of 'update' query.
- * <p>
- *
- * </p>
+ *  
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
- * @see <a href="http://orientdb.com/docs/last/SQL-Update.html">Update query in OrientDB</a>
+ * @see <a href="http://orientdb.com/docs/2.2/SQL-Update.html">Update query in OrientDB</a>
  */
 
 public class UpdateQueryGenerator {
