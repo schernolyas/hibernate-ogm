@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.utils;
 
+import org.hibernate.ogm.datastore.orientdb.dto.GenerationResult;
 import java.math.BigInteger;
 import java.util.Calendar;
 import java.util.Collections;
@@ -20,20 +21,21 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.model.spi.Tuple;
 import org.json.simple.JSONObject;
+import org.hibernate.ogm.model.spi.Association;
 
 /**
  * The class is generator of 'insert' queries.
  * <p>
- * OrientDB supports 'insert' query in format 'insert into ClassName content JSON'. The format allow to insert embedded
- * classes. But the format not supports parameters (like '?' or ':name'). <b>All binary values must be saved by Base64
+ * OrientDB supports 'insert' query with JSON format like  'insert into classname content {"name":"value"}'. The format allow to insert embedded
+ * classes. But JDBC driver not supports parameters (like '?' or ':name') in query that the type. <b>All binary values must be saved by Base64
  * encoding.</b>
  * </p>
  *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
- * @see <a href="http://orientdb.com/docs/last/SQL-Insert.html">Insert</a>
+ * @see <a href="http://orientdb.com/docs/last/SQL-Insert.html">Insert query in OrientDB</a>
  */
 @SuppressWarnings("unchecked")
-public class InsertQueryGenerator extends AbstractQueryGenerator {
+public class InsertQueryGenerator  {
 
 	private static final Log log = LoggerFactory.getLogger();
 
