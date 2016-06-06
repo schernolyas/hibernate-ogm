@@ -69,6 +69,7 @@ import org.hibernate.type.Type;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.id.ORecordId;
+import com.orientechnologies.orient.core.record.impl.ODocument;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -76,7 +77,7 @@ import org.hibernate.ogm.datastore.orientdb.constant.OrientDBMapping;
 import org.hibernate.ogm.datastore.orientdb.utils.InsertQueryGenerator;
 import org.hibernate.ogm.datastore.orientdb.utils.PreparedStatementUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.UpdateQueryGenerator;
-import org.hibernate.ogm.datastore.orientdb.utils.AbstractQueryGenerator.GenerationResult;
+import org.hibernate.ogm.datastore.orientdb.dto.GenerationResult;
 import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner;
 import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner.QueryType;
 import org.hibernate.ogm.model.key.spi.AssociationKind;
@@ -241,7 +242,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 			dbKeyValue = (Long) SequenceUtil.getNextSequenceValue( connection, seqName );
 			tuple.put( dbKeyName, dbKeyValue );
 		}
-		InsertQueryGenerator.GenerationResult result = INSERT_QUERY_GENERATOR.generate( entityKeyMetadata.getTable(), tuple, true,
+		GenerationResult result = INSERT_QUERY_GENERATOR.generate( entityKeyMetadata.getTable(), tuple, true,
 				new HashSet<>( Arrays.asList( entityKeyMetadata.getColumnNames() ) ) );
 		query = result.getExecutionQuery();
 

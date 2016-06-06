@@ -15,7 +15,6 @@ import org.hibernate.ogm.model.spi.Tuple;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
- * @see org.hibernate.ogm.datastore.neo4j.dialect.impl.Neo4jAssociationSnapshot
  */
 
 public class OrientDBAssociationSnapshot implements AssociationSnapshot {

@@ -40,6 +40,10 @@ public class OrientDBEntityQueries extends QueriesBase {
 
 	private final EntityKeyMetadata entityKeyMetadata;
 
+        /**
+         * Contractor
+         * @param entityKeyMetadata metadata of entity keys
+         */
 	public OrientDBEntityQueries(EntityKeyMetadata entityKeyMetadata) {
 		this.entityKeyMetadata = entityKeyMetadata;
 		for ( int i = 0; i < entityKeyMetadata.getColumnNames().length; i++ ) {
@@ -52,7 +56,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 	 * Find the node corresponding to an entity.
 	 *
 	 * @param connection the connection
-	 * @param entityKey
+	 * @param entityKey entity key
 	 * @return the corresponding node
 	 */
 
