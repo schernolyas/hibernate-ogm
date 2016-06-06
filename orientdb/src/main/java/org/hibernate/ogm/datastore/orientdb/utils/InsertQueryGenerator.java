@@ -32,7 +32,7 @@ import org.hibernate.ogm.model.spi.Association;
  * </p>
  *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
- * @see <a href="http://orientdb.com/docs/last/SQL-Insert.html">Insert query in OrientDB</a>
+ * @see <a href="http://orientdb.com/docs/2.2/SQL-Insert.html">Insert query in OrientDB</a>
  */
 @SuppressWarnings("unchecked")
 public class InsertQueryGenerator  {
