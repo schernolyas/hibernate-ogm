@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.utils;
 
+import org.hibernate.ogm.datastore.orientdb.dto.GenerationResult;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -58,7 +59,7 @@ public class UpdateQueryGeneratorTest {
 		valuesMap.put( "field3.subfield2", new byte[]{ 1, 2, 3 } );
 		EntityKey primaryKey = new EntityKey( new DefaultEntityKeyMetadata( tableName, new String[]{ "id" } ), new Object[]{ 1 } );
 		UpdateQueryGenerator instance = new UpdateQueryGenerator();
-		AbstractQueryGenerator.GenerationResult result = instance.generate( tableName, valuesMap, primaryKey, 1 );
+		GenerationResult result = instance.generate( tableName, valuesMap, primaryKey, 1 );
 		System.out.println( "update query: " + result.getExecutionQuery() );
 		Assert.assertThat( result.getExecutionQuery(), new BaseMatcher<String>() {
 

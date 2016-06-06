@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.utils;
 
+import org.hibernate.ogm.datastore.orientdb.dto.GenerationResult;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -30,11 +31,15 @@ import static org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil.setFieldV
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 
 /**
+ * The class is generator of 'update' query.
+ * <p>
+ *
+ * </p>
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
- * @see <a href="http://orientdb.com/docs/last/SQL-Update.html">Update</a>
+ * @see <a href="http://orientdb.com/docs/last/SQL-Update.html">Update query in OrientDB</a>
  */
 
-public class UpdateQueryGenerator extends AbstractQueryGenerator {
+public class UpdateQueryGenerator {
 
 	private static final Log log = LoggerFactory.getLogger();
 
