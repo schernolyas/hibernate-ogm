@@ -85,11 +85,13 @@ import org.hibernate.ogm.model.key.spi.AssociationKind;
  * Implementation of dialect for OrientDB
  * <p>
  * A {@link Tuple} is saved as a {@link ODocument} where the columns are converted into properties of the node.<br>
- * In the version, an {@link Association} is stored like relation DBMS and identified by the {@link AssociationKey} and the
- * {@link RowKey}. The type of the relationship is the value returned by
+ * In the version, an {@link Association} is stored like relation DBMS and identified by the {@link AssociationKey} and
+ * the {@link RowKey}. The type of the relationship is the value returned by
  * {@link AssociationKeyMetadata#getCollectionRole()}.
  * <p>
- * If the value of a property is set to null the property will be removed (OrientDB does not allow to store null values).
+ * If the value of a property is set to null the property will be removed (OrientDB does not allow to store null
+ * values).
+ *
  * @see QueryableGridDialect
  * @see SessionFactoryLifecycleAwareDialect
  * @see IdentityColumnAwareGridDialect
@@ -119,9 +121,6 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		this.provider = provider;
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public Tuple getTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "getTuple:EntityKey: %s ; tupleContext: %s; current thread: %s ", key, tupleContext, Thread.currentThread().getName() );
@@ -134,35 +133,23 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public Tuple createTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "createTuple:EntityKey: %s ; tupleContext: %s ", key, tupleContext );
 		return new Tuple( new OrientDBTupleSnapshot( tupleContext.getAllAssociatedEntityKeyMetadata(), tupleContext.getAllRoles(), key.getMetadata() ) );
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void forEachTuple(ModelConsumer consumer, TupleContext tupleContext, EntityKeyMetadata entityKeyMetadata) {
 		throw new UnsupportedOperationException( "Not supported yet." );
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public Tuple createTuple(EntityKeyMetadata entityKeyMetadata, TupleContext tupleContext) {
 		log.debugf( "createTuple:EntityKeyMetadata: %s ; tupleContext: ", entityKeyMetadata, tupleContext );
 		return new Tuple( new OrientDBTupleSnapshot( tupleContext.getAllAssociatedEntityKeyMetadata(), tupleContext.getAllRoles(), entityKeyMetadata ) );
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void insertOrUpdateTuple(EntityKey key, Tuple tuple, TupleContext tupleContext) throws TupleAlreadyExistsException {
 
@@ -176,7 +163,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 				snapshot.isNew(), snapshot.isEmpty(), existsInDB, queryType );
 
 		StringBuilder queryBuffer = new StringBuilder( 100 );
-		
+
 		switch ( queryType ) {
 			case INSERT:
 				log.debugf( "insertOrUpdateTuple:Key: %s is new! Insert new record!", key );
@@ -214,9 +201,6 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		}
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void insertTuple(EntityKeyMetadata entityKeyMetadata, Tuple tuple, TupleContext tupleContext) {
 		log.debugf( "insertTuple:EntityKeyMetadata: %s ; tupleContext: %s ; tuple: %s ",
@@ -251,9 +235,6 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		}
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void removeTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "removeTuple:EntityKey: %s ; tupleContext %s ; current thread: %s",
@@ -271,9 +252,6 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		}
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public Association getAssociation(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "getAssociation:AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
@@ -417,7 +395,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		log.debugf( "createRelationshipWithNode: query: %s", result.getExecutionQuery() );
 		try {
 			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
-			//PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
+			// PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
 			log.debugf( "createRelationshipWithNode: execute insert query: %d", pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
@@ -434,7 +412,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 			log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
 			try {
 				PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
-				//PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
+				// PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
 				log.debugf( "updateRelationshipWithNode: execute update query: %d", pstmt.executeUpdate() );
 			}
 			catch (SQLException sqle) {
@@ -492,6 +470,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	/**
 	 * Prepare PreparedStemenet for execute NoSQL query
+	 *
 	 * @param backendQuery represention of NoSQL query
 	 * @param queryParameters parameters of the query
 	 * @return Prepared PreparedStatement
@@ -544,6 +523,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 			throw log.cannotExecuteQuery( backendQuery.getQuery(), e );
 		}
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -571,6 +551,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		}
 		return parameterValues;
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -578,6 +559,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 	public ParameterMetadataBuilder getParameterMetadataBuilder() {
 		return new OrientDBParameterMetadataBuilder();
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -586,6 +568,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		return nativeQuery;
 
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -594,8 +577,9 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		this.associationQueries = initializeAssociationQueries( sessionFactoryImplementor );
 		this.entityQueries = initializeEntityQueries( sessionFactoryImplementor, associationQueries );
 	}
+
 	/**
-	 * add  queries for associate entities
+	 * add queries for associate entities
 	 *
 	 * @param sessionFactoryImplementor session factory
 	 * @param associationQueries map with association
@@ -635,6 +619,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		}
 		return queryMap;
 	}
+
 	/**
 	 * initialize queries for associate entities
 	 *
@@ -662,6 +647,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		}
 		return queryMap;
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */

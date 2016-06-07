@@ -19,9 +19,9 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 /**
  * The class is thread local connection holder.
  * <p>
- * OrientDB uses paradigm "one thread-&gt; one transaction-&gt; one database connection". 
- * For implement it, Hibernate OGM uses thread local class for hold connection for each thread (and each transaction).
- * Each thread get part in <b>only one transaction</b>.
+ * OrientDB uses paradigm "one thread-&gt; one transaction-&gt; one database connection". For implement it, Hibernate
+ * OGM uses thread local class for hold connection for each thread (and each transaction). Each thread get part in
+ * <b>only one transaction</b>.
  * </p>
  *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
