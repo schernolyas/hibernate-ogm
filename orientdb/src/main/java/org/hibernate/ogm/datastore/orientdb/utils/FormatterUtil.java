@@ -9,6 +9,7 @@ package org.hibernate.ogm.datastore.orientdb.utils;
 import java.text.DateFormat;
 
 /**
+ * The utility class contains thread-local formatters for format date and datetime
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class FormatterUtil {
