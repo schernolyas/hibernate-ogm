@@ -18,9 +18,16 @@ import java.util.Map;
 public class ODocumentUtil {
 
 	/**
-	 * Prepare Map with keys of complex names like 'field1.field2'
+	 * Prepare Map with keys of complex names like 'field11.field12'.
+         * 
+         * Simple names put to Map as is. Complex names put to Map as :
+         * <code>
+         * Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();
+         * map.put("field1",new HashMap&lt;String, Object&gt;());
+         * map.get("field1").put("field2", value);
+         * </code>
 	 *
-	 * @param rootFieldName root name
+	 * @param rootFieldName root field name
 	 * @param document document
 	 * @return Map that contains keys with complex names
 	 */
