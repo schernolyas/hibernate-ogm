@@ -14,12 +14,17 @@ import org.parboiled.Parboiled;
 import org.parboiled.parserunners.RecoveringParseRunner;
 
 /**
+ * The class is builder of parameter metadata
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBParameterMetadataBuilder extends RecognizerBasedParameterMetadataBuilder {
 
 	private static Log LOG = LoggerFactory.getLogger();
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void parseQueryParameters(String nativeQuery, ParameterParser.Recognizer journaler) {
 		OrientDBQueryParser parser = Parboiled.createParser( OrientDBQueryParser.class, journaler );
