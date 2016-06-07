@@ -17,10 +17,11 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 
 /**
- * The class is connection holder.
+ * The class is thread local connection holder.
  * <p>
- * OrientDB uses paradigm "one thread-&gt; one transaction-&gt; one database connection". In this way, client that
- * supports ACID have to support the paradigm. For it uses thread local class for hold connection for each thread.
+ * OrientDB uses paradigm "one thread-&gt; one transaction-&gt; one database connection". 
+ * For implement it, Hibernate OGM uses thread local class for hold connection for each thread (and each transaction).
+ * Each thread get part in <b>only one transaction</b>.
  * </p>
  *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -35,7 +36,7 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 	private final Properties jdbcProperties;
 
 	/**
-	 * Constructor
+	 * Construct instance of holder
 	 *
 	 * @param jdbcUrl JDBC URL to database
 	 * @param info JDBC properties
