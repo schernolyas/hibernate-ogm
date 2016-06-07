@@ -81,10 +81,10 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 			info = new Properties();
 			info.put( "user", user );
 			info.put( "password", password );
-			createInMemoryDB( jdbcUrl.toString() );
+                        createInMemoryDB( jdbcUrl.toString() );
 			connectionHolder = new ConnectionHolder( jdbcUrl.toString(), info );
-
-			FormatterUtil.setDateFormater( new ThreadLocal<DateFormat>() {
+                        
+                        FormatterUtil.setDateFormater( new ThreadLocal<DateFormat>() {
 
 				@Override
 				protected DateFormat initialValue() {
@@ -105,7 +105,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 
 			} );
 		}
-		catch (Exception e) {
+		catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedOperationException e) {
 			throw log.unableToStartDatastoreProvider( e );
 		}
 	}
