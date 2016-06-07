@@ -11,7 +11,6 @@ import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Map;
 import java.util.Properties;
 
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
@@ -43,13 +42,7 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 	 */
 	public ConnectionHolder(String jdbcUrl, Properties info) {
 		this.jdbcUrl = jdbcUrl;
-		this.jdbcProperties = new Properties();
-		this.jdbcProperties.setProperty( "db.usePool", "true" );
-		for ( Map.Entry<Object, Object> entry : info.entrySet() ) {
-			String name = (String) entry.getKey();
-			String value = (String) entry.getValue();
-			this.jdbcProperties.setProperty( name, value );
-		}
+		this.jdbcProperties = info;
 	}
 
 	/**
@@ -57,7 +50,7 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 	 */
 	@Override
 	protected Connection initialValue() {
-		log.debug( "initialValue " );
+		log.debugf( "create connection %s for thread %s", jdbcUrl, Thread.currentThread().getName() );
 		return createConnectionForCurrentThread();
 	}
 
@@ -79,7 +72,6 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 	private OrientJdbcConnection createConnectionForCurrentThread() {
 		OrientJdbcConnection connection = null;
 		try {
-			log.debugf( "create connection %s for thread %s", jdbcUrl, Thread.currentThread().getName() );
 			connection = (OrientJdbcConnection) DriverManager.getConnection( jdbcUrl, jdbcProperties );
 			connection.setAutoCommit( false );
 		}
