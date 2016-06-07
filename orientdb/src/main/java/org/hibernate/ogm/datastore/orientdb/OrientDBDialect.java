@@ -75,7 +75,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBMapping;
 import org.hibernate.ogm.datastore.orientdb.utils.InsertQueryGenerator;
-import org.hibernate.ogm.datastore.orientdb.utils.PreparedStatementUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.UpdateQueryGenerator;
 import org.hibernate.ogm.datastore.orientdb.dto.GenerationResult;
 import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner;
@@ -177,15 +176,13 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 				snapshot.isNew(), snapshot.isEmpty(), existsInDB, queryType );
 
 		StringBuilder queryBuffer = new StringBuilder( 100 );
-		List<Object> preparedStatementParams = Collections.emptyList();
-
+		
 		switch ( queryType ) {
 			case INSERT:
 				log.debugf( "insertOrUpdateTuple:Key: %s is new! Insert new record!", key );
 				GenerationResult insertResult = INSERT_QUERY_GENERATOR.generate( key.getTable(), tuple, true,
-						new HashSet<String>( Arrays.asList( key.getColumnNames() ) ) );
+						new HashSet<>( Arrays.asList( key.getColumnNames() ) ) );
 				queryBuffer.append( insertResult.getExecutionQuery() );
-				preparedStatementParams = insertResult.getPreparedStatementParams();
 				break;
 			case UPDATE:
 				Integer currentVersion = (Integer) snapshot.get( OrientDBConstant.SYSTEM_VERSION );
@@ -201,8 +198,6 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		try {
 			log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; ", key, queryBuffer );
 			PreparedStatement pstmt = connection.prepareStatement( queryBuffer.toString() );
-			log.debugf( "insertOrUpdateTuple: exist parameters for preparedstatement : %d", preparedStatementParams.size() );
-			PreparedStatementUtil.setParameters( pstmt, preparedStatementParams );
 			int updateCount = pstmt.executeUpdate();
 			log.debugf( "insertOrUpdateTuple:Key: %s ;inserted or updated: %d ", key, updateCount );
 			if ( updateCount == 0 && queryType.equals( QueryType.UPDATE ) ) {
@@ -249,9 +244,6 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		log.debugf( "insertTuple: insertQuery: %s ", result.getExecutionQuery() );
 		try {
 			PreparedStatement pstmt = connection.prepareStatement( result.getExecutionQuery() );
-			if ( result.getPreparedStatementParams() != null ) {
-				PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
-			}
 			log.debugf( "insertTuple:Key: %s (%s) ;inserted or updated: %d ", dbKeyName, dbKeyValue, pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
@@ -425,7 +417,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		log.debugf( "createRelationshipWithNode: query: %s", result.getExecutionQuery() );
 		try {
 			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
-			PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
+			//PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
 			log.debugf( "createRelationshipWithNode: execute insert query: %d", pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
@@ -442,7 +434,7 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 			log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
 			try {
 				PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
-				PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
+				//PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
 				log.debugf( "updateRelationshipWithNode: execute update query: %d", pstmt.executeUpdate() );
 			}
 			catch (SQLException sqle) {

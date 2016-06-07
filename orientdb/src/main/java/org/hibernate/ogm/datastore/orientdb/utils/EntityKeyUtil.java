@@ -20,9 +20,6 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.mapping.Column;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 
-import com.orientechnologies.orient.core.id.ORecordId;
-import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
-
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
@@ -100,25 +97,5 @@ public class EntityKeyUtil {
 
 		}
 		return exists;
-	}
-
-	public static ORecordId findRid(Connection connection, String className, String businessKeyName, Object businessKeyValue) {
-		StringBuilder buffer = new StringBuilder();
-		ORecordId rid = null;
-		try {
-			log.debug( "findRid:className:" + className + " ; businessKeyName:" + businessKeyName + "; businessKeyValue:" + businessKeyValue );
-			buffer.append( "select from " ).append( className ).append( " where " );
-			buffer.append( businessKeyName ).append( " = " );
-			EntityKeyUtil.setFieldValue( buffer, businessKeyValue );
-
-			ResultSet rs = connection.createStatement().executeQuery( buffer.toString() );
-			if ( rs.next() ) {
-				rid = (ORecordId) rs.getObject( OrientDBConstant.SYSTEM_RID );
-			}
-		}
-		catch (SQLException sqle) {
-			throw log.cannotExecuteQuery( buffer.toString(), sqle );
-		}
-		return rid;
 	}
 }
