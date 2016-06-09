@@ -54,7 +54,11 @@ public class OrientDBQueryParser extends BaseParser<ParameterParser.Recognizer> 
 				ParameterBeginDelimiter(),
 				Sequence( OneOrMore( Letter() ), ZeroOrMore( Digit() ) ),
 				name.set( match() ),
+<<<<<<< HEAD
 				getAdapter().addNamedParameter( name.get(), currentIndex() ) );
+=======
+				adapter.addNamedParameter( name.get(), currentIndex() ) );
+>>>>>>> 3e414de877b4c3c8acfba4a65f72d04c16af05b6
 	}
 
 	@SuppressSubnodes
