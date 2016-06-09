@@ -33,7 +33,7 @@ public class OrientDBQueryParser extends BaseParser<ParameterParser.Recognizer> 
 	}
 
 	public Rule Query() {
-		return Sequence( QueryParts(), EOI, push( getJournaler() ) );
+		return Sequence( QueryParts(), EOI, push( journaler ) );
 	}
 
 	@SkipNode
@@ -46,14 +46,6 @@ public class OrientDBQueryParser extends BaseParser<ParameterParser.Recognizer> 
 		return FirstOf( Quoted(), Escaped(), NamedParameter(), Other() );
 	}
 
-	public RecognizerAdapter getAdapter() {
-		return adapter;
-	}
-
-	public Recognizer getJournaler() {
-		return journaler;
-	}
-
 	@SuppressSubnodes
 	public Rule NamedParameter() {
 		StringVar name = new StringVar( "" );
@@ -62,7 +54,7 @@ public class OrientDBQueryParser extends BaseParser<ParameterParser.Recognizer> 
 				ParameterBeginDelimiter(),
 				Sequence( OneOrMore( Letter() ), ZeroOrMore( Digit() ) ),
 				name.set( match() ),
-				getAdapter().addNamedParameter( name.get(), currentIndex() ) );
+				adapter.addNamedParameter( name.get(), currentIndex() ) );
 	}
 
 	@SuppressSubnodes
