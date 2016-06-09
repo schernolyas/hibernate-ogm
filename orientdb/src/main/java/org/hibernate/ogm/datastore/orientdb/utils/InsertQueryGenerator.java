@@ -26,22 +26,43 @@ import org.hibernate.ogm.model.spi.Association;
 /**
  * The class is generator of 'insert' queries.
  * <p>
- * OrientDB supports 'insert' query with JSON format like  'insert into classname content {"name":"value"}'. The format allow to insert embedded
- * classes. But JDBC driver not supports parameters (like '?' or ':name') in query that the type. <b>All binary values must be saved by Base64
- * encoding.</b>
+ * OrientDB supports 'insert' query with JSON format like 'insert into classname content {"name":"value"}'. The format
+ * allow to insert embedded classes. But JDBC driver not supports parameters (like '?' or ':name') in query that the
+ * type. <b>All binary values must be saved by Base64 encoding.</b>
  * </p>
  *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  * @see <a href="http://orientdb.com/docs/2.2/SQL-Insert.html">Insert query in OrientDB</a>
  */
 @SuppressWarnings("unchecked")
-public class InsertQueryGenerator  {
+public class InsertQueryGenerator {
 
 	private static final Log log = LoggerFactory.getLogger();
 
+	/**
+	 * generate 'insert' query
+	 *
+	 * @param className name of OrientDB class
+	 * @param tuple tuple
+	 * @param isStoreTuple true - the class is tuple, false - the class of association
+	 * @param keyColumnNames collection of column names
+	 * @return result
+	 * @see GenerationResult
+	 */
 	public GenerationResult generate(String className, Tuple tuple, boolean isStoreTuple, Set<String> keyColumnNames) {
 		return generate( className, TupleUtil.toMap( tuple ), isStoreTuple, keyColumnNames );
 	}
+
+	/**
+	 * generate 'insert' query
+	 *
+	 * @param className name of OrientDB class
+	 * @param valuesMap map with column names and their values
+	 * @param isStoreTuple true - the class is tuple, false - the class of association
+	 * @param keyColumnNames collection of column names
+	 * @return result
+	 * @see GenerationResult
+	 */
 
 	public GenerationResult generate(String className, Map<String, Object> valuesMap, boolean isStoreTuple, Set<String> keyColumnNames) {
 		JSONObject queryJsonContent = createJSON( isStoreTuple, keyColumnNames, valuesMap );

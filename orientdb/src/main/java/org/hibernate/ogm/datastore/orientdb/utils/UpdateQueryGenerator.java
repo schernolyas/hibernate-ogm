@@ -41,6 +41,14 @@ public class UpdateQueryGenerator {
 
 	private static final Log log = LoggerFactory.getLogger();
 
+	/**
+	 * generate 'update' query for update association
+	 *
+	 * @param associationKey key of association
+	 * @param tuple tuple
+	 * @return result
+	 * @see GenerationResult
+	 */
 	public GenerationResult generate(AssociationKey associationKey, Tuple tuple) {
 		Set<String> whereColumnNames = new HashSet<>();
 		whereColumnNames.addAll( Arrays.asList( associationKey.getColumnNames() ) );
@@ -67,12 +75,33 @@ public class UpdateQueryGenerator {
 		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
 	}
 
-	public GenerationResult generate(String tableName, Tuple tuple, EntityKey primaryKey, Integer currentVersion) {
-		return generate( tableName, TupleUtil.toMap( tuple ), primaryKey, currentVersion );
+	/**
+	 * generate 'update' query for update association with support version
+	 *
+	 * @param className name of OrientDB class
+	 * @param tuple tuple
+	 * @param primaryKey primary key
+	 * @param currentVersion version for update
+	 * @return result
+	 * @see GenerationResult
+	 */
+	public GenerationResult generate(String className, Tuple tuple, EntityKey primaryKey, Integer currentVersion) {
+		return generate( className, TupleUtil.toMap( tuple ), primaryKey, currentVersion );
 	}
 
-	public GenerationResult generate(String tableName, Map<String, Object> valuesMap, EntityKey primaryKey, Integer currentVersion) {
-		StringBuilder updateQuery = generateMainPart( tableName, valuesMap, primaryKey.getColumnNames() );
+	/**
+	 * generate 'update' query for update association with support version
+	 *
+	 * @param className name of OrientDB class
+	 * @param valuesMap map with column names and their values
+	 * @param primaryKey primary key
+	 * @param currentVersion version for update
+	 * @return result
+	 * @see GenerationResult
+	 */
+
+	public GenerationResult generate(String className, Map<String, Object> valuesMap, EntityKey primaryKey, Integer currentVersion) {
+		StringBuilder updateQuery = generateMainPart( className, valuesMap, primaryKey.getColumnNames() );
 
 		updateQuery.append( " where " );
 		log.debugf( "generate: primaryKey : %s", primaryKey );
@@ -85,9 +114,9 @@ public class UpdateQueryGenerator {
 		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
 	}
 
-	private StringBuilder generateMainPart(String tableName, Map<String, Object> valuesMap, String[] primaryKeyColumnNames) {
+	private StringBuilder generateMainPart(String className, Map<String, Object> valuesMap, String[] primaryKeyColumnNames) {
 		StringBuilder updateQuery = new StringBuilder( 200 );
-		updateQuery.append( "update " ).append( tableName ).append( " set " );
+		updateQuery.append( "update " ).append( className ).append( " set " );
 
 		Map<String, Object> allValuesMap = new LinkedHashMap<>( valuesMap.size() );
 		for ( Map.Entry<String, Object> entry : valuesMap.entrySet() ) {

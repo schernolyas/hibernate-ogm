@@ -6,8 +6,6 @@
  */
 package org.hibernate.ogm.datastore.orientdb.query.impl;
 
-import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
-import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.engine.query.spi.ParameterParser;
 import org.hibernate.ogm.dialect.query.spi.RecognizerBasedParameterMetadataBuilder;
 import org.parboiled.Parboiled;
@@ -20,11 +18,6 @@ import org.parboiled.parserunners.RecoveringParseRunner;
  */
 public class OrientDBParameterMetadataBuilder extends RecognizerBasedParameterMetadataBuilder {
 
-	private static Log LOG = LoggerFactory.getLogger();
-
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void parseQueryParameters(String nativeQuery, ParameterParser.Recognizer journaler) {
 		OrientDBQueryParser parser = Parboiled.createParser( OrientDBQueryParser.class, journaler );
