@@ -46,14 +46,6 @@ public class OrientDBQueryParser extends BaseParser<ParameterParser.Recognizer> 
 		return FirstOf( Quoted(), Escaped(), NamedParameter(), Other() );
 	}
 
-	public RecognizerAdapter getAdapter() {
-		return adapter;
-	}
-
-	public Recognizer getJournaler() {
-		return journaler;
-	}
-
 	@SuppressSubnodes
 	public Rule NamedParameter() {
 		StringVar name = new StringVar( "" );
