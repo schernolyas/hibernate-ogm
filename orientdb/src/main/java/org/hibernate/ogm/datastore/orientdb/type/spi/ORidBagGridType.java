@@ -23,10 +23,13 @@ import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 
 public class ORidBagGridType extends AbstractGenericBasicType<ORidBag> {
 
+	/**
+	 * instance of the class
+	 */
 	public static final ORidBagGridType INSTANCE = new ORidBagGridType();
 
 	/**
-	 * The default contructor
+	 * The default constructor
 	 */
 	public ORidBagGridType() {
 		super( PassThroughGridTypeDescriptor.INSTANCE, ORidBagTypeDescriptor.INSTANCE );
