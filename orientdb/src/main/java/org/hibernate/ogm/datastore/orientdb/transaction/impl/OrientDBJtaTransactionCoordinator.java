@@ -24,7 +24,7 @@ import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 
 /**
  * Coordinator for JTA transactions
- * 
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBJtaTransactionCoordinator extends ForwardingTransactionCoordinator {
