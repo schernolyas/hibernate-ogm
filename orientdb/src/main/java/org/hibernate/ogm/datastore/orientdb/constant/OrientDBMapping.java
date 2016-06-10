@@ -9,7 +9,9 @@ package org.hibernate.ogm.datastore.orientdb.constant;
 import java.sql.Types;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.hibernate.ogm.datastore.orientdb.query.impl.BigDecimalParamValueSetter;
 import org.hibernate.ogm.datastore.orientdb.query.impl.BooleanParamValueSetter;
 import org.hibernate.ogm.datastore.orientdb.query.impl.ByteParamValueSetter;
@@ -37,9 +39,11 @@ import org.hibernate.type.DoubleType;
 import org.hibernate.type.FloatType;
 import org.hibernate.type.IntegerType;
 import org.hibernate.type.LongType;
+import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.MaterializedBlobType;
 import org.hibernate.type.MaterializedClobType;
 import org.hibernate.type.NumericBooleanType;
+import org.hibernate.type.OneToOneType;
 import org.hibernate.type.SerializableToBlobType;
 import org.hibernate.type.ShortType;
 import org.hibernate.type.StringType;
@@ -71,6 +75,22 @@ public class OrientDBMapping {
 	 */
 	@SuppressWarnings("rawtypes")
 	public static final Map<GridType, ParamValueSetter> SIMPLE_VALUE_SETTER_MAP = getParameterValueTypes();
+	/**
+	 * Mapping of types for generate sequence
+	 */
+	@SuppressWarnings("rawtypes")
+	public static final Set<Class> SEQ_TYPES = getSeqTypes();
+	/**
+	 * Mapping of types for identity relations (One-To-One and One-To-Many)
+	 */
+	@SuppressWarnings("rawtypes")
+	public static final Set<Class> RELATIONS_TYPES = getRelationsTypes();
+
+	/**
+	 * Mapping of types for generate fields for foreign linking
+	 */
+	@SuppressWarnings("rawtypes")
+	public static final Map<Class, Class> FOREIGN_KEY_TYPE_MAPPING = getForeignKeyTypeMapping();
 
 	@SuppressWarnings("rawtypes")
 	private static Map<GridType, ParamValueSetter> getParameterValueTypes() {
@@ -152,6 +172,31 @@ public class OrientDBMapping {
 		map.put( BigDecimalType.class, "decimal" );
 		return Collections.unmodifiableMap( map );
 
+	}
+
+	@SuppressWarnings("rawtypes")
+	private static Set<Class> getSeqTypes() {
+		Set<Class> set1 = new HashSet<>();
+		set1.add( IntegerType.class );
+		set1.add( LongType.class );
+		return Collections.unmodifiableSet( set1 );
+	}
+
+	@SuppressWarnings("rawtypes")
+	private static Set<Class> getRelationsTypes() {
+		Set<Class> set2 = new HashSet<>();
+		set2.add( ManyToOneType.class );
+		set2.add( OneToOneType.class );
+		return Collections.unmodifiableSet( set2 );
+	}
+
+	@SuppressWarnings("rawtypes")
+	private static Map<Class, Class> getForeignKeyTypeMapping() {
+		Map<Class, Class> map1 = new HashMap<>();
+		map1.put( Long.class, LongType.class );
+		map1.put( Integer.class, IntegerType.class );
+		map1.put( String.class, StringType.class );
+		return Collections.unmodifiableMap( map1 );
 	}
 
 }

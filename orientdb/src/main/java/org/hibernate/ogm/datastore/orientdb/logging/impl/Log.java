@@ -15,6 +15,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 
 /**
+ * Description of errors and messages, that can be throw by the module
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @MessageLogger(projectCode = "OGM")

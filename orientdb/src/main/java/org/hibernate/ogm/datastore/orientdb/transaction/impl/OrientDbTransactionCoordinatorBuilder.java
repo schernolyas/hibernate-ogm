@@ -17,7 +17,7 @@ import org.hibernate.resource.transaction.spi.TransactionCoordinatorOwner;
 
 /**
  * Builder for TransactionCoordinator instances
- * 
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDbTransactionCoordinatorBuilder implements TransactionCoordinatorBuilder {
@@ -29,7 +29,7 @@ public class OrientDbTransactionCoordinatorBuilder implements TransactionCoordin
 
 	/**
 	 * Constructor
-	 * 
+	 *
 	 * @param delegate builder of transaction coordinator
 	 * @param datastoreProvider OrientDB datastore provider
 	 */
