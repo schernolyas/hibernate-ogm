@@ -18,12 +18,23 @@ import java.util.Map;
 public class ODocumentUtil {
 
 	/**
+<<<<<<< HEAD
 	 * Prepare Map with keys of complex names like 'field11.field12'. Simple names put to Map as is. Complex names put
 	 * to Map as : <code>
 	 * Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();
 	 * map.put("field1",new HashMap&lt;String, Object&gt;());
 	 * map.get("field1").put("field2", value);
 	 * </code>
+=======
+	 * Prepare Map with keys of complex names like 'field11.field12'.
+         * 
+         * Simple names put to Map as is. Complex names put to Map as :
+         * <code>
+         * Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();
+         * map.put("field1",new HashMap&lt;String, Object&gt;());
+         * map.get("field1").put("field2", value);
+         * </code>
+>>>>>>> 103eced... changes: 1) add javadoc 2) refactoring
 	 *
 	 * @param rootFieldName root field name
 	 * @param document document
