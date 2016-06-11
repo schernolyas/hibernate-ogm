@@ -98,7 +98,7 @@ import org.hibernate.ogm.model.key.spi.AssociationKind;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>,
-SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+		SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -163,11 +163,6 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 				snapshot.isNew(), snapshot.isEmpty(), existsInDB, queryType );
 
 		StringBuilder queryBuffer = new StringBuilder( 100 );
-<<<<<<< HEAD
-
-=======
-		
->>>>>>> 103eced... changes: 1) add javadoc 2) refactoring
 		switch ( queryType ) {
 			case INSERT:
 				log.debugf( "insertOrUpdateTuple:Key: %s is new! Insert new record!", key );
@@ -399,11 +394,6 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 		log.debugf( "createRelationshipWithNode: query: %s", result.getExecutionQuery() );
 		try {
 			PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
-<<<<<<< HEAD
-			// PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
-=======
-			//PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
->>>>>>> 103eced... changes: 1) add javadoc 2) refactoring
 			log.debugf( "createRelationshipWithNode: execute insert query: %d", pstmt.executeUpdate() );
 		}
 		catch (SQLException sqle) {
@@ -420,11 +410,6 @@ SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 			log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
 			try {
 				PreparedStatement pstmt = provider.getConnection().prepareStatement( result.getExecutionQuery() );
-<<<<<<< HEAD
-				// PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
-=======
-				//PreparedStatementUtil.setParameters( pstmt, result.getPreparedStatementParams() );
->>>>>>> 103eced... changes: 1) add javadoc 2) refactoring
 				log.debugf( "updateRelationshipWithNode: execute update query: %d", pstmt.executeUpdate() );
 			}
 			catch (SQLException sqle) {

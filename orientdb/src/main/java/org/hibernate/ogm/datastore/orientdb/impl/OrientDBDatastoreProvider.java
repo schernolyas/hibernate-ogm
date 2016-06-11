@@ -39,7 +39,7 @@ import org.hibernate.service.spi.Stoppable;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBDatastoreProvider extends BaseDatastoreProvider
-		implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
+implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	private static Log log = LoggerFactory.getLogger();
 	private ConnectionHolder connectionHolder;
@@ -81,10 +81,10 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider
 			info = new Properties();
 			info.put( "user", user );
 			info.put( "password", password );
-                        createInMemoryDB( jdbcUrl.toString() );
+			createInMemoryDB( jdbcUrl.toString() );
 			connectionHolder = new ConnectionHolder( jdbcUrl.toString(), info );
-                        
-                        FormatterUtil.setDateFormater( new ThreadLocal<DateFormat>() {
+
+			FormatterUtil.setDateFormater( new ThreadLocal<DateFormat>() {
 
 				@Override
 				protected DateFormat initialValue() {
