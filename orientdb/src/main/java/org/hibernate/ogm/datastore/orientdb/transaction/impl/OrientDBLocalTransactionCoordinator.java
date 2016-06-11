@@ -20,6 +20,8 @@ import org.hibernate.ogm.transaction.impl.ForwardingTransactionDriver;
 import org.hibernate.resource.transaction.TransactionCoordinator;
 
 /**
+ * Coordinator for local transactions
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCoordinator {
@@ -28,6 +30,12 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 	private OrientDBDatastoreProvider datastoreProvider;
 	private OTransaction currentOrientDBTransaction;
 
+	/**
+	 * Constructor
+	 *
+	 * @param coordinator transaction coordinator
+	 * @param datastoreProvider provider of OrientDB datastore
+	 */
 	public OrientDBLocalTransactionCoordinator(TransactionCoordinator coordinator, OrientDBDatastoreProvider datastoreProvider) {
 		super( coordinator );
 		this.datastoreProvider = datastoreProvider;
