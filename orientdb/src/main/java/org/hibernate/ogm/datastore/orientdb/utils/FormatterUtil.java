@@ -10,10 +10,7 @@ import java.text.DateFormat;
 
 /**
  * The utility class contains thread-local formatters for format date and datetime
-<<<<<<< HEAD
  *
-=======
->>>>>>> 103eced... changes: 1) add javadoc 2) refactoring
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class FormatterUtil {
