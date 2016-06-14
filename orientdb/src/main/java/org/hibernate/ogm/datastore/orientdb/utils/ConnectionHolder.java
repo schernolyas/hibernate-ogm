@@ -46,18 +46,12 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 		this.jdbcProperties = info;
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	protected Connection initialValue() {
 		log.debugf( "create connection %s for thread %s", jdbcUrl, Thread.currentThread().getName() );
 		return createConnectionForCurrentThread();
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void remove() {
 		log.debugf( "remove connection for thread %s", Thread.currentThread().getName() );

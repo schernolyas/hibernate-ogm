@@ -16,9 +16,6 @@ import java.sql.SQLException;
  */
 public class LongParamValueSetter implements ParamValueSetter<Long> {
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void setValue(PreparedStatement preparedStatement, int index, Long value) throws SQLException {
 		preparedStatement.setLong( index, value );

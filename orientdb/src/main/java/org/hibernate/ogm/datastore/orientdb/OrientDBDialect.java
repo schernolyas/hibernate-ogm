@@ -98,7 +98,7 @@ import org.hibernate.ogm.model.key.spi.AssociationKind;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>,
-		SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -292,18 +292,12 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return new RowKey( columnNames, values );
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public Association createAssociation(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "createAssociation: %s ; AssociationContext: %s", associationKey, associationContext );
 		return new Association();
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void insertOrUpdateAssociation(AssociationKey associationKey, Association association, AssociationContext associationContext) {
 		log.debugf( "insertOrUpdateAssociation: AssociationKey: %s ; AssociationContext: %s ; association: %s", associationKey, associationContext,
@@ -337,9 +331,6 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		}
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void removeAssociation(AssociationKey key, AssociationContext associationContext) {
 		// Remove the list of tuples corresponding to a given association
@@ -421,17 +412,11 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		}
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public boolean isStoredInEntityStructure(AssociationKeyMetadata associationKeyMetadata, AssociationTypeContext associationTypeContext) {
 		return true;
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public Number nextValue(NextValueRequest request) {
 		log.debugf( "NextValueRequest: %s", request );
@@ -457,9 +442,6 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return nextValue;
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public boolean supportsSequences() {
 		return true;
@@ -506,9 +488,6 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return pstmt;
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public int executeBackendUpdateQuery(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
@@ -521,9 +500,6 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		}
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public ClosableIterator<Tuple> executeBackendQuery(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
 		try {
@@ -549,26 +525,17 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return parameterValues;
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public ParameterMetadataBuilder getParameterMetadataBuilder() {
 		return new OrientDBParameterMetadataBuilder();
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public String parseNativeQuery(String nativeQuery) {
 		return nativeQuery;
 
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public void sessionFactoryCreated(SessionFactoryImplementor sessionFactoryImplementor) {
 		this.associationQueries = initializeAssociationQueries( sessionFactoryImplementor );
@@ -645,9 +612,6 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 		return queryMap;
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public GridType overrideType(Type type) {
 		GridType gridType = null;

@@ -10,6 +10,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
+ * Provides common functionality required for query creation.
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class QueriesBase {
@@ -19,7 +21,7 @@ public class QueriesBase {
 	}
 
 	protected Map<String, Object> params(Object[] columnValues, int offset) {
-		Map<String, Object> params = new LinkedHashMap<String, Object>( columnValues.length );
+		Map<String, Object> params = new LinkedHashMap<>( columnValues.length );
 		for ( int i = 0; i < columnValues.length; i++ ) {
 			params.put( String.valueOf( offset + i ), columnValues[i] );
 		}

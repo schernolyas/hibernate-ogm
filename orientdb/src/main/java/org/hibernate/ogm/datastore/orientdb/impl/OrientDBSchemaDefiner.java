@@ -571,7 +571,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
 		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
 		Connection connection = provider.getConnection();
-		createSequence( connection, OrientDBConstant.HIBERNATE_SEQUENCE, 0, 1 );
+		//createSequence( connection, OrientDBConstant.HIBERNATE_SEQUENCE, 0, 1 );
 		createTableSequence( connection, OrientDBConstant.HIBERNATE_SEQUENCE_TABLE, "key", "seed" );
 		createGetTableSeqValueFunc( connection );
 		createExecuteQueryFunc( connection );

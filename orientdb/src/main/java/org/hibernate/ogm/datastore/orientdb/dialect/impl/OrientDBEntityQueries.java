@@ -32,6 +32,8 @@ import java.util.Arrays;
 import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
 
 /**
+ * Container for the queries related to one entity type in OrientDB.
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBEntityQueries extends QueriesBase {
@@ -40,10 +42,11 @@ public class OrientDBEntityQueries extends QueriesBase {
 
 	private final EntityKeyMetadata entityKeyMetadata;
 
-        /**
-         * Contractor
-         * @param entityKeyMetadata metadata of entity keys
-         */
+	/**
+	 * Contractor
+	 *
+	 * @param entityKeyMetadata metadata of entity keys
+	 */
 	public OrientDBEntityQueries(EntityKeyMetadata entityKeyMetadata) {
 		this.entityKeyMetadata = entityKeyMetadata;
 		for ( int i = 0; i < entityKeyMetadata.getColumnNames().length; i++ ) {
@@ -53,7 +56,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 	}
 
 	/**
-	 * Find the node corresponding to an entity.
+	 * Find the node corresponding to the entity key.
 	 *
 	 * @param connection the connection
 	 * @param entityKey entity key
@@ -131,6 +134,15 @@ public class OrientDBEntityQueries extends QueriesBase {
 		}
 		return false;
 	}
+
+	/**
+	 * find association that corresponding to the association key.
+	 *
+	 * @param connection connection to OrientDB
+	 * @param associationKey association key
+	 * @param associationContext context
+	 * @return list of associations
+	 */
 
 	public List<Map<String, Object>> findAssociation(Connection connection, AssociationKey associationKey,
 			AssociationContext associationContext) {

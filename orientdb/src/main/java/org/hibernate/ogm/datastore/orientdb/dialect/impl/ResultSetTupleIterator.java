@@ -35,10 +35,6 @@ public class ResultSetTupleIterator implements ClosableIterator<Tuple> {
 		this.resultSet = resultSet;
 	}
 
-	/**
-	 * {@inheritDoc}
-	 * @throws HibernateException if any database error occurs
-	 */
 	@Override
 	public boolean hasNext() {
 		try {
@@ -49,10 +45,6 @@ public class ResultSetTupleIterator implements ClosableIterator<Tuple> {
 		}
 	}
 
-	/**
-	 * {@inheritDoc}
-	 * @throws HibernateException if any database error occurs
-	 */
 	@Override
 	public Tuple next() {
 		try {
@@ -66,6 +58,7 @@ public class ResultSetTupleIterator implements ClosableIterator<Tuple> {
 
 	/**
 	 * convert {@link ResultSet} to {@link Tuple}
+	 *
 	 * @return tuple from ResultSet
 	 * @throws HibernateException if any database error occurs
 	 */
@@ -88,10 +81,6 @@ public class ResultSetTupleIterator implements ClosableIterator<Tuple> {
 		return new Tuple( new MapTupleSnapshot( map ) );
 	}
 
-	/**
-	 * {@inheritDoc}
-	 * @throws HibernateException if any database error occurs
-	 */
 	@Override
 	public void remove() {
 		try {
@@ -102,10 +91,6 @@ public class ResultSetTupleIterator implements ClosableIterator<Tuple> {
 		}
 	}
 
-	/**
-	 * {@inheritDoc}
-	 * @throws HibernateException if any database error occurs
-	 */
 	@Override
 	public void close() {
 		try {

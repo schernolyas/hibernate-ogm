@@ -16,6 +16,12 @@ import org.hibernate.ogm.model.spi.AssociationSnapshot;
 import org.hibernate.ogm.model.spi.Tuple;
 
 /**
+ * * Represents the association snapshot as loaded by the datastore.
+ * <p>
+ * Interface implemented by the datastore dialect to avoid data duplication in memory (if possible). Note that this
+ * snapshot will not be modified by the Hibernate OGM engine
+ * </p>
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 

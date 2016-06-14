@@ -25,9 +25,6 @@ public class OrientDB implements DatastoreConfiguration<GlobalContext<?, ?>> {
 	 */
 	public static final String DATASTORE_PROVIDER_NAME = "ORIENTDB";
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
 	public GlobalContext<?, ?> getConfigurationBuilder(ConfigurationContext context) {
 		return GenericOptionModel.createGlobalContext( context );

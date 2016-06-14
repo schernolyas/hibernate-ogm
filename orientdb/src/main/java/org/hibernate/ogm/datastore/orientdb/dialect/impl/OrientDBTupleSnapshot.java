@@ -19,7 +19,16 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
 import java.util.Collections;
 
 /**
- * {@inheritDoc}
+ * Represents a tuple snapshot as loaded by the datastore.
+ * <p>
+ * This interface is to be implemented by dialects to avoid data duplication in memory (if possible), typically wrapping
+ * a store-specific representation of the tuple data. This snapshot will never be modified by the Hibernate OGM engine.
+ * <p>
+ * Note that in the case of embeddables (e.g. composite ids), column names are given using dot notation, e.g.
+ * "id.countryCode" or "address.city.zipCode". The column names of the physical JPA model will be used, as e.g. given
+ * via {@code @Column} .
+ * <p>
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBTupleSnapshot implements TupleSnapshot {
@@ -52,9 +61,7 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		log.debugf( "2.associatedEntityKeyMetadata: %s", associatedEntityKeyMetadata );
 		log.debugf( "2.rolesByColumn: %s", rolesByColumn );
 	}
-	/**
-	 * {@inheritDoc}
-	 */
+
 	@Override
 	public Object get(String targetColumnName) {
 		log.debugf( "targetColumnName: %s", targetColumnName );
@@ -88,26 +95,23 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		}
 		return value;
 	}
-	/**
-	 * {@inheritDoc}
-	 */
+
 	@Override
 	public boolean isEmpty() {
 		return dbNameValueMap.isEmpty();
 	}
-	/**
-	 * {@inheritDoc}
-	 */
+
 	@Override
 	public Set<String> getColumnNames() {
 		return dbNameValueMap.keySet();
 	}
 
 	/**
-	 * Whether this snapshot has been newly created (meaning it doesn't have an actual {@link ODocument} yet) or not. A node
-	 * will be in the "new" state between the {@code createTuple()} call and the next {@code insertOrUpdateTuple()}
+	 * Whether this snapshot has been newly created (meaning it doesn't have an actual {@link ODocument} yet) or not. A
+	 * node will be in the "new" state between the {@code createTuple()} call and the next {@code insertOrUpdateTuple()}
 	 * call.
-         * @return  true if the snapshot is new (not saved in database yet), otherwise false
+	 *
+	 * @return true if the snapshot is new (not saved in database yet), otherwise false
 	 */
 	public boolean isNew() {
 		return ( dbNameValueMap == null || dbNameValueMap.isEmpty() );

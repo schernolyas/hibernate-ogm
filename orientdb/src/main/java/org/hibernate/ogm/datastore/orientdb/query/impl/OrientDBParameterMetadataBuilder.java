@@ -12,16 +12,22 @@ import org.parboiled.Parboiled;
 import org.parboiled.parserunners.RecoveringParseRunner;
 
 /**
- * The class is builder of parameter metadata
+ * {@link org.hibernate.ogm.dialect.query.spi.ParameterMetadataBuilder} for native OrientDB queries. The implementation is based on a
+ *  <a href="http://parboiled.org">parboiled</a> grammar.
  *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBParameterMetadataBuilder extends RecognizerBasedParameterMetadataBuilder {
 
-	@Override
-	public void parseQueryParameters(String nativeQuery, ParameterParser.Recognizer journaler) {
-		OrientDBQueryParser parser = Parboiled.createParser( OrientDBQueryParser.class, journaler );
-		new RecoveringParseRunner<ParameterParser.Recognizer>( parser.Query() ).run( nativeQuery );
+	/**
+	 * Parses the given native NoSQL query string, collecting the contained named parameters in the course of doing so.
+	 *
+	 * @param noSqlQuery the query to parse
+	 * @param recognizer collects any named parameters contained in the given query
+	 */
+	public void parseQueryParameters(String noSqlQuery, ParameterParser.Recognizer recognizer) {
+		OrientDBQueryParser parser = Parboiled.createParser( OrientDBQueryParser.class, recognizer );
+		new RecoveringParseRunner<ParameterParser.Recognizer>( parser.Query() ).run( noSqlQuery );
 	}
 
 }

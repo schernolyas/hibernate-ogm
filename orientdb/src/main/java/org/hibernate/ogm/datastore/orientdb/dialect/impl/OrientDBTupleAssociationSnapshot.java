@@ -17,23 +17,24 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
-import org.hibernate.ogm.model.key.spi.AssociationKind;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
 
 import com.orientechnologies.orient.core.record.impl.ODocument;
 
 /**
+ * Represents a association tuple snapshot as loaded by the datastore.
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 
 public class OrientDBTupleAssociationSnapshot implements TupleSnapshot {
 
-	private static Log log = LoggerFactory.getLogger();
-	private AssociationContext associationContext;
-	private AssociationKey associationKey;
+	private static final Log log = LoggerFactory.getLogger();
+	private final AssociationContext associationContext;
+	private final AssociationKey associationKey;
 	private final Map<String, Object> properties;
 
-	private Map<String, Object> relationship;
+	private final Map<String, Object> relationship;
 
 	public OrientDBTupleAssociationSnapshot(Map<String, Object> relationship, AssociationKey associationKey, AssociationContext associationContext) {
 		log.debug( "OrientDBTupleAssociationSnapshot: AssociationKey:" + associationKey + "; AssociationContext" + associationContext );
@@ -44,7 +45,7 @@ public class OrientDBTupleAssociationSnapshot implements TupleSnapshot {
 	}
 
 	private Map<String, Object> collectProperties() {
-		Map<String, Object> properties = new LinkedHashMap<String, Object>();
+		Map<String, Object> properties = new LinkedHashMap<>();
 		String[] rowKeyColumnNames = associationKey.getMetadata().getRowKeyColumnNames();
 
 		// Index columns
@@ -63,33 +64,12 @@ public class OrientDBTupleAssociationSnapshot implements TupleSnapshot {
 
 		}
 		properties.putAll( relationship );
-
 		log.debug( "1.collectProperties: " + properties );
-
-		// Properties stored in the target side of the association
-		/*
-		 * AssociatedEntityKeyMetadata associatedEntityKeyMetadata =
-		 * associationContext.getAssociationTypeContext().getAssociatedEntityKeyMetadata(); for ( String
-		 * associationColumn : associatedEntityKeyMetadata.getAssociationKeyColumns() ) { String targetColumnName =
-		 * associatedEntityKeyMetadata.getCorrespondingEntityKeyColumn( associationColumn ); if (
-		 * targetNode.containsField( targetColumnName ) ) { properties.put( associationColumn,
-		 * targetNode.getOriginalValue( targetColumnName ) ); } }
-		 */
-
-		// Property stored in the owner side of the association
-		/*
-		 * for ( int i = 0; i < associationKey.getColumnNames().length; i++ ) { if ( ownerNode.containsField(
-		 * associationKey.getEntityKey().getColumnNames()[i] ) ) { properties.put( associationKey.getColumnNames()[i],
-		 * ownerNode.getOriginalValue(associationKey.getEntityKey().getColumnNames()[i] ) ); } }
-		 */
-		log.debug( "collectProperties: " + properties );
 		return properties;
 	}
 
 	@Override
 	public Object get(String columnName) {
-		// log.debugf( "targetColumnName: %s", columnName );
-
 		Object value = properties.get( columnName );
 		if ( value == null && EntityKeyUtil.isEmbeddedColumn( columnName ) ) {
 			EmbeddedColumnInfo ec = new EmbeddedColumnInfo( columnName );
@@ -108,9 +88,4 @@ public class OrientDBTupleAssociationSnapshot implements TupleSnapshot {
 	public boolean isEmpty() {
 		return properties.isEmpty();
 	}
-
-	private static boolean isEmbeddedCollection(AssociationKey associationKey) {
-		return associationKey.getMetadata().getAssociationKind() == AssociationKind.EMBEDDED_COLLECTION;
-	}
-
 }
