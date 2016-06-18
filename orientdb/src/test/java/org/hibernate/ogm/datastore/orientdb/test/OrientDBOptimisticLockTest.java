@@ -10,11 +10,9 @@ import com.orientechnologies.orient.core.exception.OConcurrentModificationExcept
 import static org.hibernate.ogm.datastore.orientdb.test.OrientDBSimpleTest.MEMORY_TEST;
 
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
@@ -117,7 +115,7 @@ public class OrientDBOptimisticLockTest {
 		}
 
 		log.info( "waiting results...." );
-		Set<Long> readyForWrite = Collections.synchronizedSet( new HashSet<Long>( 2 ) );
+		CountDownLatch readyForWrite = new CountDownLatch( 2 );
 		ForkJoinTask<Long> t1 = ForkJoinPool.commonPool()
 				.submit( ForkJoinTask.adapt( new WriterUpdateThread( 2, 1, emf.createEntityManager(), readyForWrite ) ) );
 		ForkJoinTask<Long> t2 = ForkJoinPool.commonPool()
@@ -192,7 +190,7 @@ public class OrientDBOptimisticLockTest {
 		}
 
 		log.info( "waiting results...." );
-		Set<Long> readyForWrite = Collections.synchronizedSet( new HashSet<Long>( 2 ) );
+		CountDownLatch readyForWrite = new CountDownLatch( 2 );
 		ForkJoinTask<Long> t1 = ForkJoinPool.commonPool()
 				.submit( ForkJoinTask.adapt( new WriterUpdateThread( 2, 2, emf.createEntityManager(), readyForWrite ) ) );
 		ForkJoinTask<Long> t2 = ForkJoinPool.commonPool()
@@ -298,9 +296,9 @@ public class OrientDBOptimisticLockTest {
 		private final long taskId;
 		private final long writerId;
 		private final EntityManager localEm;
-		private final Set<Long> readyForWrite;
+		private final CountDownLatch readyForWrite;
 
-		public WriterUpdateThread(long taskId, long writerId, EntityManager localEm, Set<Long> readyForWrite) {
+		public WriterUpdateThread(long taskId, long writerId, EntityManager localEm, CountDownLatch readyForWrite) {
 			this.taskId = taskId;
 			this.writerId = writerId;
 			this.localEm = localEm;
@@ -315,15 +313,9 @@ public class OrientDBOptimisticLockTest {
 				Query query = localEm.createNativeQuery( "select from writer where bKey=" + writerId, Writer.class );
 				List<Writer> results = query.getResultList();
 				assertFalse( "Writer must be!", results.isEmpty() );
-				readyForWrite.add( taskId );
+				readyForWrite.countDown();
 				log.info( "Waiting other threads..." );
-				while ( readyForWrite.size() != 2 ) {
-					try {
-						Thread.sleep( 100 );
-					}
-					catch (InterruptedException ie) {
-					}
-				}
+				readyForWrite.await();
 				log.info( "All threads ready. Lets go!" );
 
 				Writer writer = results.get( 0 );
@@ -355,9 +347,9 @@ public class OrientDBOptimisticLockTest {
 		private final long taskId;
 		private final long writerId;
 		private final EntityManager localEm;
-		private final Set<Long> readyForWrite;
+		private final CountDownLatch readyForWrite;
 
-		public WriterDeleteThread(long taskId, long writerId, EntityManager localEm, Set<Long> readyForWrite) {
+		public WriterDeleteThread(long taskId, long writerId, EntityManager localEm, CountDownLatch readyForWrite) {
 			this.taskId = taskId;
 			this.writerId = writerId;
 			this.localEm = localEm;
@@ -372,15 +364,9 @@ public class OrientDBOptimisticLockTest {
 				Query query = localEm.createNativeQuery( "select from writer where bKey=" + writerId, Writer.class );
 				List<Writer> results = query.getResultList();
 				assertFalse( "Writer must be!", results.isEmpty() );
-				readyForWrite.add( taskId );
+				readyForWrite.countDown();
 				log.info( "Waiting other threads..." );
-				while ( readyForWrite.size() != 2 ) {
-					try {
-						Thread.sleep( 100 );
-					}
-					catch (InterruptedException ie) {
-					}
-				}
+				readyForWrite.await();
 				log.info( "All threads ready. Lets go!" );
 				Writer writer = results.get( 0 );
 				localEm.remove( writer );
