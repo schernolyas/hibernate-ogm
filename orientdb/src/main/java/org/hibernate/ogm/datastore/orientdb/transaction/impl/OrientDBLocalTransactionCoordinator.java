@@ -93,7 +93,7 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 		public void begin() {
 			Connection sqlConnection = datastoreProvider.getConnection();
 			OrientJdbcConnection orientDbConn = (OrientJdbcConnection) sqlConnection;
-			ODatabaseDocumentTx database = orientDbConn.getDatabase();
+			ODatabaseDocumentTx database = (ODatabaseDocumentTx) orientDbConn.getDatabase();
 			log.debugf( "begin transaction for database %s. Connection's hash code: %s",
 					database.getName(), orientDbConn.hashCode() );
 			super.begin();

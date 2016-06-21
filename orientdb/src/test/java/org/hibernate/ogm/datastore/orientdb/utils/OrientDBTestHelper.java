@@ -158,7 +158,7 @@ public class OrientDBTestHelper implements TestableGridDialect {
 		OrientJdbcConnection connection = (OrientJdbcConnection) provider.getConnection();
 		log.infof( "call dropSchemaAndDatabase! db closed: %b ", connection.getDatabase().isClosed() );
 		if ( !connection.getDatabase().isClosed() ) {
-			ODatabaseDocumentTx db = connection.getDatabase();
+			ODatabaseDocumentTx db = (ODatabaseDocumentTx) connection.getDatabase();
 			if ( !db.isActiveOnCurrentThread() ) {
 				db.activateOnCurrentThread();
 			}
