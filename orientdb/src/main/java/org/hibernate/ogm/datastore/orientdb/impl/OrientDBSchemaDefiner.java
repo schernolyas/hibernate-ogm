@@ -66,7 +66,6 @@ import org.hibernate.type.descriptor.converter.AttributeConverterTypeAdapter;
  *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
-
 public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
 	private static final String CREATE_PROPERTY_TEMPLATE = "create property {0}.{1} {2}";
@@ -80,14 +79,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	private String createClassQuery(Table table) {
-		String query = null;
 		if ( isTablePerClassInheritance( table ) ) {
-			query = String.format( "create class %s extends %s", table.getName(), table.getPrimaryKey().getTable().getName() );
+			return String.format( "create class %s extends %s", table.getName(), table.getPrimaryKey().getTable().getName() );
 		}
 		else {
-			query = String.format( "create class %s extends V", table.getName() );
+			return String.format( "create class %s extends V", table.getName() );
 		}
-		return query;
 	}
 
 	private void createSequence(Connection connection, String name, int startValue, int incValue) {
@@ -185,7 +182,8 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			}
 		}
 		if ( inheritedFromTable != null ) {
-			for ( Iterator<Column> it = inheritedFromTable.getColumnIterator(); it.hasNext(); ) {
+			for ( @SuppressWarnings("unchecked")
+			Iterator<Column> it = inheritedFromTable.getColumnIterator(); it.hasNext(); ) {
 				Column column = it.next();
 				if ( currentColumn.getName().equals( column.getName() ) ) {
 					created = true;
@@ -199,20 +197,13 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	private void createEntities(Connection connection, SchemaDefinitionContext context) {
 
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
-			Set<String> createdEmbeddedClassSet = new HashSet<>();
-			Set<String> tables = new HashSet<>();
 			for ( Sequence sequence : namespace.getSequences() ) {
-				log.debugf( "sequence.getName(): %s", sequence.getName() );
-				createSequence( connection, sequence.getName().getSequenceName().getCanonicalName(),
-						sequence.getInitialValue(), sequence.getIncrementSize() );
+				createSequence( connection, sequence.getName().getSequenceName().getCanonicalName(), sequence.getInitialValue(), sequence.getIncrementSize() );
 			}
 
+			Set<String> tables = new HashSet<>();
+			Set<String> createdEmbeddedClassSet = new HashSet<>();
 			for ( Table table : namespace.getTables() ) {
-				log.debugf( "table name: %s, abstract union table: %b; physical table: %b; abstract table: %b ",
-						table.getName(), table.isAbstractUnionTable(), table.isPhysicalTable(), table.isAbstract() );
-				log.debugf( "QualifiedTableName: ObjectName: %s; TableName:%s ",
-						table.getQualifiedTableName().getObjectName(), table.getQualifiedTableName().getTableName() );
-
 				boolean isEmbeddedListTableName = isEmbeddedListTable( table );
 				String tableName = table.getName();
 
@@ -220,12 +211,9 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					tableName = table.getName().substring( 0, table.getName().indexOf( "_" ) );
 
 					EmbeddedColumnInfo embeddedListColumn = new EmbeddedColumnInfo( table.getName().substring( table.getName().indexOf( "_" ) + 1 ) );
-					log.debugf( "table %s is table for embedded collections! EmbeddedList class: %s; embedded list property: %s",
-							table.getName(), embeddedListColumn.getClassNames(), embeddedListColumn.getPropertyName() );
 					for ( String className : embeddedListColumn.getClassNames() ) {
 						if ( !createdEmbeddedClassSet.contains( className ) ) {
 							String classQuery = createClassQuery( className );
-							log.debugf( "create class query: %s", classQuery );
 							try {
 								connection.createStatement().execute( classQuery );
 								tables.add( className );
@@ -235,28 +223,22 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 							}
 						}
 					}
-					String createEmbeddedListQuery = String.format( "create property %s.%s embeddedlist %s ",
-							embeddedListColumn.getClassNames().get( embeddedListColumn.getClassNames().size() - 1 ),
-							embeddedListColumn.getPropertyName(),
-							embeddedListColumn.getPropertyName() );
-					log.debugf( "create embeddedlist query: %s", createEmbeddedListQuery );
+
 					throw new UnsupportedOperationException( String.format( "Table name %s not supported!", tableName ) );
 				}
 				else {
 					String classQuery = createClassQuery( table );
-					log.debugf( "create class query: %s", classQuery );
 					try {
 						provider.getConnection().createStatement().execute( classQuery );
 						tables.add( tableName );
 					}
 					catch (SQLException e) {
-						log.error( "cannotGenerateClass!", e );
 						throw log.cannotGenerateClass( table.getName(), e );
 					}
 				}
 
+				@SuppressWarnings("unchecked")
 				Iterator<Column> columnIterator = table.getColumnIterator();
-
 				while ( columnIterator.hasNext() ) {
 					Column column = columnIterator.next();
 					log.debugf( "column: %s ", column );
@@ -269,24 +251,17 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					}
 
 					if ( ComponentType.class.equals( column.getValue().getType().getClass() ) ) {
-						log.debugf( "column name %s has component type. Returned type: %s ",
-								column.getName(), column.getValue().getType().getReturnedClass() );
-						ComponentType type = (ComponentType) column.getValue().getType();
 						throw new UnsupportedOperationException( "Component type not supported yet " );
 					}
 					else if ( OrientDBMapping.RELATIONS_TYPES.contains( column.getValue().getType().getClass() ) ) {
-						// @TODO refactor it
 						Value value = column.getValue();
-						log.debugf( "column name: %s ; column.getCanonicalName(): %s", column.getName(), column.getCanonicalName() );
 						if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
 							EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
-							log.debugf( "embedded column. class: %s ; property: %s", ec.getClassNames().get( 0 ), ec.getPropertyName() );
-
+							// TODO: ???
 						}
 						else {
-							Class mappedByClass = searchMappedByReturnedClass( context, namespace.getTables(), (EntityType) value.getType(), column );
+							Class<?> mappedByClass = searchMappedByReturnedClass( context, namespace.getTables(), (EntityType) value.getType(), column );
 							String propertyQuery = createValueProperyQuery( table, column, OrientDBMapping.FOREIGN_KEY_TYPE_MAPPING.get( mappedByClass ) );
-							log.debugf( "create foreign key property query: %s", propertyQuery );
 							try {
 								provider.getConnection().createStatement().execute( propertyQuery );
 							}
@@ -298,8 +273,6 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					else if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
 						EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
 						boolean isPrimaryKeyColumn = isPrimaryKeyColumn( table, column );
-						log.debugf( "embedded column. class: %s ; property: %s", ec.getClassNames(), ec.getPropertyName() );
-						log.debugf( "is column from primary key: %s", isPrimaryKeyColumn );
 						if ( !isPrimaryKeyColumn ) {
 							createEmbeddedColumn( createdEmbeddedClassSet, tableName, column, ec );
 						}
@@ -320,7 +293,6 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					}
 					else {
 						String propertyQuery = createValueProperyQuery( tableName, column );
-						log.debugf( "create property query: %s", propertyQuery );
 						try {
 							provider.getConnection().createStatement().execute( propertyQuery );
 						}
@@ -341,20 +313,17 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					}
 				}
 
-				if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table )
-						&& !isEmbeddedObjectTable( table ) ) {
+				if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table ) && !isEmbeddedObjectTable( table ) ) {
 					PrimaryKey primaryKey = table.getPrimaryKey();
 					if ( primaryKey != null ) {
-						log.debugf( "primaryKey: %s ", primaryKey.getTable().getName() );
 						createPrimaryKey( connection, primaryKey );
 					}
 					else {
-						log.debugf( "Table %s has not primary key", table.getName() );
+						log.debugf( "Table %s has not a primary key", table.getName() );
 					}
 				}
 			}
 		}
-
 	}
 
 	private boolean isTablePerClassInheritance(Table table) {
@@ -369,10 +338,10 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	private void createPrimaryKey(Connection connection, PrimaryKey primaryKey) {
 		StringBuilder uniqueIndexQuery = new StringBuilder( 100 );
 		uniqueIndexQuery.append( "CREATE INDEX " )
-		.append( primaryKey.getName() != null
-		? primaryKey.getName()
+			.append( primaryKey.getName() != null
+				? primaryKey.getName()
 				: PrimaryKey.generateName( primaryKey.generatedConstraintNamePrefix(), primaryKey.getTable(), primaryKey.getColumns() ) )
-		.append( " ON " ).append( primaryKey.getTable().getName() ).append( " (" );
+			.append( " ON " ).append( primaryKey.getTable().getName() ).append( " (" );
 		for ( Iterator<Column> it = primaryKey.getColumns().iterator(); it.hasNext(); ) {
 			Column column = it.next();
 			String columnName = column.getName();
@@ -474,8 +443,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	private String createValueProperyQuery(Column column, String className, String propertyName, Class targetTypeClass) {
-
+	private String createValueProperyQuery(Column column, String className, String propertyName, Class<?> targetTypeClass) {
 		String query = null;
 		if ( targetTypeClass.equals( CustomType.class ) ) {
 			CustomType type = (CustomType) column.getValue().getType();
@@ -493,7 +461,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 		else if ( targetTypeClass.equals( AttributeConverterTypeAdapter.class ) ) {
 			log.debug( "3.Column  name: " + column.getName() + " ; className: " + column.getValue().getType().getClass() );
-			AttributeConverterTypeAdapter type = (AttributeConverterTypeAdapter) column.getValue().getType();
+			AttributeConverterTypeAdapter<?> type = (AttributeConverterTypeAdapter<?>) column.getValue().getType();
 			int sqlType = type.getSqlTypeDescriptor().getSqlType();
 			log.debugf( "3.sql type: %d", sqlType );
 			if ( !OrientDBMapping.SQL_TYPE_MAPPING.containsKey( sqlType ) ) {
@@ -516,13 +484,13 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return query;
 	}
 
-	private String createValueProperyQuery(String tableName, Column column, Class targetTypeClass) {
+	private String createValueProperyQuery(String tableName, Column column, Class<?> targetTypeClass) {
 		log.debugf( "1.Column: %s, targetTypeClass: %s ", column.getName(), targetTypeClass );
 		return createValueProperyQuery( column, tableName, column.getName(), targetTypeClass );
 
 	}
 
-	private String createValueProperyQuery(Table table, Column column, Class targetTypeClass) {
+	private String createValueProperyQuery(Table table, Column column, Class<?> targetTypeClass) {
 		log.debugf( "1.Column: %s, targetTypeClass: %s ", column.getName(), targetTypeClass );
 		return createValueProperyQuery( column, table.getName(), column.getName(), targetTypeClass );
 
@@ -550,11 +518,11 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return p1 > -1 && p2 > p1;
 	}
 
-	private Class searchMappedByReturnedClass(SchemaDefinitionContext context, Collection<Table> tables, EntityType type, Column currentColumn) {
+	private Class<?> searchMappedByReturnedClass(SchemaDefinitionContext context, Collection<Table> tables, EntityType type, Column currentColumn) {
 		String tableName = type.getAssociatedJoinable( context.getSessionFactory() ).getTableName();
 		log.debugf( "associated entity name: %s", type.getAssociatedEntityName() );
 
-		Class primaryKeyClass = null;
+		Class<?> primaryKeyClass = null;
 		for ( Table table : tables ) {
 			if ( table.getName().equals( tableName ) ) {
 				log.debugf( "primary key type: %s", table.getPrimaryKey().getColumn( 0 ).getValue().getType().getReturnedClass() );
@@ -596,5 +564,4 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		buffer.append( "seq_" ).append( className.toLowerCase() ).append( "_" ).append( primaryKeyName.toLowerCase() );
 		return buffer.toString();
 	}
-
 }

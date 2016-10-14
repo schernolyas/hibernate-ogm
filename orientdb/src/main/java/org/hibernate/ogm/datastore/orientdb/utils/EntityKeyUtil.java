@@ -37,7 +37,6 @@ public class EntityKeyUtil {
 	}
 
 	public static void setFieldValue(StringBuilder queryBuffer, Object dbKeyValue) {
-
 		if ( dbKeyValue instanceof String || dbKeyValue instanceof UUID || dbKeyValue instanceof Character ) {
 			queryBuffer.append( "'" ).append( dbKeyValue ).append( "'" );
 		}
@@ -57,7 +56,6 @@ public class EntityKeyUtil {
 			queryBuffer.append( dbKeyValue );
 		}
 		queryBuffer.append( " " );
-
 	}
 
 	public static String generatePrimaryKeyPredicate(EntityKey key) {
@@ -84,11 +82,9 @@ public class EntityKeyUtil {
 			buffer.append( "select count(@rid) from " );
 			buffer.append( key.getTable() ).append( " where " );
 			buffer.append( generatePrimaryKeyPredicate( key ) );
-			log.debugf( "existsPrimaryKeyInDB:query: %s ;", buffer );
 			ResultSet rs = stmt.executeQuery( buffer.toString() );
 			if ( rs.next() ) {
 				long count = rs.getLong( 1 );
-				log.debugf( "existsPrimaryKeyInDB:Key: %s ; count: %d", key, count );
 				exists = count > 0;
 			}
 		}
