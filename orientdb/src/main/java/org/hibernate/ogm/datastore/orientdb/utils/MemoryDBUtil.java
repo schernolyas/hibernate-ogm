@@ -26,14 +26,16 @@ public class MemoryDBUtil {
 	 */
 	public static void dropInMemoryDb() {
 		log.info( "drop current database " );
-		if ( getOrientGraphFactory().getDatabase().exists() ) {
-			getOrientGraphFactory().getDatabase().drop();
-			log.warn( "current database  droped!" );
-			getOrientGraphFactory().getDatabase().close();
-			log.warn( "current database  closed!" );
+		if ( factory != null ) {
+			if ( getOrientGraphFactory().getDatabase().exists() ) {
+				getOrientGraphFactory().getDatabase().drop();
+				log.warn( "current database  droped!" );
+				getOrientGraphFactory().getDatabase().close();
+				log.warn( "current database  closed!" );
+			}
+			factory.drop();
+			factory = null;
 		}
-		factory.drop();
-		factory = null;
 	};
 
 	/**

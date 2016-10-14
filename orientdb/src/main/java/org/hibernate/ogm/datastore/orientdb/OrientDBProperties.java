@@ -40,6 +40,6 @@ public class OrientDBProperties implements OgmProperties {
 	 * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
 	 */
 	public static enum DatabaseTypeEnum {
-		memory, plocal, remote
+		MEMORY, PLOCAL, REMOTE
 	}
 }
