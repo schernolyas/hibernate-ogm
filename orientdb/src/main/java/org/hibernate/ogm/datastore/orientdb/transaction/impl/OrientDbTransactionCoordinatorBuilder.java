@@ -9,8 +9,6 @@ package org.hibernate.ogm.datastore.orientdb.transaction.impl;
 import org.hibernate.ConnectionAcquisitionMode;
 import org.hibernate.ConnectionReleaseMode;
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
-import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
-import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.resource.transaction.TransactionCoordinator;
 import org.hibernate.resource.transaction.TransactionCoordinatorBuilder;
 import org.hibernate.resource.transaction.spi.TransactionCoordinatorOwner;
@@ -21,8 +19,6 @@ import org.hibernate.resource.transaction.spi.TransactionCoordinatorOwner;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDbTransactionCoordinatorBuilder implements TransactionCoordinatorBuilder {
-
-	private static Log log = LoggerFactory.getLogger();
 
 	private final TransactionCoordinatorBuilder delegate;
 	private final OrientDBDatastoreProvider datastoreProvider;

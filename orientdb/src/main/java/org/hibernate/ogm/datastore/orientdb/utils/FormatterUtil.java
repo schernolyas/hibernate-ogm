@@ -33,7 +33,7 @@ public class FormatterUtil {
 	 * @param dateFormater formatter
 	 */
 
-	public static void setDateFormater(ThreadLocal<DateFormat> dateFormater) {
+	public static void setDateFormatter(ThreadLocal<DateFormat> dateFormater) {
 		FormatterUtil.dateFormater = dateFormater;
 	}
 
@@ -52,7 +52,7 @@ public class FormatterUtil {
 	 * @param dateTimeFormater formatter
 	 */
 
-	public static void setDateTimeFormater(ThreadLocal<DateFormat> dateTimeFormater) {
+	public static void setDateTimeFormatter(ThreadLocal<DateFormat> dateTimeFormater) {
 		FormatterUtil.dateTimeFormater = dateTimeFormater;
 	}
 
