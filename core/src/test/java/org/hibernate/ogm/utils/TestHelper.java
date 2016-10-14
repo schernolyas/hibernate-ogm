@@ -208,7 +208,7 @@ public class TestHelper {
 		// if the factory is closed, we don't have access to the service registry
 		if ( sessionFactory != null && !sessionFactory.isClosed() ) {
 			try {
-				helper.prepareDatabase( sessionFactory );
+				HELPER.prepareDatabase( sessionFactory );
 			}
 			catch ( Exception e ) {
 				log.warn( "Exception while dropping schema and database in test", e );
