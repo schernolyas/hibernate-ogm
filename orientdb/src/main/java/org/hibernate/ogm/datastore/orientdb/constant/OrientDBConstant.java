@@ -65,6 +65,11 @@ public class OrientDBConstant {
 	 * Name of table for using as table id generation
 	 */
 	public static final String HIBERNATE_SEQUENCE_TABLE = "sequences";
+	
+	public static final String PLOCAL_STORAGE_TYPE= "plocal";
+	public static final String MEMORY_STORAGE_TYPE= "memory";
+	public static final String GRAPTH_DATABASE_TYPE= "graph";
+	public static final String DOCUMENT_DATABASE_TYPE= "document";
 
 	static {
 		Set<String> set = new HashSet<>();
