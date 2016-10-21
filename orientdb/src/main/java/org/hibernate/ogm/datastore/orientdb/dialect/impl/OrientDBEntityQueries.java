@@ -16,20 +16,24 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.ODatabaseDocumentUtil;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import java.util.Arrays;
 import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.QueryUtil;
 
 /**
  * Container for the queries related to one entity type in OrientDB.
@@ -66,8 +70,8 @@ public class OrientDBEntityQueries extends QueriesBase {
 	public Map<String, Object> findEntity(Connection connection, EntityKey entityKey) {
 		Map<String, Object> dbValues = new LinkedHashMap<>();
 		StringBuilder query = new StringBuilder( "select from " );
-		try {
-			Statement stmt = connection.createStatement();
+		//try {
+			//Statement stmt = connection.createStatement();
 			if ( entityKey.getColumnNames().length == 1 && entityKey.getColumnValues()[0] instanceof ORecordId ) {
 				// search by @rid
 				ORecordId rid = (ORecordId) entityKey.getColumnValues()[0];
@@ -80,6 +84,24 @@ public class OrientDBEntityQueries extends QueriesBase {
 
 			}
 			log.debugf( "find entiry query: %s", query.toString() );
+			List<ODocument> documents = QueryUtil.executeNativeQuery( ODatabaseDocumentUtil.getDatabase( connection ), query );
+			if (documents.isEmpty()) {
+				log.debugf( " entity by primary key %s not found!", entityKey );
+				return null;
+			}
+			ODocument currentDocument  = documents.get( 0 );
+			dbValues = currentDocument.toMap();
+			for (String fieldName : dbValues.keySet()) {
+				Object fieldValue = dbValues.get( fieldName );
+				if ( fieldValue instanceof ODocument ) {
+					dbValues.remove( fieldName );
+					dbValues.putAll( ODocumentUtil.extractNamesTree( fieldName, (ODocument) fieldValue ) );
+				}
+				
+			}
+			reCastValues( dbValues );
+			/*
+			
 			ResultSet rs = stmt.executeQuery( query.toString() );
 			if ( rs.next() ) {
 				ResultSetMetaData metadata = rs.getMetaData();
@@ -105,13 +127,13 @@ public class OrientDBEntityQueries extends QueriesBase {
 			else {
 				log.debugf( " entity by primary key %s not found!", entityKey );
 				return null;
-			}
+			} */
 			return dbValues;
-		}
+		/*}
 		catch (SQLException sqle) {
 			throw log.cannotExecuteQuery( query.toString(), sqle );
 
-		}
+		} */
 	}
 
 	private void reCastValues(Map<String, Object> map) {
