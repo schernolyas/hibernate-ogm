@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.impl;
 
+import com.orientechnologies.orient.client.remote.OServerAdmin;
 import java.sql.Connection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -16,6 +17,7 @@ import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
+import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.transaction.impl.OrientDbTransactionCoordinatorBuilder;
@@ -92,7 +94,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 	private String jdbcUrl(OrientDBProperties.DatabaseTypeEnum databaseType) {
 		String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
 		StringBuilder jdbcUrl = new StringBuilder( 100 );
-		jdbcUrl.append( "jdbc:orient:" ).append( databaseType );
+		jdbcUrl.append( "jdbc:orient:" ).append( databaseType.name().toLowerCase() );
 		switch ( databaseType ) {
 			case MEMORY:
 				jdbcUrl.append( ":" ).append( database );
@@ -108,11 +110,46 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 	}
 
 	private void createDB(String jdbcUrl, DatabaseTypeEnum databaseType) {
-		if ( databaseType == OrientDBProperties.DatabaseTypeEnum.MEMORY ) {
+		if ( OrientDBProperties.DatabaseTypeEnum.MEMORY.equals( databaseType ) ) {
 			if ( MemoryDBUtil.getOrientGraphFactory() != null ) {
 				log.debugf( "getCreatedInstancesInPool: %d", MemoryDBUtil.getOrientGraphFactory().getCreatedInstancesInPool() );
 			}
 			MemoryDBUtil.createDbFactory( jdbcUrl.substring( jdbcUrl.indexOf( OrientDBProperties.DatabaseTypeEnum.MEMORY.name() ) ) );
+		}
+		else if ( OrientDBProperties.DatabaseTypeEnum.REMOTE.equals( databaseType ) ) {
+			if ( propertyReader.property( OgmProperties.CREATE_DATABASE, Boolean.class ).withDefault( Boolean.FALSE ).getValue() ) {
+				String user = propertyReader.property( OgmProperties.USERNAME, String.class ).getValue();
+				String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
+				String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
+				String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
+				log.debugf( "Try to create remote database in JDBC URL %s ", jdbcUrl );
+				OServerAdmin serverAdmin = null;
+				try {
+					serverAdmin = new OServerAdmin( "remote:" + host );
+					serverAdmin.connect( user, password );
+					boolean isDbExists = serverAdmin.existsDatabase( database, "plocal" );
+					log.infof( "Database %s esists? %s.", database, String.valueOf( isDbExists ) );
+					if ( !isDbExists ) {
+						log.infof( "Database %s not exists. Try to create it.", database );
+						serverAdmin.createDatabase( database, "graph", OrientDBConstant.PLOCAL_STORAGE_TYPE );
+					}
+					else {
+						log.infof( "Database %s already exists", database );
+					}
+					// open the database
+					ODatabaseDocumentTx db = new ODatabaseDocumentTx( "remote:" + host + "/" + database );
+					db.open( user, password );
+				}
+				catch (Exception ioe) {
+					throw log.cannotCreateDatabase( database, ioe );
+				}
+				finally {
+					if ( serverAdmin != null ) {
+						serverAdmin.close( true );
+					}
+				}
+			}
+
 		}
 	}
 

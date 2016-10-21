@@ -102,7 +102,8 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
  * @see IdentityColumnAwareGridDialect
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
-public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+public class OrientDBDialect extends BaseGridDialect
+		implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -124,7 +125,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 	public OrientDBDialect(OrientDBDatastoreProvider provider) {
 		this.provider = provider;
 	}
- 
+
 	@Override
 	public Tuple getTuple(EntityKey key, OperationContext operationContext) {
 		TupleTypeContext tupleContext = operationContext.getTupleTypeContext();
