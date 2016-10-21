@@ -12,18 +12,23 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.document.options.AssociationStorageType;
 import org.hibernate.ogm.datastore.orientdb.OrientDB;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
+import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
@@ -37,7 +42,11 @@ import org.hibernate.ogm.utils.GridDialectOperationContexts;
 import org.hibernate.ogm.utils.GridDialectTestHelper;
 
 import com.orientechnologies.common.exception.OException;
+import com.orientechnologies.orient.client.remote.OServerAdmin;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.id.ORecordId;
+import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
 import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 
 /**
@@ -60,6 +69,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		}
 		return metadata;
 	}
+
 	@Override
 	public long getNumberOfEntities(Session session) {
 		return 0;
@@ -152,6 +162,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		return true;
 	}
 
+	@Override
 	public void prepareDatabase(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
@@ -174,10 +185,68 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
+		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
+		OrientDBProperties.DatabaseTypeEnum databaseType = propertyReader
+				.property( OrientDBProperties.DATEBASE_TYPE, OrientDBProperties.DatabaseTypeEnum.class )
+				.withDefault( OrientDBProperties.DatabaseTypeEnum.MEMORY ).getValue();
 		OrientJdbcConnection connection = (OrientJdbcConnection) provider.getConnection();
 		log.infof( "call dropSchemaAndDatabase! db closed: %b ", connection.getDatabase().isClosed() );
-		if ( !connection.getDatabase().isClosed() ) {
-			ODatabaseDocumentTx db = (ODatabaseDocumentTx) connection.getDatabase();
+		ODatabaseDocumentTx db = ODatabaseDocumentUtil.getDatabase( connection );
+		/*Set<String> docClassSet = new HashSet<>();
+		docClassSet.add( "sequences" );
+
+		// remove all documents and classes
+		log.info( "try to delete all documents" );
+		List<ODocument> result = QueryUtil.executeNativeQuery( db, "select from V" );
+		for ( ODocument doc : result ) {
+			log.infof( "doc: %s ", doc.toJSON() );
+			log.infof( "rid class: %s ", doc.field( "@rid" ).getClass().getName() );
+			log.infof( "class class: %s ", doc.field( "@class" ).getClass().getName() );
+			String docClass = doc.field( "@class", String.class );
+			ORecordId rid = doc.field( "@rid", ORecordId.class );
+			docClassSet.add( docClass );
+			db.delete( rid );
+		}
+		log.infof( "try to delete classes %s", docClassSet );
+		for ( String docClass : docClassSet ) {
+			db.query( new OSQLSynchQuery<ODocument>( String.format( "select executeQuery('drop class %s')", docClass ) ) );
+		}
+		// remove all functions
+		log.info( "try to delete all functions" );
+		for ( ODocument func : QueryUtil.executeNativeQuery( db, "select from OFunction" ) ) {
+			ORecordId rid = func.field( "@rid", ORecordId.class );
+			log.infof( "delete function by rid %s", rid.toString() );
+			db.delete( rid );
+		} */
+		String user = propertyReader.property( OgmProperties.USERNAME, String.class ).getValue();
+		String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
+		String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
+		String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
+		OServerAdmin serverAdmin = null;
+		try {
+			serverAdmin = new OServerAdmin( "remote:" + host ).connect( user, password );
+			serverAdmin.dropDatabase( database, OrientDBConstant.PLOCAL_STORAGE_TYPE );
+		}
+		catch (IOException ioe) {
+			log.error( "Canot drop database", ioe );
+		} finally {
+			if (serverAdmin!=null) {
+				serverAdmin.close( true );				
+			}
+			
+		}
+
+		/*
+		 * ResultSet allRecords = connection.createStatement().executeQuery( "select from V" ); while
+		 * (allRecords.next()) { ORecordId rid = (ORecordId) allRecords.getObject( "@rid" ); log.infof( "rid: %b ", rid
+		 * ); String className = allRecords.getString( "@class" ); log.infof( "className: %b ", className ); }
+		 */
+
+		if ( OrientDBProperties.DatabaseTypeEnum.REMOTE.equals( databaseType ) ) {
+
+		}
+		else if ( !connection.getDatabase().isClosed() ) {
+
 			if ( !db.isActiveOnCurrentThread() ) {
 				db.activateOnCurrentThread();
 			}
@@ -238,4 +307,5 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		GridDialect dialect = ( (SessionFactoryImplementor) sessionFactory ).getServiceRegistry().getService( GridDialect.class );
 		return dialect;
 	}
+
 }

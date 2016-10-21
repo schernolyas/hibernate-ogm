@@ -13,6 +13,10 @@ import java.util.List;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.record.impl.ODocument;
+import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
+
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
@@ -36,5 +40,13 @@ public class QueryUtil {
 			}
 		}
 	}
+	
+	public static List<ODocument> executeNativeQuery(ODatabaseDocumentTx db, StringBuilder query) {
+		return executeNativeQuery( db, query.toString() );		
+	}
 
+	public static List<ODocument> executeNativeQuery(ODatabaseDocumentTx db, String query) {
+		List<ODocument> result = db.query( new OSQLSynchQuery<ODocument>( query ) );
+		return result;
+	}
 }
