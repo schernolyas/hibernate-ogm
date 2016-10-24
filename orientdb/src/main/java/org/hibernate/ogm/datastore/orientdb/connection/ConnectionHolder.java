@@ -4,14 +4,12 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.ogm.datastore.orientdb.utils;
+package org.hibernate.ogm.datastore.orientdb.connection;
 
 import com.orientechnologies.common.exception.OException;
-import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.Properties;
+import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
+import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
@@ -29,26 +27,27 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
  * @see <a href="http://orientdb.com/docs/2.2/Transactions.html">Transactions in OrientDB</a>
  * @see <a href="http://orientdb.com/docs/2.2/Java-Multi-Threading.html">Multi-Threading in OrientDB</a>
  */
-public class ConnectionHolder extends ThreadLocal<Connection> {
+public class ConnectionHolder extends ThreadLocal<ODatabaseDocumentTx> {
 
 	private static Log log = LoggerFactory.getLogger();
-	private final String jdbcUrl;
-	private final Properties jdbcProperties;
+	private final String orientDbUrl;
+	private final String user;
+	private final String password;
+	
+	private final OPartitionedDatabasePoolFactory factory = new OPartitionedDatabasePoolFactory( 10 );
 
-	/**
-	 * Construct instance of holder
-	 *
-	 * @param jdbcUrl JDBC URL to database
-	 * @param info JDBC properties
-	 */
-	public ConnectionHolder(String jdbcUrl, Properties info) {
-		this.jdbcUrl = jdbcUrl;
-		this.jdbcProperties = info;
+	
+
+	public ConnectionHolder(String orientDbUrl, String user, String password) {
+		super();
+		this.orientDbUrl = orientDbUrl;
+		this.user = user;
+		this.password = password;
 	}
 
 	@Override
-	protected Connection initialValue() {
-		log.debugf( "create connection %s for thread %s", jdbcUrl, Thread.currentThread().getName() );
+	protected ODatabaseDocumentTx initialValue() {
+		log.debugf( "create connection %s for thread %s", orientDbUrl, Thread.currentThread().getName() );
 		return createConnectionForCurrentThread();
 	}
 
@@ -58,22 +57,15 @@ public class ConnectionHolder extends ThreadLocal<Connection> {
 		try {
 			get().close();
 		}
-		catch (SQLException | OException sqle) {
-			log.error( "Cannot close connection", sqle );
+		catch ( OException oe) {
+			log.error( "Cannot close connection", oe );
 		}
 		super.remove();
 	}
 
-	private OrientJdbcConnection createConnectionForCurrentThread() {
-		OrientJdbcConnection connection = null;
-		try {
-			connection = (OrientJdbcConnection) DriverManager.getConnection( jdbcUrl, jdbcProperties );
-			connection.setAutoCommit( false );
-		}
-		catch (SQLException sqle) {
-			throw log.cannotCreateConnection( sqle );
-		}
-		return (OrientJdbcConnection) connection;
+	private ODatabaseDocumentTx createConnectionForCurrentThread() {		
+		OPartitionedDatabasePool pool = factory.get("url","user","password");
+		return pool.acquire();
 	}
 
 }
