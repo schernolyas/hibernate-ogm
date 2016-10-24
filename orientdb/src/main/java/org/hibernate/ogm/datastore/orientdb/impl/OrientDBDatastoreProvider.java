@@ -17,11 +17,11 @@ import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
+import org.hibernate.ogm.datastore.orientdb.connection.ConnectionHolder;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.transaction.impl.OrientDbTransactionCoordinatorBuilder;
-import org.hibernate.ogm.datastore.orientdb.utils.ConnectionHolder;
 import org.hibernate.ogm.datastore.orientdb.utils.FormatterUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.MemoryDBUtil;
 import org.hibernate.ogm.datastore.spi.BaseDatastoreProvider;
@@ -58,11 +58,12 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 					.property( OrientDBProperties.DATEBASE_TYPE, OrientDBProperties.DatabaseTypeEnum.class )
 					.withDefault( OrientDBProperties.DatabaseTypeEnum.MEMORY ).getValue();
 
-			Properties credentials = credentials( propertyReader );
-			String url = jdbcUrl( databaseType );
-			createDB( url, databaseType );
+			String user = propertyReader.property( OgmProperties.USERNAME, String.class ).getValue();
+			String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
+			String orientDBUrl = prepareOrientDbUrl( databaseType );
+			createDB( orientDBUrl, databaseType );
 
-			connectionHolder = new ConnectionHolder( url, credentials );
+			connectionHolder = new ConnectionHolder( orientDBUrl, user, password );
 
 			FormatterUtil.setDateFormatter( createFormatter( propertyReader, OrientDBProperties.DATE_FORMAT, "yyyy-MM-dd" ) );
 			FormatterUtil.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, "yyyy-MM-dd HH:mm:ss" ) );
@@ -70,15 +71,6 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		catch (Exception e) {
 			throw log.unableToStartDatastoreProvider( e );
 		}
-	}
-
-	private Properties credentials(ConfigurationPropertyReader propertyReader) {
-		String user = propertyReader.property( OgmProperties.USERNAME, String.class ).getValue();
-		String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
-		Properties info = new Properties();
-		info.put( "user", user );
-		info.put( "password", password );
-		return info;
 	}
 
 	private ThreadLocal<DateFormat> createFormatter(final ConfigurationPropertyReader propertyReader, final String property, final String defaultFormat) {
@@ -91,7 +83,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		};
 	}
 
-	private String jdbcUrl(OrientDBProperties.DatabaseTypeEnum databaseType) {
+	private String prepareOrientDbUrl(OrientDBProperties.DatabaseTypeEnum databaseType) {
 		String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
 		StringBuilder jdbcUrl = new StringBuilder( 100 );
 		jdbcUrl.append( "jdbc:orient:" ).append( databaseType.name().toLowerCase() );
@@ -153,7 +145,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		}
 	}
 
-	public Connection getConnection() {
+	public ODatabaseDocumentTx getConnection() {
 		return connectionHolder.get();
 	}
 
@@ -166,6 +158,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		log.debug( "---stop---" );
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public void configure(Map cfg) {
 		log.debugf( "config map: %s", cfg.toString() );
