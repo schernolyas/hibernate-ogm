@@ -7,7 +7,6 @@
 package org.hibernate.ogm.datastore.orientdb.query.impl;
 
 import java.math.BigDecimal;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
@@ -18,8 +17,8 @@ import java.sql.SQLException;
 public class BigDecimalParamValueSetter implements ParamValueSetter<BigDecimal> {
 
 	@Override
-	public void setValue(PreparedStatement preparedStatement, int index, BigDecimal value) throws SQLException {
-		preparedStatement.setBigDecimal( index, value );
+	public void setValue(int index, BigDecimal value) throws SQLException {
+		// preparedStatement.setBigDecimal( index, value );
 	}
 
 }

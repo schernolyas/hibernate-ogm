@@ -30,6 +30,12 @@ public class OrientDBProperties implements OgmProperties {
 	 * @see DatabaseTypeEnum
 	 */
 	public static final String DATEBASE_TYPE = "hibernate.ogm.orientdb.dbtype";
+	/**
+	 * Database pool size
+	 *
+	 * @see DatabaseTypeEnum
+	 */
+	public static final String POOL_SIZE = "hibernate.ogm.orientdb.pool.size";
 
 	private OrientDBProperties() {
 	}
