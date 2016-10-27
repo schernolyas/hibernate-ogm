@@ -71,6 +71,7 @@ public class UpdateQueryGenerator {
 				updateQuery.append( " and " );
 			}
 		}
+		updateQuery.append( " return count" );
 
 		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
 	}

@@ -7,8 +7,6 @@
 
 package org.hibernate.ogm.datastore.orientdb.impl;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.HashSet;
@@ -21,6 +19,7 @@ import org.hibernate.ogm.datastore.orientdb.dto.EmbeddedColumnInfo;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.QueryUtil;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.PrimaryKey;
@@ -37,10 +36,9 @@ import org.hibernate.type.IntegerType;
 import org.hibernate.type.StringType;
 import org.hibernate.usertype.UserType;
 
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
-import com.orientechnologies.orient.core.exception.OSequenceException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
-import com.orientechnologies.orient.jdbc.OrientJdbcConnection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -68,6 +66,7 @@ import org.hibernate.type.descriptor.converter.AttributeConverterTypeAdapter;
  */
 public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 
+	private static final long serialVersionUID = 1L;
 	private static final String CREATE_PROPERTY_TEMPLATE = "create property {0}.{1} {2}";
 	private static final String CREATE_EMBEDDED_PROPERTY_TEMPLATE = "create property {0}.{1} embedded {2}";
 	private static final Log log = LoggerFactory.getLogger();
@@ -87,53 +86,42 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	private void createSequence(Connection connection, String name, int startValue, int incValue) {
-		try {
-			String query = String.format( "CREATE SEQUENCE %s TYPE ORDERED START %d INCREMENT %d", name, ( startValue == 0 ? 0 : startValue - 1 ), incValue );
-			log.debugf( "query for create sequnce: %s", query );
-			connection.createStatement().execute( query );
-		}
-		catch (SQLException sqle) {
-			log.debugf( "sqle.getCause(): %s", sqle.getCause() );
-			if ( sqle.getCause() instanceof OSequenceException && sqle.getCause().getMessage().contains( "already exists!" ) ) {
-				try {
-					String query = String.format( "ALTER SEQUENCE %s START %d INCREMENT %d", name, ( startValue == 0 ? 0 : startValue - 1 ), incValue );
-					log.debugf( "query for alter sequnce: %s", query );
-					connection.createStatement().execute( query );
-				}
-				catch (SQLException sqle1) {
-					throw log.cannotGenerateSequence( name, sqle1 );
-				}
-
-			}
-			else {
-				throw log.cannotGenerateSequence( name, sqle );
-			}
-		}
+	private void createSequence(ODatabaseDocumentTx db, String name, int startValue, int incValue) {
+		// try {
+		String query = String.format( "CREATE SEQUENCE %s TYPE ORDERED START %d INCREMENT %d", name, ( startValue == 0 ? 0 : startValue - 1 ), incValue );
+		log.debugf( "query for create sequnce: %s", query );
+		QueryUtil.executeNativeQuery( db, query );
+		/*
+		 * } catch (SQLException sqle) { log.debugf( "sqle.getCause(): %s", sqle.getCause() ); if ( sqle.getCause()
+		 * instanceof OSequenceException && sqle.getCause().getMessage().contains( "already exists!" ) ) { try { String
+		 * query = String.format( "ALTER SEQUENCE %s START %d INCREMENT %d", name, ( startValue == 0 ? 0 : startValue -
+		 * 1 ), incValue ); log.debugf( "query for alter sequnce: %s", query ); QueryUtil.executeNativeQuery( db, query
+		 * ); } catch (SQLException sqle1) { throw log.cannotGenerateSequence( name, sqle1 ); } } else { throw
+		 * log.cannotGenerateSequence( name, sqle ); } }
+		 */
 	}
 
-	private void createTableSequence(Connection connection, String seqTable, String pkColumnName, String valueColumnName) {
-		try {
-			connection.createStatement().execute( String.format( "create class %s extends V", seqTable ) );
-			connection.createStatement().execute( String.format( "create property %s.%s string ", seqTable, pkColumnName ) );
-			connection.createStatement().execute( String.format( "create property %s.%s long ", seqTable, valueColumnName ) );
-			connection.createStatement().execute( String.format( "create index %s.%s unique ", seqTable, pkColumnName ) );
-		}
-		catch (SQLException sqle) {
-			throw log.cannotGenerateClass( seqTable, sqle );
-		}
+	private void createTableSequence(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String valueColumnName) {
+		// try {
+		QueryUtil.executeNativeQuery( db, String.format( "create class %s extends V", seqTable ) );
+		QueryUtil.executeNativeQuery( db, String.format( "create property %s.%s string ", seqTable, pkColumnName ) );
+		QueryUtil.executeNativeQuery( db, String.format( "create property %s.%s long ", seqTable, valueColumnName ) );
+		QueryUtil.executeNativeQuery( db, String.format( "create index %s.%s unique ", seqTable, pkColumnName ) );
+		/*
+		 * } catch (SQLException sqle) { throw log.cannotGenerateClass( seqTable, sqle ); }
+		 */
 	}
 
-	private void createGetTableSeqValueFunc(Connection connection) {
+	private void createGetTableSeqValueFunc(ODatabaseDocumentTx db) {
 		try {
-			OrientJdbcConnection orientDBConnection = (OrientJdbcConnection) connection;
-			Set<String> functions = orientDBConnection.getDatabase().getMetadata().getFunctionLibrary().getFunctionNames();
+
+			Set<String> functions = db.getMetadata().getFunctionLibrary().getFunctionNames();
 			log.debugf( " functions : %s", functions );
 			if ( functions.contains( "getTableSeqValue".toUpperCase() ) ) {
 				log.debug( " function 'getTableSeqValue' exists!" );
 				return;
 			}
-			for ( OClass oc : orientDBConnection.getDatabase().getMetadata().getSchema().getClasses() ) {
+			for ( OClass oc : db.getMetadata().getSchema().getClasses() ) {
 				log.debugf( " class: %s", oc.getName() );
 			}
 			InputStream is = OrientDBSchemaDefiner.class.getResourceAsStream( "getTableSeq.sql" );
@@ -141,23 +129,22 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			char[] chars = new char[2000];
 			CharBuffer buffer = CharBuffer.wrap( chars );
 			reader.read( buffer );
-			connection.createStatement().execute( new String( buffer.array() ).trim() );
+			QueryUtil.executeNativeQuery( db, new String( buffer.array() ).trim() );
 		}
-		catch (SQLException | IOException e) {
+		catch (IOException e) {
 			throw log.cannotCreateStoredProcedure( "getTableSeqValue", e );
 		}
 	}
 
-	private void createExecuteQueryFunc(Connection connection) {
+	private void createExecuteQueryFunc(ODatabaseDocumentTx db) {
 		try {
-			OrientJdbcConnection orientDBConnection = (OrientJdbcConnection) connection;
-			Set<String> functions = orientDBConnection.getDatabase().getMetadata().getFunctionLibrary().getFunctionNames();
+			Set<String> functions = db.getMetadata().getFunctionLibrary().getFunctionNames();
 			log.debugf( " functions : %s", functions );
 			if ( functions.contains( "executeQuery".toUpperCase() ) ) {
 				log.debug( " function 'executeQuery' exists!" );
 				return;
 			}
-			for ( OClass oc : orientDBConnection.getDatabase().getMetadata().getSchema().getClasses() ) {
+			for ( OClass oc : db.getMetadata().getSchema().getClasses() ) {
 				log.debugf( " class: %s", oc.getName() );
 			}
 			InputStream is = OrientDBSchemaDefiner.class.getResourceAsStream( "executeQuery.sql" );
@@ -165,9 +152,9 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 			char[] chars = new char[2000];
 			CharBuffer buffer = CharBuffer.wrap( chars );
 			reader.read( buffer );
-			connection.createStatement().execute( new String( buffer.array() ).trim() );
+			QueryUtil.executeNativeQuery( db, new String( buffer.array() ).trim() );
 		}
-		catch (SQLException | IOException e) {
+		catch (IOException e) {
 			throw log.cannotCreateStoredProcedure( "getTableSeqValue", e );
 		}
 	}
@@ -194,11 +181,11 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return created;
 	}
 
-	private void createEntities(Connection connection, SchemaDefinitionContext context) {
+	private void createEntities(ODatabaseDocumentTx db, SchemaDefinitionContext context) {
 
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			for ( Sequence sequence : namespace.getSequences() ) {
-				createSequence( connection, sequence.getName().getSequenceName().getCanonicalName(), sequence.getInitialValue(), sequence.getIncrementSize() );
+				createSequence( db, sequence.getName().getSequenceName().getCanonicalName(), sequence.getInitialValue(), sequence.getIncrementSize() );
 			}
 
 			Set<String> tables = new HashSet<>();
@@ -214,13 +201,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					for ( String className : embeddedListColumn.getClassNames() ) {
 						if ( !createdEmbeddedClassSet.contains( className ) ) {
 							String classQuery = createClassQuery( className );
-							try {
-								connection.createStatement().execute( classQuery );
-								tables.add( className );
-							}
-							catch (SQLException e) {
-								throw log.cannotGenerateClass( table.getName(), e );
-							}
+							// try {
+							QueryUtil.executeNativeQuery( db, classQuery );
+							tables.add( className );
+							/*
+							 * } catch (SQLException e) { throw log.cannotGenerateClass( table.getName(), e ); }
+							 */
 						}
 					}
 
@@ -228,13 +214,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 				}
 				else {
 					String classQuery = createClassQuery( table );
-					try {
-						provider.getConnection().createStatement().execute( classQuery );
-						tables.add( tableName );
-					}
-					catch (SQLException e) {
-						throw log.cannotGenerateClass( table.getName(), e );
-					}
+					// try {
+					QueryUtil.executeNativeQuery( db, classQuery );
+					tables.add( tableName );
+					/*
+					 * } catch (SQLException e) { throw log.cannotGenerateClass( table.getName(), e ); }
+					 */
 				}
 
 				@SuppressWarnings("unchecked")
@@ -262,12 +247,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 						else {
 							Class<?> mappedByClass = searchMappedByReturnedClass( context, namespace.getTables(), (EntityType) value.getType(), column );
 							String propertyQuery = createValueProperyQuery( table, column, OrientDBMapping.FOREIGN_KEY_TYPE_MAPPING.get( mappedByClass ) );
-							try {
-								provider.getConnection().createStatement().execute( propertyQuery );
-							}
-							catch (SQLException e) {
-								throw log.cannotGenerateProperty( column.getName(), table.getName(), e );
-							}
+							// try {
+							QueryUtil.executeNativeQuery( db, propertyQuery );
+							/*
+							 * } catch (SQLException e) { throw log.cannotGenerateProperty( column.getName(),
+							 * table.getName(), e ); }
+							 */
 						}
 					}
 					else if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
@@ -282,19 +267,18 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 							String propertyQuery = createValueProperyQuery( column, tableName, columnName,
 									simpleValue.getType().getClass() );
 							log.debugf( "create property query: %s", propertyQuery );
-							try {
-								provider.getConnection().createStatement().execute( propertyQuery );
-							}
-							catch (SQLException e) {
-								log.error( "Exception:", e );
-								throw log.cannotGenerateProperty( column.getName(), table.getName(), e );
-							}
+							// try {
+							QueryUtil.executeNativeQuery( db, propertyQuery );
+							/*
+							 * } catch (SQLException e) { log.error( "Exception:", e ); throw
+							 * log.cannotGenerateProperty( column.getName(), table.getName(), e ); }
+							 */
 						}
 					}
 					else {
 						String propertyQuery = createValueProperyQuery( tableName, column );
 						try {
-							provider.getConnection().createStatement().execute( propertyQuery );
+							QueryUtil.executeNativeQuery( db, propertyQuery );
 						}
 						catch (OCommandExecutionException oe) {
 							log.debugf( "orientdb message: %s; ", oe.getMessage() );
@@ -305,10 +289,10 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 								throw log.cannotExecuteQuery( propertyQuery, oe );
 							}
 						}
-						catch (SQLException e) {
-							log.error( "Exception:", e );
-							throw log.cannotGenerateProperty( column.getName(), table.getName(), e );
-						}
+						/*
+						 * catch (SQLException e) { log.error( "Exception:", e ); throw log.cannotGenerateProperty(
+						 * column.getName(), table.getName(), e ); }
+						 */
 
 					}
 				}
@@ -316,7 +300,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 				if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table ) && !isEmbeddedObjectTable( table ) ) {
 					PrimaryKey primaryKey = table.getPrimaryKey();
 					if ( primaryKey != null ) {
-						createPrimaryKey( connection, primaryKey );
+						createPrimaryKey( db, primaryKey );
 					}
 					else {
 						log.debugf( "Table %s has not a primary key", table.getName() );
@@ -335,13 +319,13 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		return !tableName.equals( primaryKeyTableName );
 	}
 
-	private void createPrimaryKey(Connection connection, PrimaryKey primaryKey) {
+	private void createPrimaryKey(ODatabaseDocumentTx db, PrimaryKey primaryKey) {
 		StringBuilder uniqueIndexQuery = new StringBuilder( 100 );
 		uniqueIndexQuery.append( "CREATE INDEX " )
-			.append( primaryKey.getName() != null
-				? primaryKey.getName()
+		.append( primaryKey.getName() != null
+		? primaryKey.getName()
 				: PrimaryKey.generateName( primaryKey.generatedConstraintNamePrefix(), primaryKey.getTable(), primaryKey.getColumns() ) )
-			.append( " ON " ).append( primaryKey.getTable().getName() ).append( " (" );
+		.append( " ON " ).append( primaryKey.getTable().getName() ).append( " (" );
 		for ( Iterator<Column> it = primaryKey.getColumns().iterator(); it.hasNext(); ) {
 			Column column = it.next();
 			String columnName = column.getName();
@@ -356,25 +340,25 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		}
 		uniqueIndexQuery.append( ") UNIQUE" );
 
-		try {
-			log.debugf( "primary key query: %s", uniqueIndexQuery );
-			connection.createStatement().execute( uniqueIndexQuery.toString() );
-		}
-		catch (SQLException e) {
-			throw log.cannotExecuteQuery( uniqueIndexQuery.toString(), e );
-		}
+		// try {
+		log.debugf( "primary key query: %s", uniqueIndexQuery );
+		QueryUtil.executeNativeQuery( db, uniqueIndexQuery );
+		// connection.createStatement().execute( uniqueIndexQuery.toString() );
+		/*
+		 * } catch (SQLException e) { throw log.cannotExecuteQuery( uniqueIndexQuery.toString(), e ); }
+		 */
 		StringBuilder seq = new StringBuilder( 100 );
 		if ( primaryKey.getColumns().size() == 1 && OrientDBMapping.SEQ_TYPES.contains( primaryKey.getColumns().get( 0 ).getValue().getType().getClass() ) ) {
 			seq.append( "CREATE SEQUENCE " );
 			seq.append( generateSeqName( primaryKey.getTable().getName(), primaryKey.getColumns().get( 0 ).getName() ) );
 			seq.append( " TYPE ORDERED START 0" );
-			try {
-				log.debugf( "query: %s", seq );
-				connection.createStatement().execute( seq.toString() );
-			}
-			catch (SQLException e) {
-				throw log.cannotExecuteQuery( seq.toString(), e );
-			}
+			// try {
+			log.debugf( "query: %s", seq );
+			// connection.createStatement().execute( seq.toString() );
+			QueryUtil.executeNativeQuery( db, seq );
+			/*
+			 * } catch (SQLException e) { throw log.cannotExecuteQuery( seq.toString(), e ); }
+			 */
 		}
 	}
 
@@ -397,18 +381,17 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					log.debugf( "11.propertyOwnerClassName: %s; propertyName: %s;embeddedClassName:%s; classIndex:%d",
 							propertyOwnerClassName, embeddedClassName, embeddedClassName, classIndex );
 					String executedQuery = null;
-					try {
-						executedQuery = createClassQuery( embeddedClassName );
-						provider.getConnection().createStatement().execute( executedQuery );
-						executedQuery = MessageFormat.format( CREATE_EMBEDDED_PROPERTY_TEMPLATE,
-								propertyOwnerClassName, embeddedClassName, embeddedClassName );
-						log.debugf( "1.query: %s; ", executedQuery );
-						provider.getConnection().createStatement().execute( executedQuery );
-						createdEmbeddedClassSet.add( embeddedClassName );
-					}
-					catch (SQLException sqle) {
-						throw log.cannotExecuteQuery( executedQuery, sqle );
-					}
+					// try {
+					executedQuery = createClassQuery( embeddedClassName );
+					QueryUtil.executeNativeQuery( provider.getConnection(), executedQuery );
+					executedQuery = MessageFormat.format( CREATE_EMBEDDED_PROPERTY_TEMPLATE,
+							propertyOwnerClassName, embeddedClassName, embeddedClassName );
+					log.debugf( "1.query: %s; ", executedQuery );
+					QueryUtil.executeNativeQuery( provider.getConnection(), executedQuery );
+					createdEmbeddedClassSet.add( embeddedClassName );
+					/*
+					 * } catch (SQLException sqle) { throw log.cannotExecuteQuery( executedQuery, sqle ); }
+					 */
 				}
 				else {
 					log.debugf( "11.propertyOwnerClassName: %s and  propertyName: %s already created",
@@ -424,11 +407,11 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 				try {
 					executedQuery = createValueProperyQuery( column, propertyOwnerClassName, valuePropertyName, simpleValue.getType().getClass() );
 					log.debugf( "2.query: %s; ", executedQuery );
-					provider.getConnection().createStatement().execute( executedQuery );
+					QueryUtil.executeNativeQuery( provider.getConnection(), executedQuery );
 				}
-				catch (SQLException sqle) {
-					throw log.cannotExecuteQuery( executedQuery, sqle );
-				}
+				/*
+				 * catch (SQLException sqle) { throw log.cannotExecuteQuery( executedQuery, sqle ); }
+				 */
 				catch (OCommandExecutionException oe) {
 					log.debugf( "orientdb message: %s; ", oe.getMessage() );
 					if ( oe.getMessage().contains( ".".concat( valuePropertyName ) ) && oe.getMessage().contains( "already exists" ) ) {
@@ -538,12 +521,12 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		SessionFactoryImplementor sessionFactoryImplementor = context.getSessionFactory();
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
 		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
-		Connection connection = provider.getConnection();
-		//createSequence( connection, OrientDBConstant.HIBERNATE_SEQUENCE, 0, 1 );
-		createTableSequence( connection, OrientDBConstant.HIBERNATE_SEQUENCE_TABLE, "key", "seed" );
-		createGetTableSeqValueFunc( connection );
-		createExecuteQueryFunc( connection );
-		createEntities( connection, context );
+		ODatabaseDocumentTx db = provider.getConnection();
+		// createSequence( connection, OrientDBConstant.HIBERNATE_SEQUENCE, 0, 1 );
+		createTableSequence( db, OrientDBConstant.HIBERNATE_SEQUENCE_TABLE, "key", "seed" );
+		createGetTableSeqValueFunc( db );
+		createExecuteQueryFunc( db );
+		createEntities( db, context );
 	}
 
 	@Override

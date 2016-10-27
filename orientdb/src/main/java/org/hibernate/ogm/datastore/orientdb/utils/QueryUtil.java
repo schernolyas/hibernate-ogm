@@ -16,6 +16,7 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
+import java.util.Map;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -40,13 +41,19 @@ public class QueryUtil {
 			}
 		}
 	}
-	
+
 	public static List<ODocument> executeNativeQuery(ODatabaseDocumentTx db, StringBuilder query) {
-		return executeNativeQuery( db, query.toString() );		
+		return executeNativeQuery( db, query.toString() );
 	}
 
 	public static List<ODocument> executeNativeQuery(ODatabaseDocumentTx db, String query) {
 		List<ODocument> result = db.query( new OSQLSynchQuery<ODocument>( query ) );
+		return result;
+	}
+
+	public static List<ODocument> executeNativeQueryWithParams(ODatabaseDocumentTx db, String query, Map<String, Object> queryParams) {
+		OSQLSynchQuery<ODocument> preparedQuery = new OSQLSynchQuery<>( query );
+		List<ODocument> result = db.command( preparedQuery ).execute( queryParams );
 		return result;
 	}
 }
