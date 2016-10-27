@@ -4,7 +4,7 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.ogm.datastore.orientdb.test;
+package org.hibernate.ogm.datastore.orientdb.test.jpa;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -13,22 +13,17 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.TimeZone;
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.FlushModeType;
-import javax.persistence.Persistence;
 import javax.persistence.Query;
 import org.apache.log4j.Logger;
-import org.hibernate.ogm.datastore.orientdb.test.jpa.SimpleTypesEntity;
-import org.hibernate.ogm.datastore.orientdb.utils.MemoryDBUtil;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.SimpleTypesEntity;
 import org.hibernate.ogm.type.impl.EnumType;
 import org.hibernate.ogm.type.impl.NumericBooleanType;
 import org.hibernate.ogm.type.impl.TimestampType;
 import org.hibernate.ogm.type.impl.TrueFalseType;
 import org.hibernate.ogm.type.impl.YesNoType;
+import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -43,11 +38,10 @@ import static org.junit.Assert.assertEquals;
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(Parameterized.class)
-public class OrientDbQueryParamTest {
+public class OrientDbQueryParamTest extends OgmJpaTestCase {
 
 	private static final Logger log = Logger.getLogger( OrientDbQueryParamTest.class.getName() );
 	private static EntityManager em;
-	private static EntityManagerFactory emf;
 
 	@Parameterized.Parameter(value = 0)
 	public Class searchByClass;
@@ -139,33 +133,24 @@ public class OrientDbQueryParamTest {
 
 	}
 
-	@BeforeClass
-	public static void setUpClass() {
-		MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
-		emf = Persistence.createEntityManagerFactory( "hibernateOgmJpaUnit" );
-		em = emf.createEntityManager();
-		em.setFlushMode( FlushModeType.COMMIT );
-	}
 
-	@AfterClass
-	public static void tearDownClass() {
-		if ( em != null ) {
-			em.close();
-			emf.close();
-		}
-		MemoryDBUtil.dropInMemoryDb();
-	}
 
 	@Before
 	public void setUp() {
-		if ( em.getTransaction().isActive() ) {
-			em.getTransaction().rollback();
-		}
+		em = getFactory().createEntityManager();
+
 	}
 
 	@After
 	public void tearDown() {
+		if ( em.getTransaction().isActive() ) {
+			em.getTransaction().rollback();
+		}
 		em.clear();
+	}
+	@Override
+	protected Class<?>[] getAnnotatedClasses() {
+		return new Class<?>[] { SimpleTypesEntity.class };
 	}
 
 }

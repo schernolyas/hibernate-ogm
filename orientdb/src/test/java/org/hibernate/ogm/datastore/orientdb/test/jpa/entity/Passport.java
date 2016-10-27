@@ -4,18 +4,25 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.ogm.datastore.orientdb.test.jpa;
+package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
-import java.io.Serializable;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.IdClass;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
+@Entity
+@IdClass(PassportPK.class)
+public class Passport {
 
-public class PassportPK implements Serializable {
-
+	@Id
 	private int seria;
+	@Id
 	private long number;
+
+	private String fio;
 
 	public int getSeria() {
 		return seria;
@@ -33,11 +40,19 @@ public class PassportPK implements Serializable {
 		this.number = number;
 	}
 
+	public String getFio() {
+		return fio;
+	}
+
+	public void setFio(String fio) {
+		this.fio = fio;
+	}
+
 	@Override
 	public int hashCode() {
-		int hash = 7;
-		hash = 23 * hash + this.seria;
-		hash = 23 * hash + (int) ( this.number ^ ( this.number >>> 32 ) );
+		int hash = 3;
+		hash = 19 * hash + this.seria;
+		hash = 19 * hash + (int) ( this.number ^ ( this.number >>> 32 ) );
 		return hash;
 	}
 
@@ -52,7 +67,7 @@ public class PassportPK implements Serializable {
 		if ( getClass() != obj.getClass() ) {
 			return false;
 		}
-		final PassportPK other = (PassportPK) obj;
+		final Passport other = (Passport) obj;
 		if ( this.seria != other.seria ) {
 			return false;
 		}
@@ -60,6 +75,11 @@ public class PassportPK implements Serializable {
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "Passport{" + "seria=" + seria + ", number=" + number + ", fio=" + fio + '}';
 	}
 
 }

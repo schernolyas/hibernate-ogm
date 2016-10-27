@@ -6,9 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.query.impl;
 
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.Date;
 
 /**
@@ -19,8 +17,8 @@ import java.util.Date;
 public class TimestampParamValueSetter implements ParamValueSetter<Date> {
 
 	@Override
-	public void setValue(PreparedStatement preparedStatement, int index, Date value) throws SQLException {
-		preparedStatement.setTimestamp( index, new Timestamp( value.getTime() ) );
+	public void setValue(int index, Date value) throws SQLException {
+		// preparedStatement.setTimestamp( index, new Timestamp( value.getTime() ) );
 	}
 
 }

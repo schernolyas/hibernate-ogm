@@ -6,7 +6,6 @@
  */
 package org.hibernate.ogm.datastore.orientdb.query.impl;
 
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
@@ -17,8 +16,8 @@ import java.sql.SQLException;
 public class BooleanParamValueSetter implements ParamValueSetter<Boolean> {
 
 	@Override
-	public void setValue(PreparedStatement preparedStatement, int index, Boolean value) throws SQLException {
-		preparedStatement.setBoolean( index, value );
+	public void setValue(int index, Boolean value) throws SQLException {
+		// preparedStatement.setBoolean( index, value );
 	}
 
 }
