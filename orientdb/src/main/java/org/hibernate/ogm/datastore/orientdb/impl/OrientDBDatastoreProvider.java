@@ -7,11 +7,9 @@
 package org.hibernate.ogm.datastore.orientdb.impl;
 
 import com.orientechnologies.orient.client.remote.OServerAdmin;
-import java.sql.Connection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Map;
-import java.util.Properties;
 
 import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
@@ -23,7 +21,6 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.transaction.impl.OrientDbTransactionCoordinatorBuilder;
 import org.hibernate.ogm.datastore.orientdb.utils.FormatterUtil;
-import org.hibernate.ogm.datastore.orientdb.utils.MemoryDBUtil;
 import org.hibernate.ogm.datastore.spi.BaseDatastoreProvider;
 import org.hibernate.ogm.datastore.spi.SchemaDefiner;
 import org.hibernate.ogm.dialect.spi.GridDialect;
@@ -42,6 +39,7 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
  */
 public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
+	private static final long serialVersionUID = 1L;
 	private static Log log = LoggerFactory.getLogger();
 	private ConnectionHolder connectionHolder;
 	private ConfigurationPropertyReader propertyReader;
@@ -60,10 +58,11 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 			String user = propertyReader.property( OgmProperties.USERNAME, String.class ).getValue();
 			String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
+			Integer poolSize = propertyReader.property( OrientDBProperties.POOL_SIZE, Integer.class ).withDefault( 10 ).getValue();
 			String orientDBUrl = prepareOrientDbUrl( databaseType );
 			createDB( orientDBUrl, databaseType );
 
-			connectionHolder = new ConnectionHolder( orientDBUrl, user, password );
+			connectionHolder = new ConnectionHolder( orientDBUrl, user, password, poolSize );
 
 			FormatterUtil.setDateFormatter( createFormatter( propertyReader, OrientDBProperties.DATE_FORMAT, "yyyy-MM-dd" ) );
 			FormatterUtil.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, "yyyy-MM-dd HH:mm:ss" ) );
@@ -75,7 +74,6 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 	private ThreadLocal<DateFormat> createFormatter(final ConfigurationPropertyReader propertyReader, final String property, final String defaultFormat) {
 		return new ThreadLocal<DateFormat>() {
-
 			@Override
 			protected DateFormat initialValue() {
 				return new SimpleDateFormat( propertyReader.property( property, String.class ).withDefault( defaultFormat ).getValue() );
@@ -85,28 +83,27 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 	private String prepareOrientDbUrl(OrientDBProperties.DatabaseTypeEnum databaseType) {
 		String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
-		StringBuilder jdbcUrl = new StringBuilder( 100 );
-		jdbcUrl.append( "jdbc:orient:" ).append( databaseType.name().toLowerCase() );
+		StringBuilder orientDbUrl = new StringBuilder( 100 );
+		orientDbUrl.append( databaseType.name().toLowerCase() );
 		switch ( databaseType ) {
 			case MEMORY:
-				jdbcUrl.append( ":" ).append( database );
+				orientDbUrl.append( ":" ).append( database );
 				break;
 			case REMOTE:
 				String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
-				jdbcUrl.append( ":" ).append( host ).append( "/" ).append( database );
+				orientDbUrl.append( ":" ).append( host ).append( "/" ).append( database );
 				break;
 			default:
 				throw new UnsupportedOperationException( String.format( "Database type %s unsupported!", databaseType ) );
 		}
-		return jdbcUrl.toString();
+		return orientDbUrl.toString();
 	}
 
-	private void createDB(String jdbcUrl, DatabaseTypeEnum databaseType) {
+	private void createDB(String orientDbUrl, DatabaseTypeEnum databaseType) {
 		if ( OrientDBProperties.DatabaseTypeEnum.MEMORY.equals( databaseType ) ) {
-			if ( MemoryDBUtil.getOrientGraphFactory() != null ) {
-				log.debugf( "getCreatedInstancesInPool: %d", MemoryDBUtil.getOrientGraphFactory().getCreatedInstancesInPool() );
-			}
-			MemoryDBUtil.createDbFactory( jdbcUrl.substring( jdbcUrl.indexOf( OrientDBProperties.DatabaseTypeEnum.MEMORY.name() ) ) );
+			String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
+			ODatabaseDocumentTx db = new ODatabaseDocumentTx( "memory:/" + database );
+			db.create();
 		}
 		else if ( OrientDBProperties.DatabaseTypeEnum.REMOTE.equals( databaseType ) ) {
 			if ( propertyReader.property( OgmProperties.CREATE_DATABASE, Boolean.class ).withDefault( Boolean.FALSE ).getValue() ) {
@@ -114,7 +111,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 				String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
 				String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
 				String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
-				log.debugf( "Try to create remote database in JDBC URL %s ", jdbcUrl );
+				log.debugf( "Try to create remote database in JDBC URL %s ", orientDbUrl );
 				OServerAdmin serverAdmin = null;
 				try {
 					serverAdmin = new OServerAdmin( "remote:" + host );

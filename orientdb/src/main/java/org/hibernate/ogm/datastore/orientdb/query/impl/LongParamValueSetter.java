@@ -6,7 +6,6 @@
  */
 package org.hibernate.ogm.datastore.orientdb.query.impl;
 
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
@@ -17,8 +16,8 @@ import java.sql.SQLException;
 public class LongParamValueSetter implements ParamValueSetter<Long> {
 
 	@Override
-	public void setValue(PreparedStatement preparedStatement, int index, Long value) throws SQLException {
-		preparedStatement.setLong( index, value );
+	public void setValue(int index, Long value) throws SQLException {
+		// preparedStatement.setLong( index, value );
 	}
 
 }

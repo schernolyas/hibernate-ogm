@@ -7,10 +7,10 @@
 package org.hibernate.ogm.datastore.orientdb.utils;
 
 import com.orientechnologies.common.exception.OException;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.record.impl.ODocument;
+
+import java.util.List;
 
 import org.hibernate.HibernateException;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
@@ -33,19 +33,15 @@ public class SequenceUtil {
 	 * @return next value of the sequence
 	 * @throws HibernateException if {@link SQLException} or {@link OException} occurs
 	 */
-	public static long getNextSequenceValue(Connection connection, String seqName) {
-		long nextValue = -1;
+	public static long getNextSequenceValue(ODatabaseDocumentTx db, String seqName) {
 		String query = String.format( "select sequence('%s').next()", seqName );
-		try {
-			Statement stmt = connection.createStatement();
-			ResultSet rs = stmt.executeQuery( query );
-			if ( rs.next() ) {
-				nextValue = rs.getLong( "sequence" );
-			}
-		}
-		catch (SQLException | OException sqle) {
-			throw log.cannotExecuteQuery( query, sqle );
-		}
+		List<ODocument> documents = QueryUtil.executeNativeQuery( db, query );
+		long nextValue = documents.get( 0 ).field( "sequence", Long.class );
+		/*
+		 * try { Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery( query ); if (
+		 * rs.next() ) { nextValue = rs.getLong( "sequence" ); } } catch (SQLException | OException sqle) { throw
+		 * log.cannotExecuteQuery( query, sqle ); }
+		 */
 		return nextValue;
 	}
 
@@ -62,21 +58,17 @@ public class SequenceUtil {
 	 * @return next value of the sequence
 	 * @throws HibernateException if {@link SQLException} or {@link OException} occurs
 	 */
-	public static long getNextTableValue(Connection connection, String seqTable, String pkColumnName, String pkColumnValue, String valueColumnName,
+	public static long getNextTableValue(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String pkColumnValue, String valueColumnName,
 			int initValue, int inc) {
-		long nextValue = -1;
 		String query = String.format( "select getTableSeqValue('%s','%s','%s','%s',%d,%d) as %s ",
 				seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc, valueColumnName );
-		try {
-			Statement stmt = connection.createStatement();
-			ResultSet rs = stmt.executeQuery( query );
-			if ( rs.next() ) {
-				nextValue = rs.getLong( valueColumnName );
-			}
-		}
-		catch (SQLException | OException sqle) {
-			throw log.cannotExecuteStoredProcedure( "getTableSeqValue", sqle );
-		}
+		List<ODocument> documents = QueryUtil.executeNativeQuery( db, query );
+		long nextValue = documents.get( 0 ).field( valueColumnName, Long.class );
+		/*
+		 * try { Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery( query ); if (
+		 * rs.next() ) { nextValue = rs.getLong( valueColumnName ); } } catch (SQLException | OException sqle) { throw
+		 * log.cannotExecuteStoredProcedure( "getTableSeqValue", sqle ); }
+		 */
 		return nextValue;
 	}
 }

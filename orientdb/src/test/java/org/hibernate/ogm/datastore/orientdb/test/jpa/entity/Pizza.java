@@ -4,8 +4,7 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-
-package org.hibernate.ogm.datastore.orientdb.test.jpa;
+package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
 import java.util.List;
 import java.util.Objects;
@@ -15,41 +14,37 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.ManyToOne;
+import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
 import javax.persistence.Version;
 
-import org.hibernate.search.annotations.Analyze;
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Index;
 import org.hibernate.search.annotations.Indexed;
-import org.hibernate.search.annotations.Store;
 
 import com.orientechnologies.orient.core.id.ORecordId;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
-
 @Entity
-@Indexed(index = "BuyingOrder")
-public class BuyingOrder {
+@Indexed(index = "Pizza")
+public class Pizza {
 
 	@Id
 	@Column(name = "bKey")
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long bKey;
+	private String name;
+	@OneToMany(mappedBy = "buying")
+	private List<OrderItem> orderItems;
+
+	@ManyToMany
+	private List<Product> products;
+
 	@Version
 	@Column(name = "@version")
 	private int version;
 	@Column(name = "@rid")
 	private ORecordId rid;
-	@Field(index = Index.YES, analyze = Analyze.YES, store = Store.YES)
-	private String orderKey;
-	@ManyToOne
-	private Customer owner;
-	@OneToMany(mappedBy = "order")
-	private List<OrderItem> orders;
 
 	public Long getbKey() {
 		return bKey;
@@ -59,36 +54,20 @@ public class BuyingOrder {
 		this.bKey = bKey;
 	}
 
-	public ORecordId getRid() {
-		return rid;
+	public String getName() {
+		return name;
 	}
 
-	public void setRid(ORecordId rid) {
-		this.rid = rid;
+	public void setName(String name) {
+		this.name = name;
 	}
 
-	public String getOrderKey() {
-		return orderKey;
+	public List<OrderItem> getOrderItems() {
+		return orderItems;
 	}
 
-	public void setOrderKey(String orderKey) {
-		this.orderKey = orderKey;
-	}
-
-	public Customer getOwner() {
-		return owner;
-	}
-
-	public void setOwner(Customer owner) {
-		this.owner = owner;
-	}
-
-	public List<OrderItem> getOrders() {
-		return orders;
-	}
-
-	public void setOrders(List<OrderItem> orders) {
-		this.orders = orders;
+	public void setOrderItems(List<OrderItem> orderItems) {
+		this.orderItems = orderItems;
 	}
 
 	public int getVersion() {
@@ -99,10 +78,26 @@ public class BuyingOrder {
 		this.version = version;
 	}
 
+	public ORecordId getRid() {
+		return rid;
+	}
+
+	public void setRid(ORecordId rid) {
+		this.rid = rid;
+	}
+
+	public List<Product> getProducts() {
+		return products;
+	}
+
+	public void setProducts(List<Product> products) {
+		this.products = products;
+	}
+
 	@Override
 	public int hashCode() {
-		int hash = 3;
-		hash = 11 * hash + Objects.hashCode( this.bKey );
+		int hash = 7;
+		hash = 13 * hash + Objects.hashCode( this.bKey );
 		return hash;
 	}
 
@@ -117,7 +112,7 @@ public class BuyingOrder {
 		if ( getClass() != obj.getClass() ) {
 			return false;
 		}
-		final BuyingOrder other = (BuyingOrder) obj;
+		final Pizza other = (Pizza) obj;
 		if ( !Objects.equals( this.bKey, other.bKey ) ) {
 			return false;
 		}

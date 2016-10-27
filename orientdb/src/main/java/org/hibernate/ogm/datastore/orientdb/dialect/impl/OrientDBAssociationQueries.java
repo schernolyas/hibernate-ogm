@@ -6,12 +6,6 @@
  */
 package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -19,16 +13,19 @@ import java.util.List;
 import java.util.Map;
 import org.hibernate.AssertionFailure;
 
-import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.QueryUtil;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.AssociationKeyMetadata;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.RowKey;
+
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.record.impl.ODocument;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -47,7 +44,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 				ownerEntityKeyMetadata, associationKeyMetadata );
 	}
 
-	public void removeAssociation(Connection connection, AssociationKey associationKey, AssociationContext associationContext) {
+	public void removeAssociation(ODatabaseDocumentTx db, AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "removeAssociation: %s ;associationKey: %s;", associationKey );
 		log.debugf( "removeAssociation: AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
 		log.debugf( "removeAssociation: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
@@ -77,43 +74,42 @@ public class OrientDBAssociationQueries extends QueriesBase {
 			default:
 				throw new AssertionFailure( "Unrecognized associationKind: " + associationKey.getMetadata().getAssociationKind() );
 		}
+		deleteQuery.append( " return count" );
 
 		log.debugf( "removeAssociation: query: %s ", deleteQuery );
-		try {
-			PreparedStatement pstmt = connection.prepareStatement( deleteQuery.toString() );
-			log.debugf( "removeAssociation:AssociationKey: %s. remove: %s", associationKey, pstmt.executeUpdate() );
-		}
-		catch (SQLException e) {
-			throw log.cannotExecuteQuery( deleteQuery.toString(), e );
-		}
+		QueryUtil.executeNativeQuery( db, deleteQuery );
+		/*
+		 * try { PreparedStatement pstmt = connection.prepareStatement( deleteQuery.toString() ); log.debugf(
+		 * "removeAssociation:AssociationKey: %s. remove: %s", associationKey, pstmt.executeUpdate() ); } catch
+		 * (SQLException e) { throw log.cannotExecuteQuery( deleteQuery.toString(), e ); }
+		 */
 	}
 
-	public void removeAssociationRow(Connection connection, AssociationKey associationKey, RowKey rowKey) {
+	public void removeAssociationRow(ODatabaseDocumentTx db, AssociationKey associationKey, RowKey rowKey) {
 		log.debugf( "removeAssociationRow: associationKey: %s; RowKey:%s ", associationKey, rowKey );
-		StringBuilder query = new StringBuilder( 100 );
-		query.append( "delete vertex " ).append( associationKey.getTable() ).append( " where " );
+		StringBuilder deleteQuery = new StringBuilder( 100 );
+		deleteQuery.append( "delete vertex " ).append( associationKey.getTable() ).append( " where " );
 		for ( int i = 0; i < rowKey.getColumnNames().length; i++ ) {
 			String columnName = rowKey.getColumnNames()[i];
 			Object columnValue = rowKey.getColumnValues()[i];
-			query.append( columnName ).append( "=" );
-			EntityKeyUtil.setFieldValue( query, columnValue );
+			deleteQuery.append( columnName ).append( "=" );
+			EntityKeyUtil.setFieldValue( deleteQuery, columnValue );
 			if ( i < rowKey.getColumnNames().length - 1 ) {
-				query.append( " AND " );
+				deleteQuery.append( " AND " );
 			}
 		}
-		log.debugf( "removeAssociationRow: delete query: %s; ", query );
-		try {
-			PreparedStatement pstmt = connection.prepareStatement( query.toString() );
-			log.debugf( "removeAssociationRow: deleted rows %d; ", pstmt.executeUpdate() );
-
-		}
-		catch (SQLException sqle) {
-			throw log.cannotExecuteQuery( query.toString(), sqle );
-		}
+		deleteQuery.append( " return count" );
+		log.debugf( "removeAssociationRow: delete query: %s; ", deleteQuery );
+		QueryUtil.executeNativeQuery( db, deleteQuery );
+		/*
+		 * try { PreparedStatement pstmt = connection.prepareStatement( query.toString() ); log.debugf(
+		 * "removeAssociationRow: deleted rows %d; ", pstmt.executeUpdate() ); } catch (SQLException sqle) { throw
+		 * log.cannotExecuteQuery( query.toString(), sqle ); }
+		 */
 
 	}
 
-	public List<Map<String, Object>> findRelationship(Connection connection, AssociationKey associationKey, RowKey rowKey) {
+	public List<Map<String, Object>> findRelationship(ODatabaseDocumentTx db, AssociationKey associationKey, RowKey rowKey) {
 		Map<String, Object> relationshipValues = new LinkedHashMap<>();
 		log.debugf( "findRelationship: associationKey: %s", associationKey );
 		log.debugf( "findRelationship: row key : %s", rowKey );
@@ -172,26 +168,20 @@ public class OrientDBAssociationQueries extends QueriesBase {
 			index++;
 		}
 		log.debugf( "findRelationship: queryBuilder: %s", queryBuilder );
-		try {
-			Statement stmt = connection.createStatement();
-			ResultSet rs = stmt.executeQuery( queryBuilder.toString() );
-			while ( rs.next() ) {
-				ResultSetMetaData metadata = rs.getMetaData();
-				Map<String, Object> rowValues = new LinkedHashMap<>();
-				for ( String systemField : OrientDBConstant.SYSTEM_FIELDS ) {
-					rowValues.put( systemField, rs.getObject( systemField ) );
-				}
-				for ( int i = 0; i < rs.getMetaData().getColumnCount(); i++ ) {
-					int dbFieldNo = i + 1;
-					String dbColumnName = metadata.getColumnName( dbFieldNo );
-					rowValues.put( dbColumnName, rs.getObject( dbColumnName ) );
-				}
-				dbValues.add( rowValues );
-			}
+		List<ODocument> documents = QueryUtil.executeNativeQuery( db, queryBuilder );
+		for ( ODocument doc : documents ) {
+			dbValues.add( doc.toMap() );
 		}
-		catch (SQLException sqle) {
-			throw log.cannotExecuteQuery( queryBuilder.toString(), sqle );
-		}
+		/*
+		 * try { Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(
+		 * queryBuilder.toString() ); while ( rs.next() ) { ResultSetMetaData metadata = rs.getMetaData(); Map<String,
+		 * Object> rowValues = new LinkedHashMap<>(); for ( String systemField : OrientDBConstant.SYSTEM_FIELDS ) {
+		 * rowValues.put( systemField, rs.getObject( systemField ) ); } for ( int i = 0; i <
+		 * rs.getMetaData().getColumnCount(); i++ ) { int dbFieldNo = i + 1; String dbColumnName =
+		 * metadata.getColumnName( dbFieldNo ); rowValues.put( dbColumnName, rs.getObject( dbColumnName ) ); }
+		 * dbValues.add( rowValues ); } } catch (SQLException sqle) { throw log.cannotExecuteQuery(
+		 * queryBuilder.toString(), sqle ); }
+		 */
 		log.debugf( "findRelationship: found: %d", dbValues.size() );
 
 		return dbValues;

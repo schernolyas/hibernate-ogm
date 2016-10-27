@@ -4,26 +4,22 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.ogm.datastore.orientdb.test;
+package org.hibernate.ogm.datastore.orientdb.test.jpa;
 
 import java.util.List;
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.FlushModeType;
-import javax.persistence.Persistence;
 import javax.persistence.Query;
 import org.apache.log4j.Logger;
-import static org.hibernate.ogm.datastore.orientdb.test.OrientDBSimpleTest.MEMORY_TEST;
-import org.hibernate.ogm.datastore.orientdb.test.jpa.Passport;
-import org.hibernate.ogm.datastore.orientdb.test.jpa.PassportPK;
-import org.hibernate.ogm.datastore.orientdb.utils.MemoryDBUtil;
+
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Passport;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.PassportPK;
+
+import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
 import org.junit.After;
-import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -32,39 +28,21 @@ import org.junit.runners.MethodSorters;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class OrientDBCompositeIdTest {
+public class OrientDBCompositeIdTest extends OgmJpaTestCase {
 
 	private static final Logger log = Logger.getLogger( OrientDBCompositeIdTest.class.getName() );
-	private static EntityManager em;
-	private static EntityManagerFactory emf;
-
-	@BeforeClass
-	public static void setUpClass() {
-		MemoryDBUtil.createDbFactory( MEMORY_TEST );
-		emf = Persistence.createEntityManagerFactory( "hibernateOgmJpaUnit" );
-		em = emf.createEntityManager();
-		em.setFlushMode( FlushModeType.COMMIT );
-	}
-
-	@AfterClass
-	public static void tearDownClass() {
-		if ( emf != null && em != null ) {
-			em.close();
-			emf.close();
-		}
-		MemoryDBUtil.dropInMemoryDb();
-	}
+	private EntityManager em;
 
 	@Before
 	public void setUp() {
-		if ( em.getTransaction().isActive() ) {
-			em.getTransaction().rollback();
-		}
-
+		em = getFactory().createEntityManager();
 	}
 
 	@After
 	public void tearDown() {
+		if ( em.getTransaction().isActive() ) {
+			em.getTransaction().rollback();
+		}
 		em.clear();
 	}
 
@@ -242,6 +220,11 @@ public class OrientDBCompositeIdTest {
 			}
 			throw e;
 		}
+	}
+
+	@Override
+	protected Class<?>[] getAnnotatedClasses() {
+		return new Class<?>[]{ Passport.class, PassportPK.class };
 	}
 
 }

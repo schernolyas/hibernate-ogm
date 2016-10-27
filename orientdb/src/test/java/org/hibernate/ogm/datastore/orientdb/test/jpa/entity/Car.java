@@ -4,47 +4,40 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
+package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
-package org.hibernate.ogm.datastore.orientdb.test.jpa;
-
-import java.math.BigDecimal;
+import java.util.List;
 import java.util.Objects;
 
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
+import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.ManyToOne;
-import javax.persistence.Version;
 
 import org.hibernate.search.annotations.Indexed;
-
-import com.orientechnologies.orient.core.id.ORecordId;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
-
 @Entity
-@Indexed(index = "OrderItem")
-public class OrderItem {
+@Indexed(index = "Car")
+public class Car {
 
 	@Id
 	@Column(name = "bKey")
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long bKey;
-	@Version
-	@Column(name = "@version")
-	private int version;
-	@Column(name = "@rid")
-	private ORecordId rid;
 
-	private BigDecimal cost;
-	@ManyToOne
-	private BuyingOrder order;
-	@ManyToOne
-	private Pizza buying;
+	private byte[] photo;
+
+	@Embedded
+	private EngineInfo engineInfo;
+
+	@ElementCollection
+	private List<CarOwner> owners;
 
 	public Long getbKey() {
 		return bKey;
@@ -54,50 +47,34 @@ public class OrderItem {
 		this.bKey = bKey;
 	}
 
-	public ORecordId getRid() {
-		return rid;
+	public EngineInfo getEngineInfo() {
+		return engineInfo;
 	}
 
-	public void setRid(ORecordId rid) {
-		this.rid = rid;
+	public void setEngineInfo(EngineInfo engineInfo) {
+		this.engineInfo = engineInfo;
 	}
 
-	public BigDecimal getCost() {
-		return cost;
+	public List<CarOwner> getOwners() {
+		return owners;
 	}
 
-	public void setCost(BigDecimal cost) {
-		this.cost = cost;
+	public void setOwners(List<CarOwner> owners) {
+		this.owners = owners;
 	}
 
-	public BuyingOrder getOrder() {
-		return order;
+	public byte[] getPhoto() {
+		return photo;
 	}
 
-	public void setOrder(BuyingOrder order) {
-		this.order = order;
-	}
-
-	public Pizza getBuying() {
-		return buying;
-	}
-
-	public void setBuying(Pizza buying) {
-		this.buying = buying;
-	}
-
-	public int getVersion() {
-		return version;
-	}
-
-	public void setVersion(int version) {
-		this.version = version;
+	public void setPhoto(byte[] photo) {
+		this.photo = photo;
 	}
 
 	@Override
 	public int hashCode() {
-		int hash = 5;
-		hash = 71 * hash + Objects.hashCode( this.bKey );
+		int hash = 3;
+		hash = 83 * hash + Objects.hashCode( this.bKey );
 		return hash;
 	}
 
@@ -112,7 +89,7 @@ public class OrderItem {
 		if ( getClass() != obj.getClass() ) {
 			return false;
 		}
-		final OrderItem other = (OrderItem) obj;
+		final Car other = (Car) obj;
 		if ( !Objects.equals( this.bKey, other.bKey ) ) {
 			return false;
 		}

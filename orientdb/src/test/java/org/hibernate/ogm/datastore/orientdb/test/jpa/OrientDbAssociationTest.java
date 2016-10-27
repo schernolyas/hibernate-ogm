@@ -4,7 +4,7 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.ogm.datastore.orientdb.test;
+package org.hibernate.ogm.datastore.orientdb.test.jpa;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -19,22 +19,17 @@ import java.util.List;
 import java.util.Set;
 
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.FlushModeType;
-import javax.persistence.Persistence;
 import javax.persistence.Query;
 
 import org.apache.log4j.Logger;
-import org.hibernate.ogm.datastore.orientdb.test.jpa.BuyingOrder;
-import org.hibernate.ogm.datastore.orientdb.test.jpa.Customer;
-import org.hibernate.ogm.datastore.orientdb.test.jpa.Pizza;
-import org.hibernate.ogm.datastore.orientdb.test.jpa.Product;
-import org.hibernate.ogm.datastore.orientdb.test.jpa.ProductType;
-import org.hibernate.ogm.datastore.orientdb.utils.MemoryDBUtil;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.BuyingOrder;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Customer;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Pizza;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Product;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.ProductType;
+import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -45,40 +40,24 @@ import org.junit.runners.MethodSorters;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class OrientDbAssociationTest {
+public class OrientDbAssociationTest extends OgmJpaTestCase  {
 
 	private static final Logger log = Logger.getLogger( OrientDbAssociationTest.class.getName() );
 	private static EntityManager em;
-	private static EntityManagerFactory emf;
-
-	@BeforeClass
-	public static void setUpClass() {
-		MemoryDBUtil.createDbFactory( OrientDBSimpleTest.MEMORY_TEST );
-		emf = Persistence.createEntityManagerFactory( "hibernateOgmJpaUnit" );
-		em = emf.createEntityManager();
-		em.setFlushMode( FlushModeType.COMMIT );
-	}
-
-	@AfterClass
-	public static void tearDownClass() {
-		if ( em != null ) {
-			em.close();
-			emf.close();
-		}
-		MemoryDBUtil.dropInMemoryDb();
-	}
 
 	@Before
 	public void setUp() {
-		if ( em.getTransaction().isActive() ) {
-			em.getTransaction().rollback();
-		}
+		em = getFactory().createEntityManager();
 	}
 
 	@After
 	public void tearDown() {
+		if ( em.getTransaction().isActive() ) {
+			em.getTransaction().rollback();
+		}
 		em.clear();
 	}
+
 
 	@Test
 	public void test1LinkAllAssociations() throws Exception {
@@ -315,5 +294,10 @@ public class OrientDbAssociationTest {
 			em.getTransaction().rollback();
 			throw e;
 		}
+	}
+	@Override
+	protected Class<?>[] getAnnotatedClasses() {
+		return new Class<?>[] { BuyingOrder.class, Pizza.class,
+			Customer.class,ProductType.class,Product.class };
 	}
 }

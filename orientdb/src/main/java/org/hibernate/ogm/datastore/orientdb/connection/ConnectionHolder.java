@@ -6,7 +6,6 @@
  */
 package org.hibernate.ogm.datastore.orientdb.connection;
 
-import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
 import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
@@ -33,16 +32,14 @@ public class ConnectionHolder extends ThreadLocal<ODatabaseDocumentTx> {
 	private final String orientDbUrl;
 	private final String user;
 	private final String password;
-	
-	private final OPartitionedDatabasePoolFactory factory = new OPartitionedDatabasePoolFactory( 10 );
+	private final OPartitionedDatabasePoolFactory factory;
 
-	
-
-	public ConnectionHolder(String orientDbUrl, String user, String password) {
+	public ConnectionHolder(String orientDbUrl, String user, String password, Integer poolSize) {
 		super();
 		this.orientDbUrl = orientDbUrl;
 		this.user = user;
 		this.password = password;
+		this.factory = new OPartitionedDatabasePoolFactory( poolSize );
 	}
 
 	@Override
@@ -54,17 +51,12 @@ public class ConnectionHolder extends ThreadLocal<ODatabaseDocumentTx> {
 	@Override
 	public void remove() {
 		log.debugf( "remove connection for thread %s", Thread.currentThread().getName() );
-		try {
-			get().close();
-		}
-		catch ( OException oe) {
-			log.error( "Cannot close connection", oe );
-		}
+		get().close();
 		super.remove();
 	}
 
-	private ODatabaseDocumentTx createConnectionForCurrentThread() {		
-		OPartitionedDatabasePool pool = factory.get("url","user","password");
+	private ODatabaseDocumentTx createConnectionForCurrentThread() {
+		OPartitionedDatabasePool pool = factory.get( this.orientDbUrl, this.user, this.password );
 		return pool.acquire();
 	}
 
