@@ -36,13 +36,7 @@ public class SequenceUtil {
 	public static long getNextSequenceValue(ODatabaseDocumentTx db, String seqName) {
 		String query = String.format( "select sequence('%s').next()", seqName );
 		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
-		long nextValue = documents.get( 0 ).field( "sequence", Long.class );
-		/*
-		 * try { Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery( query ); if (
-		 * rs.next() ) { nextValue = rs.getLong( "sequence" ); } } catch (SQLException | OException sqle) { throw
-		 * log.cannotExecuteQuery( query, sqle ); }
-		 */
-		return nextValue;
+		return documents.get( 0 ).field( "sequence", Long.class );
 	}
 
 	/**
@@ -63,12 +57,6 @@ public class SequenceUtil {
 		String query = String.format( "select getTableSeqValue('%s','%s','%s','%s',%d,%d) as %s ",
 				seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc, valueColumnName );
 		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
-		long nextValue = documents.get( 0 ).field( valueColumnName, Long.class );
-		/*
-		 * try { Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery( query ); if (
-		 * rs.next() ) { nextValue = rs.getLong( valueColumnName ); } } catch (SQLException | OException sqle) { throw
-		 * log.cannotExecuteStoredProcedure( "getTableSeqValue", sqle ); }
-		 */
-		return nextValue;
+		return documents.get( 0 ).field( valueColumnName, Long.class );
 	}
 }

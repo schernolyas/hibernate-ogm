@@ -11,8 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 
-import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
@@ -24,7 +24,6 @@ import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import java.util.Arrays;
 import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
 
@@ -63,8 +62,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 	public Map<String, Object> findEntity(ODatabaseDocumentTx db, EntityKey entityKey) {
 		Map<String, Object> dbValues = new LinkedHashMap<>();
 		StringBuilder query = new StringBuilder( "select from " );
-		// try {
-		// Statement stmt = connection.createStatement();
+
 		if ( entityKey.getColumnNames().length == 1 && entityKey.getColumnValues()[0] instanceof ORecordId ) {
 			// search by @rid
 			ORecordId rid = (ORecordId) entityKey.getColumnValues()[0];
@@ -107,9 +105,6 @@ public class OrientDBEntityQueries extends QueriesBase {
 		 * " entity by primary key %s not found!", entityKey ); return null; }
 		 */
 		return dbValues;
-		/*
-		 * } catch (SQLException sqle) { throw log.cannotExecuteQuery( query.toString(), sqle ); }
-		 */
 	}
 
 	private void reCastValues(Map<String, Object> map) {
@@ -122,15 +117,6 @@ public class OrientDBEntityQueries extends QueriesBase {
 			}
 
 		}
-	}
-
-	private boolean isLinkedProperty(String propertyName) {
-		for ( String linkFieldStarts : OrientDBConstant.LINK_FIELDS ) {
-			if ( propertyName.startsWith( linkFieldStarts ) ) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	/**
@@ -175,7 +161,6 @@ public class OrientDBEntityQueries extends QueriesBase {
 					dbValues.put( fieldName, ODocumentUtil.extractNamesTree( fieldName, (ODocument) dbValues.get( fieldName ) ) );
 				}
 			}
-
 			association.add( dbValues );
 		}
 		log.debugf( "findAssociation: rows :  %d", association.size() );
