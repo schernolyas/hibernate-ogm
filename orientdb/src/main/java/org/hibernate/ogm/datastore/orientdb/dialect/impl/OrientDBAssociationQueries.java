@@ -77,12 +77,8 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		deleteQuery.append( " return count" );
 
 		log.debugf( "removeAssociation: query: %s ", deleteQuery );
-		NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
-		/*
-		 * try { PreparedStatement pstmt = connection.prepareStatement( deleteQuery.toString() ); log.debugf(
-		 * "removeAssociation:AssociationKey: %s. remove: %s", associationKey, pstmt.executeUpdate() ); } catch
-		 * (SQLException e) { throw log.cannotExecuteQuery( deleteQuery.toString(), e ); }
-		 */
+		Number count  = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, deleteQuery );
+		log.debugf( "removeAssociation: removed ssociations: %d ", count );
 	}
 
 	public void removeAssociationRow(ODatabaseDocumentTx db, AssociationKey associationKey, RowKey rowKey) {
@@ -100,12 +96,8 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		}
 		deleteQuery.append( " return count" );
 		log.debugf( "removeAssociationRow: delete query: %s; ", deleteQuery );
-		NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
-		/*
-		 * try { PreparedStatement pstmt = connection.prepareStatement( query.toString() ); log.debugf(
-		 * "removeAssociationRow: deleted rows %d; ", pstmt.executeUpdate() ); } catch (SQLException sqle) { throw
-		 * log.cannotExecuteQuery( query.toString(), sqle ); }
-		 */
+		Number count  = (Number) NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
+		log.debugf( "removeAssociation: removed rows: %d ", count );
 
 	}
 
@@ -136,7 +128,6 @@ public class OrientDBAssociationQueries extends QueriesBase {
 					}
 				}
 			}
-
 		}
 		else {
 			EntityKey entityKey = getEntityKey( associationKey, rowKey );
@@ -172,18 +163,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		for ( ODocument doc : documents ) {
 			dbValues.add( doc.toMap() );
 		}
-		/*
-		 * try { Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(
-		 * queryBuilder.toString() ); while ( rs.next() ) { ResultSetMetaData metadata = rs.getMetaData(); Map<String,
-		 * Object> rowValues = new LinkedHashMap<>(); for ( String systemField : OrientDBConstant.SYSTEM_FIELDS ) {
-		 * rowValues.put( systemField, rs.getObject( systemField ) ); } for ( int i = 0; i <
-		 * rs.getMetaData().getColumnCount(); i++ ) { int dbFieldNo = i + 1; String dbColumnName =
-		 * metadata.getColumnName( dbFieldNo ); rowValues.put( dbColumnName, rs.getObject( dbColumnName ) ); }
-		 * dbValues.add( rowValues ); } } catch (SQLException sqle) { throw log.cannotExecuteQuery(
-		 * queryBuilder.toString(), sqle ); }
-		 */
 		log.debugf( "findRelationship: found: %d", dbValues.size() );
-
 		return dbValues;
 	}
 

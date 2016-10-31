@@ -54,7 +54,7 @@ public class OrientDBJtaTransactionCoordinator extends ForwardingTransactionCoor
 	}
 
 	private void join() {
-		ODatabaseDocumentTx database = datastoreProvider.getConnection();
+		ODatabaseDocumentTx database = datastoreProvider.getCurrentDatabase();
 
 		if ( currentOrientDBTransaction == null && delegate.isActive() ) {
 			log.debugf( "begin transaction for database %s", database.getName() );

@@ -391,11 +391,11 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 					String executedQuery = null;
 					// try {
 					executedQuery = createClassQuery( embeddedClassName );
-					NativeQueryUtil.executeNonIdempotentQuery( provider.getConnection(), executedQuery );
+					NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), executedQuery );
 					executedQuery = MessageFormat.format( CREATE_EMBEDDED_PROPERTY_TEMPLATE,
 							propertyOwnerClassName, embeddedClassName, embeddedClassName );
 					log.debugf( "1.query: %s; ", executedQuery );
-					NativeQueryUtil.executeNonIdempotentQuery( provider.getConnection(), executedQuery );
+					NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), executedQuery );
 					createdEmbeddedClassSet.add( embeddedClassName );
 					/*
 					 * } catch (SQLException sqle) { throw log.cannotExecuteQuery( executedQuery, sqle ); }
@@ -415,7 +415,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 				try {
 					executedQuery = createValueProperyQuery( column, propertyOwnerClassName, valuePropertyName, simpleValue.getType().getClass() );
 					log.debugf( "2.query: %s; ", executedQuery );
-					NativeQueryUtil.executeNonIdempotentQuery( provider.getConnection(), executedQuery );
+					NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), executedQuery );
 				}
 				/*
 				 * catch (SQLException sqle) { throw log.cannotExecuteQuery( executedQuery, sqle ); }
@@ -529,7 +529,7 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 		SessionFactoryImplementor sessionFactoryImplementor = context.getSessionFactory();
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
 		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		createExecuteQueryFunc( db );
 		// createSequence( connection, OrientDBConstant.HIBERNATE_SEQUENCE, 0, 1 );
 		createTableSequence( db, OrientDBConstant.HIBERNATE_SEQUENCE_TABLE, "key", "seed" );

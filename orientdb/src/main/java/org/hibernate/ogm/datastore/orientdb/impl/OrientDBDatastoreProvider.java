@@ -15,7 +15,7 @@ import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
-import org.hibernate.ogm.datastore.orientdb.connection.ConnectionHolder;
+import org.hibernate.ogm.datastore.orientdb.connection.DatabaseHolder;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
@@ -41,7 +41,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 	private static final long serialVersionUID = 1L;
 	private static Log log = LoggerFactory.getLogger();
-	private ConnectionHolder connectionHolder;
+	private DatabaseHolder databaseHolder;
 	private ConfigurationPropertyReader propertyReader;
 
 	@Override
@@ -62,7 +62,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 			String orientDBUrl = prepareOrientDbUrl( databaseType );
 			createDB( orientDBUrl, databaseType );
 
-			connectionHolder = new ConnectionHolder( orientDBUrl, user, password, poolSize );
+			databaseHolder = new DatabaseHolder( orientDBUrl, user, password, poolSize );
 
 			FormatterUtil.setDateFormatter( createFormatter( propertyReader, OrientDBProperties.DATE_FORMAT, "yyyy-MM-dd" ) );
 			FormatterUtil.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, "yyyy-MM-dd HH:mm:ss" ) );
@@ -142,12 +142,12 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		}
 	}
 
-	public ODatabaseDocumentTx getConnection() {
-		return connectionHolder.get();
+	public ODatabaseDocumentTx getCurrentDatabase() {
+		return databaseHolder.get();
 	}
 
-	public void closeConnection() {
-		connectionHolder.remove();
+	public void closeCurrentDatabase() {
+		databaseHolder.remove();
 	}
 
 	@Override

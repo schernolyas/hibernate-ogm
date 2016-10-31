@@ -73,7 +73,7 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 
 	private void close() {
 		try {
-			datastoreProvider.closeConnection();
+			datastoreProvider.closeCurrentDatabase();
 		}
 		finally {
 			currentOrientDBTransaction = null;
@@ -88,7 +88,7 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 
 		@Override
 		public void begin() {
-			ODatabaseDocumentTx database = datastoreProvider.getConnection();
+			ODatabaseDocumentTx database = datastoreProvider.getCurrentDatabase();
 			log.debugf( "begin transaction for database %s. Connection's hash code: %s",
 					database.getName(), database.hashCode() );
 			super.begin();
