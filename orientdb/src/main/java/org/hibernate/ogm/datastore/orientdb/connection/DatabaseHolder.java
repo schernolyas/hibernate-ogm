@@ -14,7 +14,7 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 
 /**
- * The class is thread local connection holder.
+ * The class is thread local database holder.
  * <p>
  * OrientDB uses paradigm "one thread-&gt; one transaction-&gt; one database connection". For implement it, Hibernate
  * OGM uses thread local class for hold connection for each thread (and each transaction). Each thread get part in
@@ -26,7 +26,7 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
  * @see <a href="http://orientdb.com/docs/2.2/Transactions.html">Transactions in OrientDB</a>
  * @see <a href="http://orientdb.com/docs/2.2/Java-Multi-Threading.html">Multi-Threading in OrientDB</a>
  */
-public class ConnectionHolder extends ThreadLocal<ODatabaseDocumentTx> {
+public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
 
 	private static Log log = LoggerFactory.getLogger();
 	private final String orientDbUrl;
@@ -34,7 +34,7 @@ public class ConnectionHolder extends ThreadLocal<ODatabaseDocumentTx> {
 	private final String password;
 	private final OPartitionedDatabasePoolFactory factory;
 
-	public ConnectionHolder(String orientDbUrl, String user, String password, Integer poolSize) {
+	public DatabaseHolder(String orientDbUrl, String user, String password, Integer poolSize) {
 		super();
 		this.orientDbUrl = orientDbUrl;
 		this.user = user;
@@ -44,13 +44,13 @@ public class ConnectionHolder extends ThreadLocal<ODatabaseDocumentTx> {
 
 	@Override
 	protected ODatabaseDocumentTx initialValue() {
-		log.debugf( "create connection %s for thread %s", orientDbUrl, Thread.currentThread().getName() );
+		log.debugf( "create database %s for thread %s", orientDbUrl, Thread.currentThread().getName() );
 		return createConnectionForCurrentThread();
 	}
 
 	@Override
 	public void remove() {
-		log.debugf( "remove connection for thread %s", Thread.currentThread().getName() );
+		log.debugf( "remove database for thread %s", Thread.currentThread().getName() );
 		get().close();
 		super.remove();
 	}

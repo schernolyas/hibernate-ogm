@@ -7,7 +7,6 @@
 package org.hibernate.ogm.datastore.orientdb;
 
 import java.io.Serializable;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -102,7 +101,7 @@ import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBDialect extends BaseGridDialect
-implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+		implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -129,7 +128,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 	public Tuple getTuple(EntityKey key, OperationContext operationContext) {
 		TupleTypeContext tupleContext = operationContext.getTupleTypeContext();
 		log.debugf( "getTuple:EntityKey: %s ; tupleContext: %s; current thread: %s ", key, tupleContext, Thread.currentThread().getName() );
-		Map<String, Object> dbValuesMap = entityQueries.get( key.getMetadata() ).findEntity( provider.getConnection(), key );
+		Map<String, Object> dbValuesMap = entityQueries.get( key.getMetadata() ).findEntity( provider.getCurrentDatabase(), key );
 		if ( dbValuesMap == null || dbValuesMap.isEmpty() ) {
 			return null;
 		}
@@ -163,7 +162,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		Tuple tuple = tuplePointer.getTuple();
 		log.debugf( "insertOrUpdateTuple:EntityKey: %s ; tupleContext: %s ; tuple: %s ; thread: %s",
 				key, tupleContext, tuple, Thread.currentThread().getName() );
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
 		boolean existsInDB = EntityKeyUtil.existsPrimaryKeyInDB( db, key );
 		QueryType queryType = QueryTypeDefiner.define( existsInDB, snapshot.isNew() );
@@ -190,8 +189,18 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		}
 
 		try {
-			log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; ", key, queryBuffer );
-			NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
+			Object result = NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
+			log.debugf( "insertOrUpdateTuple:executeNonIdempotentQuery: queryType: %s; class: %s ", queryType, result.getClass().getName() );
+			switch ( queryType ) {
+				case INSERT:
+					ODocument doc = (ODocument) result;
+					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Inserted rows: %1 ", key, 1 );
+					break;
+				case UPDATE:
+					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %d ", key, queryBuffer, (Number) result );
+					break;
+			}
+
 		}
 		catch (OConcurrentModificationException cme) {
 			throw new StaleObjectStateException( key.getTable(), (Serializable) EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
@@ -215,7 +224,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		else {
 			// use business key. get new id from sequence
 			String seqName = OrientDBSchemaDefiner.generateSeqName( entityKeyMetadata.getTable(), dbKeyName );
-			dbKeyValue = (Long) SequenceUtil.getNextSequenceValue( provider.getConnection(), seqName );
+			dbKeyValue = (Long) SequenceUtil.getNextSequenceValue( provider.getCurrentDatabase(), seqName );
 			tuple.put( dbKeyName, dbKeyValue );
 		}
 		GenerationResult result = INSERT_QUERY_GENERATOR.generate( entityKeyMetadata.getTable(), tuple, true,
@@ -223,29 +232,27 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		query = result.getExecutionQuery();
 
 		log.debugf( "insertTuple: insertQuery: %s ", result.getExecutionQuery() );
-		NativeQueryUtil.executeNonIdempotentQuery( provider.getConnection(), result.getExecutionQuery() );
-
+		Number updatedRows = (Number) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
+		log.debugf( "insertTuple: Query: %s; Updated rows: %d ", query, updatedRows );
 	}
 
 	@Override
 	public void removeTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "removeTuple:EntityKey: %s ; tupleContext %s ; current thread: %s",
 				key, tupleContext, Thread.currentThread().getName() );
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		StringBuilder queryBuffer = new StringBuilder( 100 );
-		// try {
 		queryBuffer.append( "DELETE VERTEX " ).append( key.getTable() ).append( " where " ).append( EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
 		log.debugf( "removeTuple:Key: %s. query: %s ", key, queryBuffer );
-		Number count  = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
+		Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
 		log.debugf( "removeTuple: removed entities: %d ", count );
-
 	}
 
 	@Override
 	public Association getAssociation(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "getAssociation:AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
 		EntityKey entityKey = associationKey.getEntityKey();
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		boolean existsPrimaryKey = EntityKeyUtil.existsPrimaryKeyInDB( db, entityKey );
 		if ( !existsPrimaryKey ) {
 			// Entity now extists
@@ -258,7 +265,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 
 	private Map<RowKey, Tuple> createAssociationMap(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "createAssociationMap:AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		List<Map<String, Object>> relationships = entityQueries.get( associationKey.getEntityKey().getMetadata() )
 				.findAssociation( db, associationKey, associationContext );
 
@@ -328,7 +335,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 			return;
 		}
 
-		associationQueries.get( key.getMetadata() ).removeAssociation( provider.getConnection(), key, associationContext );
+		associationQueries.get( key.getMetadata() ).removeAssociation( provider.getCurrentDatabase(), key, associationContext );
 	}
 
 	private void removeAssociationOperation(Association association, AssociationKey associationKey, AssociationOperation action,
@@ -340,13 +347,13 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		if ( associationKey.getMetadata().isInverse() ) {
 			return;
 		}
-		associationQueries.get( associationKey.getMetadata() ).removeAssociationRow( provider.getConnection(), associationKey, action.getKey() );
+		associationQueries.get( associationKey.getMetadata() ).removeAssociationRow( provider.getCurrentDatabase(), associationKey, action.getKey() );
 	}
 
 	private void putAssociationOperation(Association association, AssociationKey associationKey, AssociationOperation action,
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
 		log.debugf( "putAssociationOperation: : action: %s ; metadata: %s; association:%s", action, associationKey.getMetadata(), association );
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		if ( associationQueries.containsKey( associationKey.getMetadata() ) ) {
 			List<Map<String, Object>> relationship = associationQueries.get( associationKey.getMetadata() ).findRelationship( db,
 					associationKey, action.getKey() );
@@ -372,7 +379,8 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
 		GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow, false, Collections.<String>emptySet() );
 		log.debugf( "createRelationshipWithNode: query: %s", result.getExecutionQuery() );
-		NativeQueryUtil.executeIdempotentQuery( provider.getConnection(), result.getExecutionQuery() );
+		Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
+		log.debugf( "createRelationshipWithNode: created rows: %d", count );
 	}
 
 	private void updateRelationshipWithNode(AssociationKey associationKey, Tuple associationRow,
@@ -382,8 +390,8 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		if ( AssociationKind.EMBEDDED_COLLECTION.equals( associationKey.getMetadata().getAssociationKind() ) ) {
 			GenerationResult result = UPDATE_QUERY_GENERATOR.generate( associationKey, associationRow );
 			log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
-			NativeQueryUtil.executeIdempotentQuery( provider.getConnection(), result.getExecutionQuery() );
-			// log.debugf( "updateRelationshipWithNode: execute update query: %d", pstmt.executeUpdate() );
+			Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
+			log.debugf( "updateRelationshipWithNode: execute update query: %d", count );
 		}
 		else {
 			log.debugf( "updateRelationshipWithNode: update  association  not needs!" );
@@ -399,7 +407,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 	public Number nextValue(NextValueRequest request) {
 		log.debugf( "NextValueRequest: %s", request );
 		long nextValue = 0;
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		IdSourceType type = request.getKey().getMetadata().getType();
 		switch ( type ) {
 			case SEQUENCE:
@@ -430,11 +438,10 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 	 *
 	 * @param backendQuery represention of NoSQL query
 	 * @param queryParameters parameters of the query
-	 * @return Prepared PreparedStatement
-	 * @throws SQLException if any database exception occurs
+	 * @return Collection with documents
+	 * @see ODocument
 	 */
 
-	@SuppressWarnings("unchecked")
 	private List<ODocument> executeNativeQueryWithParams(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
 		Map<String, Object> parameters = getNamedParameterValuesConvertedByGridType( queryParameters );
 		log.debugf( "prepareStatement: parameters: %s ; ",
@@ -450,15 +457,13 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 					key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
 			queryParams.put( key, value.getValue() );
 		}
-		return NativeQueryUtil.executeIdempotentQueryWithParams( provider.getConnection(), nativeQueryTemplate, queryParams );
+		return NativeQueryUtil.executeIdempotentQueryWithParams( provider.getCurrentDatabase(), nativeQueryTemplate, queryParams );
 	}
 
 	@Override
 	public int executeBackendUpdateQuery(BackendQuery<String> query, QueryParameters queryParameters, TupleContext tupleContext) {
 		List<ODocument> documents = executeNativeQueryWithParams( query, queryParameters );
-		// @todo fix this
-		return -1;
-
+		throw new UnsupportedOperationException( "call executeBackendUpdateQuery!" );
 	}
 
 	@Override
