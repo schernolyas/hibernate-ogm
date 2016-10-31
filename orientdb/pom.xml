@@ -85,8 +85,15 @@
             <artifactId>commons-codec</artifactId>
             <version>1.10</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.codehaus.groovy/groovy-all -->
+      	<dependency>
+    		<groupId>org.codehaus.groovy</groupId>
+    		<artifactId>groovy-all</artifactId>
+    		<version>2.4.7</version>
+		</dependency>        
 
         <!-- Testing -->
+        
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

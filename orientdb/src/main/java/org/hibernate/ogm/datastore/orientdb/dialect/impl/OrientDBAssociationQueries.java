@@ -16,7 +16,7 @@ import org.hibernate.AssertionFailure;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
-import org.hibernate.ogm.datastore.orientdb.utils.QueryUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.AssociationKeyMetadata;
@@ -77,7 +77,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		deleteQuery.append( " return count" );
 
 		log.debugf( "removeAssociation: query: %s ", deleteQuery );
-		QueryUtil.executeNativeQuery( db, deleteQuery );
+		NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
 		/*
 		 * try { PreparedStatement pstmt = connection.prepareStatement( deleteQuery.toString() ); log.debugf(
 		 * "removeAssociation:AssociationKey: %s. remove: %s", associationKey, pstmt.executeUpdate() ); } catch
@@ -100,7 +100,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		}
 		deleteQuery.append( " return count" );
 		log.debugf( "removeAssociationRow: delete query: %s; ", deleteQuery );
-		QueryUtil.executeNativeQuery( db, deleteQuery );
+		NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
 		/*
 		 * try { PreparedStatement pstmt = connection.prepareStatement( query.toString() ); log.debugf(
 		 * "removeAssociationRow: deleted rows %d; ", pstmt.executeUpdate() ); } catch (SQLException sqle) { throw
@@ -168,7 +168,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 			index++;
 		}
 		log.debugf( "findRelationship: queryBuilder: %s", queryBuilder );
-		List<ODocument> documents = QueryUtil.executeNativeQuery( db, queryBuilder );
+		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, queryBuilder );
 		for ( ODocument doc : documents ) {
 			dbValues.add( doc.toMap() );
 		}
