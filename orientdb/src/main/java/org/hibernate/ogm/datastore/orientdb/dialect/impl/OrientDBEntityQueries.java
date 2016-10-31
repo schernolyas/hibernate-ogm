@@ -26,7 +26,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import java.util.Arrays;
 import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
-import org.hibernate.ogm.datastore.orientdb.utils.QueryUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
 
 /**
  * Container for the queries related to one entity type in OrientDB.
@@ -77,7 +77,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 
 		}
 		log.debugf( "find entiry query: %s", query.toString() );
-		List<ODocument> documents = QueryUtil.executeNativeQuery( db, query );
+		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
 		if ( documents.isEmpty() ) {
 			log.debugf( " entity by primary key %s not found!", entityKey );
 			return null;
@@ -167,7 +167,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 		}
 
 		log.debugf( "findAssociation: query: %s", query );
-		List<ODocument> documents = QueryUtil.executeNativeQuery( db, query );
+		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
 		for ( ODocument doc : documents ) {
 			Map<String, Object> dbValues = doc.toMap();
 			for ( String fieldName : dbValues.keySet() ) {

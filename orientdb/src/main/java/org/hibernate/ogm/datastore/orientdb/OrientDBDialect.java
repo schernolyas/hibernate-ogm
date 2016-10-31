@@ -83,7 +83,7 @@ import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import org.hibernate.ogm.datastore.orientdb.utils.QueryUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
 
 /**
  * Implementation of dialect for OrientDB
@@ -191,18 +191,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 
 		try {
 			log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; ", key, queryBuffer );
-			QueryUtil.executeNativeQuery( db, queryBuffer );
-			// PreparedStatement pstmt = connection.prepareStatement( queryBuffer.toString() );
-			// int updateCount = pstmt.executeUpdate();
-			// log.debugf( "insertOrUpdateTuple:Key: %s ;inserted or updated: %d ", key, updateCount );
-			// if ( updateCount == 0 && queryType.equals( QueryType.UPDATE ) ) {
-			// primary key was in DB .... but during prepare query someone remove it from DB.
-			// Integer currentVersion = (Integer) snapshot.get( OrientDBConstant.SYSTEM_VERSION );
-			// throw log.versionNotActual( key, currentVersion );
-			// }
-			/*
-			 * } catch (SQLException sqle) { throw log.cannotExecuteQuery( queryBuffer.toString(), sqle );
-			 */
+			NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
 		}
 		catch (OConcurrentModificationException cme) {
 			throw new StaleObjectStateException( key.getTable(), (Serializable) EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
@@ -234,12 +223,8 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		query = result.getExecutionQuery();
 
 		log.debugf( "insertTuple: insertQuery: %s ", result.getExecutionQuery() );
-		QueryUtil.executeNativeQuery( provider.getConnection(), result.getExecutionQuery() );
-		/*
-		 * try { PreparedStatement pstmt = connection.prepareStatement( result.getExecutionQuery() ); log.debugf(
-		 * "insertTuple:Key: %s (%s) ;inserted or updated: %d ", dbKeyName, dbKeyValue, pstmt.executeUpdate() ); } catch
-		 * (SQLException sqle) { throw log.cannotExecuteQuery( query, sqle ); }
-		 */
+		NativeQueryUtil.executeNonIdempotentQuery( provider.getConnection(), result.getExecutionQuery() );
+
 	}
 
 	@Override
@@ -251,13 +236,9 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		// try {
 		queryBuffer.append( "DELETE VERTEX " ).append( key.getTable() ).append( " where " ).append( EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
 		log.debugf( "removeTuple:Key: %s. query: %s ", key, queryBuffer );
-		QueryUtil.executeNativeQuery( db, queryBuffer );
-		// PreparedStatement pstmt = db.prepareStatement( queryBuffer.toString() );
-		// log.debugf( "removeTuple:Key: %s. remove: %s", key, pstmt.executeUpdate() );
-		// }
-		// catch (SQLException e) {
-		// throw log.cannotExecuteQuery( queryBuffer.toString(), e );
-		// }
+		Number count  = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
+		log.debugf( "removeTuple: removed entities: %d ", count );
+
 	}
 
 	@Override
@@ -391,7 +372,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
 		GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow, false, Collections.<String>emptySet() );
 		log.debugf( "createRelationshipWithNode: query: %s", result.getExecutionQuery() );
-		QueryUtil.executeNativeQuery( provider.getConnection(), result.getExecutionQuery() );
+		NativeQueryUtil.executeIdempotentQuery( provider.getConnection(), result.getExecutionQuery() );
 	}
 
 	private void updateRelationshipWithNode(AssociationKey associationKey, Tuple associationRow,
@@ -401,7 +382,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		if ( AssociationKind.EMBEDDED_COLLECTION.equals( associationKey.getMetadata().getAssociationKind() ) ) {
 			GenerationResult result = UPDATE_QUERY_GENERATOR.generate( associationKey, associationRow );
 			log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
-			QueryUtil.executeNativeQuery( provider.getConnection(), result.getExecutionQuery() );
+			NativeQueryUtil.executeIdempotentQuery( provider.getConnection(), result.getExecutionQuery() );
 			// log.debugf( "updateRelationshipWithNode: execute update query: %d", pstmt.executeUpdate() );
 		}
 		else {
@@ -469,7 +450,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 					key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
 			queryParams.put( key, value.getValue() );
 		}
-		return QueryUtil.executeNativeQueryWithParams( provider.getConnection(), nativeQueryTemplate, queryParams );
+		return NativeQueryUtil.executeIdempotentQueryWithParams( provider.getConnection(), nativeQueryTemplate, queryParams );
 	}
 
 	@Override
