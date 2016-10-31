@@ -80,7 +80,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		long result = 0;
 		Map<String, ClassMetadata> meta = sessionFactory.getAllClassMetadata();
 
-		List<ODocument> docs = QueryUtil.executeNativeQuery( db, COUNT_QUERY );
+		List<ODocument> docs = NativeQueryUtil.executeIdempotentQuery( db, COUNT_QUERY );
 		for ( ODocument doc : docs ) {
 			String className = doc.field( "class", String.class );
 			ClassMetadata metadata = searchMetadata( meta, className );
@@ -100,7 +100,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		long result = 0;
 		Map<String, ClassMetadata> meta = sessionFactory.getAllClassMetadata();
 
-		List<ODocument> docs = QueryUtil.executeNativeQuery( db, COUNT_QUERY );
+		List<ODocument> docs = NativeQueryUtil.executeIdempotentQuery( db, COUNT_QUERY );
 		for ( ODocument doc : docs ) {
 			String className = doc.field( "class", String.class );
 			ClassMetadata metadata = searchMetadata( meta, className );
@@ -140,10 +140,10 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
 		ODatabaseDocumentTx db = provider.getConnection();
 		log.infof( "call prepareDatabase! db closed: %s ", db.isClosed() );
-		QueryUtil.executeNativeQuery( db, "ALTER DATABASE TIMEZONE UTC" );
-		QueryUtil.executeNativeQuery( db, "ALTER DATABASE DATEFORMAT '"
+		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE TIMEZONE UTC" );
+		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATEFORMAT '"
 				.concat( propertyReader.property( OrientDBProperties.DATE_FORMAT, String.class ).withDefault( "yyyy-MM-dd" ).getValue() ).concat( "'" ) );
-		QueryUtil.executeNativeQuery( db, "ALTER DATABASE DATETIMEFORMAT '"
+		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATETIMEFORMAT '"
 				.concat( propertyReader.property( OrientDBProperties.DATETIME_FORMAT, String.class ).withDefault( "yyyy-MM-dd HH:mm:ss" ).getValue() )
 				.concat( "'" ) );
 
@@ -164,7 +164,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 
 		// remove all documents and classes
 		log.info( "try to delete all documents" );
-		List<ODocument> result = QueryUtil.executeNativeQuery( db, "select from V" );
+		List<ODocument> result = NativeQueryUtil.executeIdempotentQuery( db, "select from V" );
 		for ( ODocument doc : result ) {
 			log.infof( "doc: %s ", doc.toJSON() );
 			log.infof( "rid class: %s ", doc.field( "@rid" ).getClass().getName() );
@@ -176,11 +176,11 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		}
 		log.infof( "try to delete classes %s", docClassSet );
 		for ( String docClass : docClassSet ) {
-			QueryUtil.executeNativeQuery( db, String.format( "select executeQuery('drop class %s')", docClass ) );
+			NativeQueryUtil.executeIdempotentQuery( db, String.format( "select executeQuery('drop class %s')", docClass ) );
 		}
 		// remove all functions
 		log.info( "try to delete all functions" );
-		for ( ODocument func : QueryUtil.executeNativeQuery( db, "select from OFunction" ) ) {
+		for ( ODocument func : NativeQueryUtil.executeIdempotentQuery( db, "select from OFunction" ) ) {
 			ORecordId rid = func.field( "@rid", ORecordId.class );
 			log.infof( "delete function by rid %s", rid.toString() );
 			db.delete( rid );
