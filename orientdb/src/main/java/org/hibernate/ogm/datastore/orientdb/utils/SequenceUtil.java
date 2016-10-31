@@ -35,7 +35,7 @@ public class SequenceUtil {
 	 */
 	public static long getNextSequenceValue(ODatabaseDocumentTx db, String seqName) {
 		String query = String.format( "select sequence('%s').next()", seqName );
-		List<ODocument> documents = QueryUtil.executeNativeQuery( db, query );
+		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
 		long nextValue = documents.get( 0 ).field( "sequence", Long.class );
 		/*
 		 * try { Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery( query ); if (
@@ -62,7 +62,7 @@ public class SequenceUtil {
 			int initValue, int inc) {
 		String query = String.format( "select getTableSeqValue('%s','%s','%s','%s',%d,%d) as %s ",
 				seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc, valueColumnName );
-		List<ODocument> documents = QueryUtil.executeNativeQuery( db, query );
+		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
 		long nextValue = documents.get( 0 ).field( valueColumnName, Long.class );
 		/*
 		 * try { Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery( query ); if (

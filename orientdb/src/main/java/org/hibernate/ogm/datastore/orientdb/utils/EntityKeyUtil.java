@@ -80,7 +80,7 @@ public class EntityKeyUtil {
 		buffer.append( "select count(@rid) as c from " );
 		buffer.append( key.getTable() ).append( " where " );
 		buffer.append( generatePrimaryKeyPredicate( key ) );
-		List<ODocument> documents = QueryUtil.executeNativeQuery( db, buffer );
+		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, buffer );
 		Long count = (Long) ( documents.isEmpty() ? 0L : documents.get( 0 ).field( "c", Long.class ) );
 
 		return ( count > 0 );

@@ -78,4 +78,7 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 
 	@Message(id = 1718, value = "Cannot create database %s.")
 	HibernateException cannotCreateDatabase(String database, @Cause Exception cause);
+
+	@Message(id = 1719, value = "Query %s is not idempotent.")
+	HibernateException queryMustBeIdempotentQuery(String query);
 }
