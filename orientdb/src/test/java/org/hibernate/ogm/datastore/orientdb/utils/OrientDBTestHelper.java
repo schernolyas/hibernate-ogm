@@ -76,7 +76,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 	@Override
 	public long getNumberOfEntities(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		long result = 0;
 		Map<String, ClassMetadata> meta = sessionFactory.getAllClassMetadata();
 
@@ -96,7 +96,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 	@Override
 	public long getNumberOfAssociations(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		long result = 0;
 		Map<String, ClassMetadata> meta = sessionFactory.getAllClassMetadata();
 
@@ -138,7 +138,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 	public void prepareDatabase(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		log.infof( "call prepareDatabase! db closed: %s ", db.isClosed() );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE TIMEZONE UTC" );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATEFORMAT '"
@@ -156,7 +156,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		OrientDBProperties.DatabaseTypeEnum databaseType = propertyReader
 				.property( OrientDBProperties.DATEBASE_TYPE, OrientDBProperties.DatabaseTypeEnum.class )
 				.withDefault( OrientDBProperties.DatabaseTypeEnum.MEMORY ).getValue();
-		ODatabaseDocumentTx db = provider.getConnection();
+		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		log.infof( "call dropSchemaAndDatabase! db closed: %b ", db.isClosed() );
 
 		Set<String> docClassSet = new HashSet<>();
