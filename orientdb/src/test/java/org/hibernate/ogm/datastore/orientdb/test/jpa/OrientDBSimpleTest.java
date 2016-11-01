@@ -17,8 +17,12 @@ import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.BuyingOrder;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Customer;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.OrderItem;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Pizza;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Product;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.ProductType;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Status;
 import org.junit.After;
 import org.junit.Before;
@@ -261,7 +265,8 @@ public class OrientDBSimpleTest extends OgmJpaTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { Customer.class, Pizza.class };
+		return new Class<?>[] { Customer.class, Pizza.class, Product.class,BuyingOrder.class, Pizza.class,
+			ProductType.class, OrderItem.class };
 	}
 
 }
