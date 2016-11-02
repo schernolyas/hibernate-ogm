@@ -40,6 +40,17 @@
             <plugin>
                  <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
+            <plugin>
+          		<artifactId>maven-surefire-plugin</artifactId>
+          		<configuration>
+            		<redirectTestOutputToFile>true</redirectTestOutputToFile>
+            		<argLine>${additionalRuntimeArgLine}</argLine>
+            		<reuseForks>false</reuseForks>
+            		<systemPropertyVariables>
+              			<hibernate.service.allow_crawling>false</hibernate.service.allow_crawling>
+            		</systemPropertyVariables>
+          		</configuration>
+        	</plugin>
         </plugins>
     </build>
 
@@ -171,4 +182,5 @@
             <scope>test</scope>
         </dependency>        
     </dependencies>
+    
 </project>

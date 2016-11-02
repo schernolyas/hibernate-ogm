@@ -8,6 +8,7 @@ package org.hibernate.ogm.datastore.orientdb.utils;
 
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 
 import java.util.List;
@@ -52,11 +53,12 @@ public class SequenceUtil {
 	 * @return next value of the sequence
 	 * @throws HibernateException if {@link SQLException} or {@link OException} occurs
 	 */
+	
 	public static long getNextTableValue(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String pkColumnValue, String valueColumnName,
 			int initValue, int inc) {
-		String query = String.format( "select getTableSeqValue('%s','%s','%s','%s',%d,%d) as %s ",
-				seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc, valueColumnName );
-		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
+		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( "getTableSeqValue".toUpperCase() );
+		List<ODocument> documents = (List<ODocument>) executeQuery.execute( seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc,
+				valueColumnName );
 		return documents.get( 0 ).field( valueColumnName, Long.class );
 	}
 }
