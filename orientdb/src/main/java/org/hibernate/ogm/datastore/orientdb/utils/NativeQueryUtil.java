@@ -66,7 +66,7 @@ public class NativeQueryUtil {
 	}
 
 	public static Object executeNonIdempotentQuery(ODatabaseDocumentTx db, String query) {
-		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( "executeQuery" );
+		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( "executeQuery".toUpperCase() );
 		return executeQuery.execute( query );
 	}
 }
