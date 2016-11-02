@@ -26,6 +26,7 @@ import org.hibernate.ogm.model.key.spi.RowKey;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -77,7 +78,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		deleteQuery.append( " return count" );
 
 		log.debugf( "removeAssociation: query: %s ", deleteQuery );
-		Number count  = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, deleteQuery );
+		Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, deleteQuery );
 		log.debugf( "removeAssociation: removed ssociations: %d ", count );
 	}
 
@@ -96,7 +97,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		}
 		deleteQuery.append( " return count" );
 		log.debugf( "removeAssociationRow: delete query: %s; ", deleteQuery );
-		Number count  = (Number) NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
+		Number count = (Number) NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
 		log.debugf( "removeAssociation: removed rows: %d ", count );
 
 	}
@@ -161,7 +162,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		log.debugf( "findRelationship: queryBuilder: %s", queryBuilder );
 		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, queryBuilder );
 		for ( ODocument doc : documents ) {
-			dbValues.add( doc.toMap() );
+			dbValues.add( ODocumentUtil.toMap( doc ) );
 		}
 		log.debugf( "findRelationship: found: %d", dbValues.size() );
 		return dbValues;
