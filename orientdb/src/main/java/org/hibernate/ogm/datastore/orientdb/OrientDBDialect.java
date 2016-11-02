@@ -101,7 +101,7 @@ import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBDialect extends BaseGridDialect
-		implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -232,8 +232,9 @@ public class OrientDBDialect extends BaseGridDialect
 		query = result.getExecutionQuery();
 
 		log.debugf( "insertTuple: insertQuery: %s ", result.getExecutionQuery() );
-		Number updatedRows = (Number) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
-		log.debugf( "insertTuple: Query: %s; Updated rows: %d ", query, updatedRows );
+		ODocument insertedRow = (ODocument) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
+
+		log.debugf( "insertTuple: Query: %s; inserted rows: %d ", query, insertedRow );
 	}
 
 	@Override
@@ -444,16 +445,16 @@ public class OrientDBDialect extends BaseGridDialect
 
 	private List<ODocument> executeNativeQueryWithParams(BackendQuery<String> backendQuery, QueryParameters queryParameters) {
 		Map<String, Object> parameters = getNamedParameterValuesConvertedByGridType( queryParameters );
-		log.debugf( "prepareStatement: parameters: %s ; ",
+		log.debugf( "executeNativeQueryWithParams: parameters: %s ; ",
 				parameters.keySet() );
 		String nativeQueryTemplate = backendQuery.getQuery();
-		log.debugf( "prepareStatement: nativeQuery: %s ; metadata: %s",
+		log.debugf( "executeNativeQueryWithParams: nativeQuery: %s ; metadata: %s",
 				backendQuery.getQuery(), backendQuery.getSingleEntityMetadataInformationOrNull() );
 		Map<String, Object> queryParams = new HashMap<>();
 		for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
 			String key = entry.getKey();
 			TypedGridValue value = entry.getValue();
-			log.debugf( "prepareStatement: key: %s ; type: %s ; value: %s; type class: %s ",
+			log.debugf( "executeNativeQueryWithParams: key: %s ; type: %s ; value: %s; type class: %s ",
 					key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
 			queryParams.put( key, value.getValue() );
 		}

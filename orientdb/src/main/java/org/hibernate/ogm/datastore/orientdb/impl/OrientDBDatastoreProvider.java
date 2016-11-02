@@ -74,6 +74,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 	private ThreadLocal<DateFormat> createFormatter(final ConfigurationPropertyReader propertyReader, final String property, final String defaultFormat) {
 		return new ThreadLocal<DateFormat>() {
+
 			@Override
 			protected DateFormat initialValue() {
 				return new SimpleDateFormat( propertyReader.property( property, String.class ).withDefault( defaultFormat ).getValue() );
