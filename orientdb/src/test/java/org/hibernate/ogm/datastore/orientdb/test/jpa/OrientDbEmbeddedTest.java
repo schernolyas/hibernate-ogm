@@ -18,12 +18,16 @@ import java.util.List;
 import javax.persistence.EntityManager;
 
 import org.apache.log4j.Logger;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.BuyingOrder;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Car;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.CarOwner;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Customer;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.EngineInfo;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.OrderItem;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Pizza;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Producer;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.Product;
+import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.ProductType;
 import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
 import org.junit.After;
 import org.junit.Before;
@@ -208,6 +212,7 @@ public class OrientDbEmbeddedTest extends OgmJpaTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 		return new Class<?>[]{ Car.class, CarOwner.class, Customer.class,
-				EngineInfo.class, Pizza.class, Producer.class };
+				EngineInfo.class, Pizza.class, Producer.class, Product.class,  BuyingOrder.class, 
+				ProductType.class, OrderItem.class };
 	}
 }
