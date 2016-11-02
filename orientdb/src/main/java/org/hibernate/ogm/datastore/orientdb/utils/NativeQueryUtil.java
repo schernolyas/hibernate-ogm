@@ -57,6 +57,7 @@ public class NativeQueryUtil {
 	public static List<ODocument> executeIdempotentQueryWithParams(ODatabaseDocumentTx db, String query, Map<String, Object> queryParams) {
 		OSQLSynchQuery<ODocument> preparedQuery = new OSQLSynchQuery<>( query );
 		List<ODocument> result = db.command( preparedQuery ).execute( queryParams );
+		log.debugf( "loaded rows: %d", result.size() );
 		return result;
 	}
 

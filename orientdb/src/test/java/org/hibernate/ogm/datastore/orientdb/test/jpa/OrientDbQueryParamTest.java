@@ -133,8 +133,6 @@ public class OrientDbQueryParamTest extends OgmJpaTestCase {
 
 	}
 
-
-
 	@Before
 	public void setUp() {
 		em = getFactory().createEntityManager();
@@ -148,9 +146,10 @@ public class OrientDbQueryParamTest extends OgmJpaTestCase {
 		}
 		em.clear();
 	}
+
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { SimpleTypesEntity.class };
+		return new Class<?>[]{ SimpleTypesEntity.class };
 	}
 
 }

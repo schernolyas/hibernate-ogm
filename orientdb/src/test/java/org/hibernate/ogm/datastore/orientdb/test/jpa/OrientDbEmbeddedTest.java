@@ -36,6 +36,7 @@ import org.junit.runners.MethodSorters;
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class OrientDbEmbeddedTest extends OgmJpaTestCase {
+
 	private static final Logger log = Logger.getLogger( OrientDbEmbeddedTest.class.getName() );
 	private EntityManager em;
 
@@ -203,9 +204,10 @@ public class OrientDbEmbeddedTest extends OgmJpaTestCase {
 			throw e;
 		}
 	}
+
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { Car.class,CarOwner.class,Customer.class,
-			EngineInfo.class, Pizza.class, Producer.class };
+		return new Class<?>[]{ Car.class, CarOwner.class, Customer.class,
+				EngineInfo.class, Pizza.class, Producer.class };
 	}
 }
