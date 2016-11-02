@@ -155,7 +155,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 		log.debugf( "findAssociation: query: %s", query );
 		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
 		for ( ODocument doc : documents ) {
-			Map<String, Object> dbValues = doc.toMap();
+			Map<String, Object> dbValues = ODocumentUtil.toMap( doc );
 			for ( String fieldName : dbValues.keySet() ) {
 				if ( dbValues.get( fieldName ) instanceof ODocument ) {
 					dbValues.put( fieldName, ODocumentUtil.extractNamesTree( fieldName, (ODocument) dbValues.get( fieldName ) ) );

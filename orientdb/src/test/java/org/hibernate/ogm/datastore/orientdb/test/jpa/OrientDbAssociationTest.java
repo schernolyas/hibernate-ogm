@@ -40,7 +40,7 @@ import org.junit.runners.MethodSorters;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class OrientDbAssociationTest extends OgmJpaTestCase  {
+public class OrientDbAssociationTest extends OgmJpaTestCase {
 
 	private static final Logger log = Logger.getLogger( OrientDbAssociationTest.class.getName() );
 	private static EntityManager em;
@@ -57,7 +57,6 @@ public class OrientDbAssociationTest extends OgmJpaTestCase  {
 		}
 		em.clear();
 	}
-
 
 	@Test
 	public void test1LinkAllAssociations() throws Exception {
@@ -295,9 +294,10 @@ public class OrientDbAssociationTest extends OgmJpaTestCase  {
 			throw e;
 		}
 	}
+
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { BuyingOrder.class, Pizza.class,
-			Customer.class,ProductType.class,Product.class };
+		return new Class<?>[]{ BuyingOrder.class, Pizza.class,
+				Customer.class, ProductType.class, Product.class };
 	}
 }

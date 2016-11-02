@@ -159,6 +159,7 @@ public class OrientDBSimpleTest extends OgmJpaTestCase {
 			List<Customer> customers = query.getResultList();
 			assertFalse( "Customers must be", customers.isEmpty() );
 			assertEquals( Long.valueOf( 1L ), customers.get( 0 ).getbKey() );
+			assertEquals( 1, customers.size() );
 
 			log.debug( "query: select from " + customers.get( 0 ).getRid().toString() );
 			query = em.createNativeQuery( "select from " + customers.get( 0 ).getRid().toString(), Customer.class );
@@ -177,8 +178,15 @@ public class OrientDBSimpleTest extends OgmJpaTestCase {
 			assertFalse( "Customers must be", customers.isEmpty() );
 
 		}
+		catch (Exception e) {
+			log.error( "Error", e );
+			em.getTransaction().rollback();
+			throw e;
+		}
 		finally {
-			em.getTransaction().commit();
+			if ( em.getTransaction().isActive() && !em.getTransaction().getRollbackOnly() ) {
+				em.getTransaction().commit();
+			}
 		}
 
 	}
@@ -218,7 +226,7 @@ public class OrientDBSimpleTest extends OgmJpaTestCase {
 			em.getTransaction().begin();
 			Long id = 1L;
 			Customer customer = em.find( Customer.class, id );
-			log.debug( "old rid:{0}" + customer.getRid() );
+			log.debug( "old rid:" + customer.getRid().toString() );
 			ORecordId oldRid = customer.getRid();
 			em.refresh( customer );
 			assertNotNull( "Must not be null", customer );
@@ -265,8 +273,8 @@ public class OrientDBSimpleTest extends OgmJpaTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { Customer.class, Pizza.class, Product.class,BuyingOrder.class, Pizza.class,
-			ProductType.class, OrderItem.class };
+		return new Class<?>[]{ Customer.class, Pizza.class, Product.class, BuyingOrder.class, Pizza.class,
+				ProductType.class, OrderItem.class };
 	}
 
 }
