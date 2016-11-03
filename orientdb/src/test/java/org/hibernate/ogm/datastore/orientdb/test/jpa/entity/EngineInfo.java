@@ -6,6 +6,8 @@
  */
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
+
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 
@@ -13,7 +15,7 @@ import javax.persistence.Embedded;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @Embeddable
-public class EngineInfo {
+public class EngineInfo implements Serializable {
 
 	private String title;
 	private int power;

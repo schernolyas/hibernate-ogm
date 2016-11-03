@@ -7,6 +7,7 @@
 
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,7 +34,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 
 @Entity
 @Indexed(index = "BuyingOrder")
-public class BuyingOrder {
+public class BuyingOrder implements Serializable {
 
 	@Id
 	@Column(name = "bKey")

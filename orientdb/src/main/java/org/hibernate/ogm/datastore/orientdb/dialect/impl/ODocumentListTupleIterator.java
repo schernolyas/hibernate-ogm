@@ -41,10 +41,7 @@ public class ODocumentListTupleIterator implements ClosableIterator<Tuple> {
 
 	@Override
 	public Tuple next() {
-		ODocument doc = docIt.next();
-		log.debugf( "tuple json: %s", doc.toJSON() );
-		log.debugf( "tuple map: %s", ODocumentUtil.toMap( doc ) );
-		return new Tuple( new MapTupleSnapshot( ODocumentUtil.toMap( doc ) ), SnapshotType.UNKNOWN );
+		return new Tuple( new MapTupleSnapshot( ODocumentUtil.toMap( docIt.next() ) ), SnapshotType.UNKNOWN );
 	}
 
 	@Override
