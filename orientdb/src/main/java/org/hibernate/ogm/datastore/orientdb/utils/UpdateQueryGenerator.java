@@ -60,7 +60,7 @@ public class UpdateQueryGenerator {
 		StringBuilder updateQuery = generateMainPart( associationKey.getTable(),
 				TupleUtil.toMap( tuple ), whereColumnNames.toArray( new String[1] ) );
 		updateQuery.append( " return count" );
-                // generate 'where' part
+		// generate 'where' part
 		updateQuery.append( " where " );
 
 		for ( Iterator<String> iterator = whereColumnNames.iterator(); iterator.hasNext(); ) {
@@ -72,7 +72,7 @@ public class UpdateQueryGenerator {
 				updateQuery.append( " and " );
 			}
 		}
-		
+
 
 		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
 	}
