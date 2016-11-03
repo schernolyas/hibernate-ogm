@@ -273,8 +273,8 @@ public class OrientDBSimpleTest extends OgmJpaTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[]{ Customer.class, Pizza.class, Product.class, BuyingOrder.class, 
-				ProductType.class, OrderItem.class };
+		return new Class<?>[]{ Customer.class, Pizza.class, Product.class, BuyingOrder.class,
+			ProductType.class, OrderItem.class };
 	}
 
 }
