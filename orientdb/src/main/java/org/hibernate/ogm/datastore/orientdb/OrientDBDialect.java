@@ -101,7 +101,7 @@ import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBDialect extends BaseGridDialect
-implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+		implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -380,8 +380,8 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
 		GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow, false, Collections.<String>emptySet() );
 		log.debugf( "createRelationshipWithNode: query: %s", result.getExecutionQuery() );
-		Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
-		log.debugf( "createRelationshipWithNode: created rows: %d", count );
+		ODocument insertedRow = (ODocument) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
+		log.debugf( "createRelationshipWithNode: created rows: %d", ( insertedRow != null ? 1 : 0 ) );
 	}
 
 	private void updateRelationshipWithNode(AssociationKey associationKey, Tuple associationRow,

@@ -32,7 +32,6 @@ public class SequenceUtil {
 	 * @param connection connection to OrientDB
 	 * @param seqName name of sequence
 	 * @return next value of the sequence
-	 * @throws HibernateException if {@link SQLException} or {@link OException} occurs
 	 */
 	public static long getNextSequenceValue(ODatabaseDocumentTx db, String seqName) {
 		String query = String.format( "select sequence('%s').next()", seqName );
@@ -53,7 +52,7 @@ public class SequenceUtil {
 	 * @return next value of the sequence
 	 * @throws HibernateException if {@link SQLException} or {@link OException} occurs
 	 */
-	
+
 	public static long getNextTableValue(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String pkColumnValue, String valueColumnName,
 			int initValue, int inc) {
 		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( "getTableSeqValue".toUpperCase() );

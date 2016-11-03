@@ -6,10 +6,9 @@
  */
 package org.hibernate.ogm.datastore.orientdb.utils;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
@@ -18,47 +17,26 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
-import java.util.Map;
+
 
 /**
+ * Util class for execute queries by native OrientDB API
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class NativeQueryUtil {
 
 	private static final Log log = LoggerFactory.getLogger();
 
-	@Deprecated
-	public static void setParameters(PreparedStatement pstmt, List<Object> preparedStatementParams) {
-		for ( int i = 0; i < preparedStatementParams.size(); i++ ) {
-			Object value = preparedStatementParams.get( i );
-			try {
-				if ( value instanceof byte[] ) {
-					pstmt.setBytes( i + 1, (byte[]) value );
-				}
-				else {
-					pstmt.setObject( i + 1, value );
-				}
-			}
-			catch (SQLException sqle) {
-				throw log.cannotSetValueForParameter( i + 1, sqle );
-			}
-		}
-	}
-
 	public static List<ODocument> executeIdempotentQuery(ODatabaseDocumentTx db, StringBuilder query) {
 		return executeIdempotentQuery( db, query.toString() );
 	}
 
 	public static List<ODocument> executeIdempotentQuery(ODatabaseDocumentTx db, String query) {
-
 		return executeIdempotentQueryWithParams( db, query, Collections.<String, Object>emptyMap() );
 	}
 
 	public static List<ODocument> executeIdempotentQueryWithParams(ODatabaseDocumentTx db, String query, Map<String, Object> queryParams) {
-		OSQLSynchQuery<ODocument> preparedQuery = new OSQLSynchQuery<>( query );
-		List<ODocument> result = db.command( preparedQuery ).execute( queryParams );
-		log.debugf( "loaded rows: %d", result.size() );
-		return result;
+		return db.command( new OSQLSynchQuery<>( query ) ).execute( queryParams );
 	}
 
 	public static Object executeNonIdempotentQuery(ODatabaseDocumentTx db, StringBuilder query) {

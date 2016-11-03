@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,7 +28,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
  */
 @Entity
 @Indexed(index = "Pizza")
-public class Pizza {
+public class Pizza implements Serializable {
 
 	@Id
 	@Column(name = "bKey")

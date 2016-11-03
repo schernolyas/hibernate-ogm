@@ -6,13 +6,15 @@
  */
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
+
 import javax.persistence.Embeddable;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @Embeddable
-public class Producer {
+public class Producer implements Serializable {
 
 	private String title;
 	private String country;
