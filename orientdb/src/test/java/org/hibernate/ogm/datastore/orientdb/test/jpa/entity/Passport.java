@@ -6,6 +6,8 @@
  */
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
+
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
@@ -15,7 +17,7 @@ import javax.persistence.IdClass;
  */
 @Entity
 @IdClass(PassportPK.class)
-public class Passport {
+public class Passport implements Serializable {
 
 	@Id
 	private int seria;

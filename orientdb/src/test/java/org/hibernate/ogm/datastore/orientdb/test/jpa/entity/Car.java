@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,7 +25,7 @@ import org.hibernate.search.annotations.Indexed;
  */
 @Entity
 @Indexed(index = "Car")
-public class Car {
+public class Car implements Serializable {
 
 	@Id
 	@Column(name = "bKey")

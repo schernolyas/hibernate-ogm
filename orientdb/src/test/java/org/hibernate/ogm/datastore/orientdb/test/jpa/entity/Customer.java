@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -45,7 +46,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 @NamedQueries({
 		@NamedQuery(name = "Customer.findAll", query = "SELECT c FROM Customer c"),
 		@NamedQuery(name = "Country.findByName", query = "SELECT c FROM Customer c WHERE c.name = :name") })
-public class Customer {
+public class Customer implements Serializable {
 
 	private static Log log = LoggerFactory.getLogger();
 

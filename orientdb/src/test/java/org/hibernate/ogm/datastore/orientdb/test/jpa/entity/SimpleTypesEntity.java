@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
 import javax.persistence.Entity;
@@ -19,7 +20,7 @@ import org.hibernate.annotations.Type;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @Entity
-public class SimpleTypesEntity {
+public class SimpleTypesEntity implements Serializable {
 
 	public static enum EnumType {
 		E1, E2;
