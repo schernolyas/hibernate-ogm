@@ -7,6 +7,8 @@
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
 import com.orientechnologies.orient.core.id.ORecordId;
+
+import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
 import javax.persistence.Column;
@@ -21,7 +23,7 @@ import javax.persistence.Version;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @Entity
-public class Writer {
+public class Writer implements Serializable {
 
 	@Id
 	private Long bKey;

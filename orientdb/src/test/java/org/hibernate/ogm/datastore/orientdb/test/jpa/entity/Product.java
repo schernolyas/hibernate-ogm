@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 
@@ -26,7 +27,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
  */
 @Entity
 @Indexed(index = "Product")
-public class Product {
+public class Product implements Serializable {
 
 	@Id
 	@GeneratedValue(generator = "uuid")

@@ -75,7 +75,6 @@ public class OrientDBAssociationQueries extends QueriesBase {
 			default:
 				throw new AssertionFailure( "Unrecognized associationKind: " + associationKey.getMetadata().getAssociationKind() );
 		}
-		deleteQuery.append( " return count" );
 
 		log.debugf( "removeAssociation: query: %s ", deleteQuery );
 		Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, deleteQuery );
@@ -95,9 +94,8 @@ public class OrientDBAssociationQueries extends QueriesBase {
 				deleteQuery.append( " AND " );
 			}
 		}
-		deleteQuery.append( " return count" );
 		log.debugf( "removeAssociationRow: delete query: %s; ", deleteQuery );
-		Number count = (Number) NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
+		Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, deleteQuery );
 		log.debugf( "removeAssociation: removed rows: %d ", count );
 
 	}

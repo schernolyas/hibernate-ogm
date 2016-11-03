@@ -7,6 +7,7 @@
 
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Objects;
 
@@ -28,7 +29,7 @@ import com.orientechnologies.orient.core.id.ORecordId;
 
 @Entity
 @Indexed(index = "OrderItem")
-public class OrderItem {
+public class OrderItem implements Serializable {
 
 	@Id
 	@Column(name = "bKey")

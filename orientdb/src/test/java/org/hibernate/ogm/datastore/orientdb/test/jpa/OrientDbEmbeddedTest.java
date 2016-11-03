@@ -47,7 +47,6 @@ public class OrientDbEmbeddedTest extends OgmJpaTestCase {
 	@Before
 	public void setUp() {
 		em = getFactory().createEntityManager();
-
 	}
 
 	@After
@@ -112,7 +111,9 @@ public class OrientDbEmbeddedTest extends OgmJpaTestCase {
 		}
 		catch (Exception e) {
 			log.error( "Error", e );
-			em.getTransaction().rollback();
+			if ( em.getTransaction().isActive() ) {
+				em.getTransaction().rollback();
+			}
 			throw e;
 		}
 	}
@@ -139,7 +140,9 @@ public class OrientDbEmbeddedTest extends OgmJpaTestCase {
 		}
 		catch (Exception e) {
 			log.error( "Error", e );
-			em.getTransaction().rollback();
+			if ( em.getTransaction().isActive() ) {
+				em.getTransaction().rollback();
+			}
 			throw e;
 		}
 	}
@@ -171,7 +174,9 @@ public class OrientDbEmbeddedTest extends OgmJpaTestCase {
 		}
 		catch (Exception e) {
 			log.error( "Error", e );
-			em.getTransaction().rollback();
+			if ( em.getTransaction().isActive() ) {
+				em.getTransaction().rollback();
+			}
 			throw e;
 		}
 	}
@@ -204,7 +209,9 @@ public class OrientDbEmbeddedTest extends OgmJpaTestCase {
 		}
 		catch (Exception e) {
 			log.error( "Error", e );
-			em.getTransaction().rollback();
+			if ( em.getTransaction().isActive() ) {
+				em.getTransaction().rollback();
+			}
 			throw e;
 		}
 	}
@@ -212,7 +219,7 @@ public class OrientDbEmbeddedTest extends OgmJpaTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 		return new Class<?>[]{ Car.class, CarOwner.class, Customer.class,
-				EngineInfo.class, Pizza.class, Producer.class, Product.class,  BuyingOrder.class, 
+				EngineInfo.class, Pizza.class, Producer.class, Product.class, BuyingOrder.class,
 				ProductType.class, OrderItem.class };
 	}
 }
