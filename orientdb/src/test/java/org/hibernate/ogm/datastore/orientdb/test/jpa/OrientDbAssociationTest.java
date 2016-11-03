@@ -142,7 +142,7 @@ public class OrientDbAssociationTest extends OgmJpaTestCase {
 		}
 	}
 
-	//@Test
+	@Test
 	public void test2AddNewAssociations() throws Exception {
 		log.debug( "start" );
 		try {
@@ -185,7 +185,7 @@ public class OrientDbAssociationTest extends OgmJpaTestCase {
 		}
 	}
 
-	//@Test
+	@Test
 	public void test3EditAssociations() throws Exception {
 		log.debug( "start" );
 		try {
@@ -222,7 +222,7 @@ public class OrientDbAssociationTest extends OgmJpaTestCase {
 		}
 	}
 
-	//@Test
+	@Test
 	public void test4RemoveAssociations() throws Exception {
 		log.debug( "start" );
 		try {
@@ -268,7 +268,7 @@ public class OrientDbAssociationTest extends OgmJpaTestCase {
 		}
 	}
 
-	//@Test
+	@Test
 	public void test5ReadAllAssociations() throws Exception {
 		log.debug( "start" );
 		try {
