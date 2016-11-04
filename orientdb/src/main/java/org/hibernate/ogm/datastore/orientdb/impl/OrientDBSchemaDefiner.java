@@ -41,6 +41,10 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
+import com.orientechnologies.orient.core.metadata.sequence.OSequence;
+import com.orientechnologies.orient.core.metadata.sequence.OSequence.CreateParams;
+import com.orientechnologies.orient.core.metadata.sequence.OSequence.SEQUENCE_TYPE;
+
 import org.hibernate.boot.model.relational.Sequence;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBMapping;
@@ -84,18 +88,11 @@ public class OrientDBSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	private void createSequence(ODatabaseDocumentTx db, String name, int startValue, int incValue) {
-		// try {
-		String query = String.format( "CREATE SEQUENCE %s TYPE ORDERED START %d INCREMENT %d", name, ( startValue == 0 ? 0 : startValue - 1 ), incValue );
-		log.debugf( "query for create sequnce: %s", query );
-		NativeQueryUtil.executeNonIdempotentQuery( db, query );
-		/*
-		 * } catch (SQLException sqle) { log.debugf( "sqle.getCause(): %s", sqle.getCause() ); if ( sqle.getCause()
-		 * instanceof OSequenceException && sqle.getCause().getMessage().contains( "already exists!" ) ) { try { String
-		 * query = String.format( "ALTER SEQUENCE %s START %d INCREMENT %d", name, ( startValue == 0 ? 0 : startValue -
-		 * 1 ), incValue ); log.debugf( "query for alter sequnce: %s", query ); QueryUtil.executeNativeQuery( db, query
-		 * ); } catch (SQLException sqle1) { throw log.cannotGenerateSequence( name, sqle1 ); } } else { throw
-		 * log.cannotGenerateSequence( name, sqle ); } }
-		 */
+		CreateParams p = new CreateParams();
+		p.setStart( (long) ( startValue == 0 ? 0 : startValue - 1 ) );
+		p.setIncrement( incValue );
+		OSequence seq = db.getMetadata().getSequenceLibrary().createSequence( name, SEQUENCE_TYPE.ORDERED, p );
+		log.debugf( " sequence  %s created ", seq.getName() );
 	}
 
 	private void createTableSequence(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String valueColumnName) {
