@@ -24,11 +24,7 @@ import org.hibernate.ogm.type.impl.YesNoType;
 import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
-import org.junit.runners.Parameterized;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -36,26 +32,13 @@ import static org.junit.Assert.assertEquals;
  *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@RunWith(Parameterized.class)
+
 public class OrientDbQueryParamTest extends OgmJpaTestCase {
 
 	private static final Logger log = Logger.getLogger( OrientDbQueryParamTest.class.getName() );
 	private static EntityManager em;
 
-	@Parameterized.Parameter(value = 0)
-	public Class searchByClass;
-	@Parameterized.Parameter(value = 1)
-	public Object searchByValue;
-	@Parameterized.Parameter(value = 2)
-	public String paramName;
-	@Parameterized.Parameter(value = 3)
-	public Integer requiredCount;
-	@Parameterized.Parameter(value = 4)
-	public SimpleTypesEntity preparedEntity;
-
-	@Parameterized.Parameters(name = "class:{0}")
-	public static Iterable<Object[]> prepareData() throws ParseException {
+	public static Iterable<Object[]> prepareTestData() throws ParseException {
 		TimeZone.setDefault( TimeZone.getTimeZone( "UTC" ) );
 		List<Object[]> list = new LinkedList<>();
 
@@ -110,7 +93,23 @@ public class OrientDbQueryParamTest extends OgmJpaTestCase {
 	}
 
 	@Test
-	public void testSearchBy() {
+	public void testSearchBy() throws ParseException {
+		for ( Object[] paramArray : prepareTestData() ) {
+
+			@SuppressWarnings("rawtypes")
+			Class searchByClass = (Class) paramArray[0];
+			Object searchByValue = paramArray[1];
+			String paramName = (String) paramArray[2];
+			Integer requiredCount = (Integer) paramArray[3];
+			SimpleTypesEntity preparedEntity = (SimpleTypesEntity) paramArray[4];
+
+			testSearchBy( searchByClass, searchByValue, paramName, requiredCount, preparedEntity );
+
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	private void testSearchBy(Class searchByClass, Object searchByValue, String paramName, Integer requiredCount, SimpleTypesEntity preparedEntity) {
 
 		try {
 			em.getTransaction().begin();
@@ -122,7 +121,7 @@ public class OrientDbQueryParamTest extends OgmJpaTestCase {
 
 			Query query = em.createNativeQuery( "select from SimpleTypesEntity where " + paramName + "=:" + paramName, SimpleTypesEntity.class );
 			query.setParameter( paramName, searchByValue );
-			assertEquals( requiredCount, Integer.valueOf( query.getResultList().size() ) );
+			assertEquals( String.format( "Incorrect search by class %s", searchByClass ), requiredCount, Integer.valueOf( query.getResultList().size() ) );
 			em.getTransaction().commit();
 		}
 		catch (Exception e) {

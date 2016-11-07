@@ -71,6 +71,9 @@ public class OrientDBConstant {
 	public static final String GRAPTH_DATABASE_TYPE = "graph";
 	public static final String DOCUMENT_DATABASE_TYPE = "document";
 
+	public static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd";
+	public static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+
 	static {
 		Set<String> set = new HashSet<>();
 		set.add( SYSTEM_RID );
