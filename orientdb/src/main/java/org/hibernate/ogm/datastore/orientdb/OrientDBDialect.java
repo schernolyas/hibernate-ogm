@@ -454,7 +454,7 @@ public class OrientDBDialect extends BaseGridDialect
 		for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
 			String key = entry.getKey();
 			TypedGridValue value = entry.getValue();
-			log.debugf( "executeNativeQueryWithParams: key: %s ; type: %s ; value: %s; type class: %s ",
+			log.debugf( "executeNativeQueryWithParams: paramName: %s ; type: %s ; value: %s; type class: %s ",
 					key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
 			queryParams.put( key, value.getValue() );
 		}
