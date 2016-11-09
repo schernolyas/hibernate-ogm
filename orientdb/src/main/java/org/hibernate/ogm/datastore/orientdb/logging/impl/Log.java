@@ -59,7 +59,7 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 	HibernateException cannotParseEmbeddedClass(String column, String json, @Cause Exception cause);
 
 	@Message(id = 1712, value = "Sequence %s not exists.")
-	HibernateException sequenceNotExists(String sequenceName, @Cause Exception cause);
+	HibernateException sequenceNotExists(String sequenceName);
 
 	@Message(id = 1713, value = "Cannot create stored procedure %s .")
 	HibernateException cannotCreateStoredProcedure(String storedProcName, @Cause Exception cause);

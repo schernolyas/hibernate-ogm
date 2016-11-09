@@ -49,7 +49,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		log.debugf( "removeAssociation: %s ;associationKey: %s;", associationKey );
 		log.debugf( "removeAssociation: AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
 		log.debugf( "removeAssociation: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
-		StringBuilder deleteQuery = null;
+		StringBuilder deleteQuery = new StringBuilder( "select from " );
 		String columnName = null;
 		log.debugf( "removeAssociation:%s", associationKey.getMetadata().getAssociationKind() );
 		log.debugf( "removeAssociation:getRoleOnMainSide:%s", associationContext.getAssociationTypeContext().getRoleOnMainSide() );
@@ -57,7 +57,6 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		log.debugf( "removeAssociation:AssociatedEntityKeyMetadata:%s", associationKey.getMetadata().getAssociatedEntityKeyMetadata() );
 		switch ( associationKey.getMetadata().getAssociationKind() ) {
 			case EMBEDDED_COLLECTION:
-				deleteQuery = new StringBuilder( "delete vertex " );
 				deleteQuery.append( associationKey.getTable() ).append( " where " );
 				columnName = associationKey.getColumnNames()[0];
 				deleteQuery.append( columnName ).append( "=" );
@@ -67,8 +66,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 				String tableName = associationKey.getTable();
 				log.debugf( "removeAssociation:getColumnNames:%s", Arrays.asList( associationKey.getColumnNames() ) );
 				columnName = associationKey.getColumnNames()[0];
-				deleteQuery = new StringBuilder( 100 );
-				deleteQuery.append( "delete vertex " ).append( tableName ).append( " where " );
+				deleteQuery.append( tableName ).append( " where " );
 				deleteQuery.append( columnName ).append( "=" );
 				EntityKeyUtil.setFieldValue( deleteQuery, associationKey.getColumnValues()[0] );
 				break;
@@ -76,27 +74,33 @@ public class OrientDBAssociationQueries extends QueriesBase {
 				throw new AssertionFailure( "Unrecognized associationKind: " + associationKey.getMetadata().getAssociationKind() );
 		}
 
-		log.debugf( "removeAssociation: query: %s ", deleteQuery );
-		Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, deleteQuery );
-		log.debugf( "removeAssociation: removed ssociations: %d ", count );
+		log.debugf( "removeAssociation: query for loading document for remove: %s ", deleteQuery );
+		List<ODocument> removeDocs = NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
+		for ( ODocument removeDoc : removeDocs ) {
+			removeDoc.delete();
+		}
+		log.debugf( "removeAssociation: removed ssociations: %d ", removeDocs.size() );
 	}
 
 	public void removeAssociationRow(ODatabaseDocumentTx db, AssociationKey associationKey, RowKey rowKey) {
 		log.debugf( "removeAssociationRow: associationKey: %s; RowKey:%s ", associationKey, rowKey );
-		StringBuilder deleteQuery = new StringBuilder( 100 );
-		deleteQuery.append( "delete vertex " ).append( associationKey.getTable() ).append( " where " );
+		StringBuilder loadingDocsForDelete = new StringBuilder( 100 );
+		loadingDocsForDelete.append( "select " ).append( associationKey.getTable() ).append( " where " );
 		for ( int i = 0; i < rowKey.getColumnNames().length; i++ ) {
 			String columnName = rowKey.getColumnNames()[i];
 			Object columnValue = rowKey.getColumnValues()[i];
-			deleteQuery.append( columnName ).append( "=" );
-			EntityKeyUtil.setFieldValue( deleteQuery, columnValue );
+			loadingDocsForDelete.append( columnName ).append( "=" );
+			EntityKeyUtil.setFieldValue( loadingDocsForDelete, columnValue );
 			if ( i < rowKey.getColumnNames().length - 1 ) {
-				deleteQuery.append( " AND " );
+				loadingDocsForDelete.append( " AND " );
 			}
 		}
-		log.debugf( "removeAssociationRow: delete query: %s; ", deleteQuery );
-		Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, deleteQuery );
-		log.debugf( "removeAssociation: removed rows: %d ", count );
+		log.debugf( "removeAssociationRow: delete query: %s; ", loadingDocsForDelete );
+		List<ODocument> removeDocs = NativeQueryUtil.executeIdempotentQuery( db, loadingDocsForDelete );
+		for ( ODocument removeDoc : removeDocs ) {
+			removeDoc.delete();
+		}
+		log.debugf( "removeAssociation: removed rows: %d ", removeDocs.size() );
 
 	}
 
