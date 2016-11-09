@@ -37,6 +37,8 @@ import org.hibernate.ogm.utils.GridDialectTestHelper;
 import com.orientechnologies.orient.client.remote.OServerAdmin;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.id.ORecordId;
+import com.orientechnologies.orient.core.metadata.function.OFunctionLibrary;
+import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import java.util.HashSet;
 import java.util.List;
@@ -136,15 +138,19 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 
 	@Override
 	public void prepareDatabase(SessionFactory sessionFactory) {
+		log.info( "--- preparing database ----" );
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		log.infof( "call prepareDatabase! db closed: %s ", db.isClosed() );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE TIMEZONE UTC" );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATEFORMAT '"
-				.concat( propertyReader.property( OrientDBProperties.DATE_FORMAT, String.class ).withDefault( "yyyy-MM-dd" ).getValue() ).concat( "'" ) );
+				.concat( propertyReader.property( OrientDBProperties.DATE_FORMAT, String.class ).withDefault( OrientDBConstant.DEFAULT_DATE_FORMAT )
+						.getValue() )
+				.concat( "'" ) );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATETIMEFORMAT '"
-				.concat( propertyReader.property( OrientDBProperties.DATETIME_FORMAT, String.class ).withDefault( "yyyy-MM-dd HH:mm:ss" ).getValue() )
+				.concat( propertyReader.property( OrientDBProperties.DATETIME_FORMAT, String.class ).withDefault( OrientDBConstant.DEFAULT_DATETIME_FORMAT )
+						.getValue() )
 				.concat( "'" ) );
 
 	}
@@ -153,9 +159,9 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
-		OrientDBProperties.DatabaseTypeEnum databaseType = propertyReader
-				.property( OrientDBProperties.DATEBASE_TYPE, OrientDBProperties.DatabaseTypeEnum.class )
-				.withDefault( OrientDBProperties.DatabaseTypeEnum.MEMORY ).getValue();
+		OrientDBProperties.StorageModeEnum databaseType = propertyReader
+				.property( OrientDBProperties.STORAGE_MODE_TYPE, OrientDBProperties.StorageModeEnum.class )
+				.withDefault( OrientDBProperties.StorageModeEnum.MEMORY ).getValue();
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		log.infof( "call dropSchemaAndDatabase! db closed: %b ", db.isClosed() );
 
@@ -175,24 +181,27 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 			db.delete( rid );
 		}
 		log.infof( "try to delete classes %s", docClassSet );
+		OSchema schema = db.getMetadata().getSchema();
 		for ( String docClass : docClassSet ) {
-			NativeQueryUtil.executeIdempotentQuery( db, String.format( "select executeQuery('drop class %s')", docClass ) );
+			if ( schema.existsClass( docClass ) ) {
+				schema.dropClass( docClass );
+			}
 		}
 		// remove all functions
 		log.info( "try to delete all functions" );
-		for ( ODocument func : NativeQueryUtil.executeIdempotentQuery( db, "select from OFunction" ) ) {
-			ORecordId rid = func.field( "@rid", ORecordId.class );
-			log.infof( "delete function by rid %s", rid.toString() );
-			db.delete( rid );
+		OFunctionLibrary functionLibrary = db.getMetadata().getFunctionLibrary();
+		for ( String funcName : functionLibrary.getFunctionNames() ) {
+			log.infof( "delete function by rid %s", funcName );
+			functionLibrary.dropFunction( funcName );
 		}
-		String user = propertyReader.property( OgmProperties.USERNAME, String.class ).getValue();
-		String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
+		String rootUser = propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
+		String rootPassword = propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
 		String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
 		String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
-		if ( OrientDBProperties.DatabaseTypeEnum.REMOTE.equals( databaseType ) ) {
+		if ( OrientDBProperties.StorageModeEnum.REMOTE.equals( databaseType ) ) {
 			OServerAdmin serverAdmin = null;
 			try {
-				serverAdmin = new OServerAdmin( "remote:" + host ).connect( user, password );
+				serverAdmin = new OServerAdmin( "remote:" + host ).connect( rootUser, rootPassword );
 				serverAdmin.dropDatabase( database, OrientDBConstant.PLOCAL_STORAGE_TYPE );
 			}
 			catch (IOException ioe) {
