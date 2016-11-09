@@ -36,7 +36,7 @@ public class NativeQueryUtil {
 	}
 
 	public static List<ODocument> executeIdempotentQueryWithParams(ODatabaseDocumentTx db, String query, Map<String, Object> queryParams) {
-		return db.command( new OSQLSynchQuery<>( query ) ).execute( queryParams );
+		return db.command( new OSQLSynchQuery<ODocument>( query ) ).execute( queryParams );
 	}
 
 	public static Object executeNonIdempotentQuery(ODatabaseDocumentTx db, StringBuilder query) {

@@ -8,6 +8,7 @@ package org.hibernate.ogm.datastore.orientdb.test.jpa;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.TimeZone;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import org.apache.log4j.Logger;
+import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.test.jpa.entity.SimpleTypesEntity;
 import org.hibernate.ogm.type.impl.EnumType;
 import org.hibernate.ogm.type.impl.NumericBooleanType;
@@ -77,13 +79,17 @@ public class OrientDbQueryParamTest extends OgmJpaTestCase {
 		entity9.setE2( SimpleTypesEntity.EnumType.E2 );
 		list.add( new Object[]{ EnumType.class, "E2", "e2", 1, entity9 } );
 
-		SimpleDateFormat df1 = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss z" );
-		Date now = df1.parse( df1.format( new Date() ) );
-		SimpleTypesEntity entity10 = new SimpleTypesEntity( 10L );
-		entity10.setCreatedTimestamp( now );
-		list.add( new Object[]{ TimestampType.class, now, "createdTimestamp", 1, entity10 } );
+		Calendar calendar = Calendar.getInstance();
+		Date now = calendar.getTime();
 
-		SimpleDateFormat df2 = new SimpleDateFormat( "yyyy-MM-dd z" );
+		SimpleDateFormat df1 = new SimpleDateFormat( OrientDBConstant.DEFAULT_DATETIME_FORMAT );
+		Date correctedNow = df1.parse( df1.format( now ) );
+		log.info( "CreatedTimestamp :" + df1.format( now ) + "; " + df1.format( correctedNow ) );
+		SimpleTypesEntity entity10 = new SimpleTypesEntity( 10L );
+		entity10.setCreatedTimestamp( correctedNow );
+		list.add( new Object[]{ TimestampType.class, correctedNow, "createdTimestamp", 1, entity10 } );
+
+		SimpleDateFormat df2 = new SimpleDateFormat( OrientDBConstant.DEFAULT_DATE_FORMAT );
 		Date today = df2.parse( df2.format( new Date() ) );
 		SimpleTypesEntity entity11 = new SimpleTypesEntity( 11L );
 		entity11.setCreatedDate( today );

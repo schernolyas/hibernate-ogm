@@ -83,6 +83,7 @@ import com.orientechnologies.orient.core.exception.OConcurrentModificationExcept
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
+import org.hibernate.ogm.model.spi.EntityMetadataInformation;
 
 /**
  * Implementation of dialect for OrientDB
@@ -101,7 +102,7 @@ import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class OrientDBDialect extends BaseGridDialect
-		implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -243,10 +244,13 @@ public class OrientDBDialect extends BaseGridDialect
 				key, tupleContext, Thread.currentThread().getName() );
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		StringBuilder queryBuffer = new StringBuilder( 100 );
-		queryBuffer.append( "DELETE VERTEX " ).append( key.getTable() ).append( " where " ).append( EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
+		queryBuffer.append( "select from " ).append( key.getTable() ).append( " where " ).append( EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
 		log.debugf( "removeTuple:Key: %s. query: %s ", key, queryBuffer );
-		Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
-		log.debugf( "removeTuple: removed entities: %d ", count );
+		List<ODocument> removeDocs = NativeQueryUtil.executeIdempotentQuery( db, queryBuffer );
+		for ( ODocument removeDoc : removeDocs ) {
+			removeDoc.delete();
+		}
+		log.debugf( "removeTuple: removed entities: %d ", removeDocs.size() );
 	}
 
 	@Override
@@ -448,8 +452,9 @@ public class OrientDBDialect extends BaseGridDialect
 		log.debugf( "executeNativeQueryWithParams: parameters: %s ; ",
 				parameters.keySet() );
 		String nativeQueryTemplate = backendQuery.getQuery();
+		EntityMetadataInformation queryMetadata = backendQuery.getSingleEntityMetadataInformationOrNull();
 		log.debugf( "executeNativeQueryWithParams: nativeQuery: %s ; metadata: %s",
-				backendQuery.getQuery(), backendQuery.getSingleEntityMetadataInformationOrNull() );
+				backendQuery.getQuery(), queryMetadata.toString() );
 		Map<String, Object> queryParams = new HashMap<>();
 		for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
 			String key = entry.getKey();
@@ -458,6 +463,8 @@ public class OrientDBDialect extends BaseGridDialect
 					key, value.getType(), value.getValue(), value.getType().getReturnedClass() );
 			queryParams.put( key, value.getValue() );
 		}
+		log.debugf( "executeNativeQueryWithParams: nativeQuery: %s ; params: %s",
+				backendQuery.getQuery(), queryParams );
 		return NativeQueryUtil.executeIdempotentQueryWithParams( provider.getCurrentDatabase(), nativeQueryTemplate, queryParams );
 	}
 
