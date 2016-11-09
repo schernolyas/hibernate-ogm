@@ -9,9 +9,8 @@ package org.hibernate.ogm.datastore.orientdb.utils;
 import com.orientechnologies.common.exception.OException;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
-import com.orientechnologies.orient.core.record.impl.ODocument;
-
-import java.util.List;
+import com.orientechnologies.orient.core.metadata.sequence.OSequence;
+import com.orientechnologies.orient.core.metadata.sequence.OSequenceLibrary;
 
 import org.hibernate.HibernateException;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
@@ -25,24 +24,29 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 public class SequenceUtil {
 
 	private static final Log log = LoggerFactory.getLogger();
+	private static final String FUNC_NAME = "getTableSeqValue".toUpperCase();
 
 	/**
 	 * Get next value from sequence
 	 *
-	 * @param connection connection to OrientDB
+	 * @param db instance of OrientDB
 	 * @param seqName name of sequence
 	 * @return next value of the sequence
 	 */
 	public static long getNextSequenceValue(ODatabaseDocumentTx db, String seqName) {
-		String query = String.format( "select sequence('%s').next()", seqName );
-		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
-		return documents.get( 0 ).field( "sequence", Long.class );
+		String seqNameUpper = seqName.toUpperCase();
+		OSequenceLibrary library = db.getMetadata().getSequenceLibrary();
+		if ( !library.getSequenceNames().contains( seqNameUpper ) ) {
+			throw log.sequenceNotExists( seqName );
+		}
+		OSequence sequence = library.getSequence( seqNameUpper );
+		return sequence.next();
 	}
 
 	/**
 	 * Get next value from table generator. Stored procedure 'getTableSeqValue' uses for generate value
 	 *
-	 * @param connection connection to OrientDB
+	 * @param db instance of OrientDB
 	 * @param seqTable name of table that uses for generate values
 	 * @param pkColumnName name of column that contains name of sequence
 	 * @param pkColumnValue value of name of sequence
@@ -54,10 +58,9 @@ public class SequenceUtil {
 	 */
 
 	public static long getNextTableValue(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String pkColumnValue, String valueColumnName,
-			int initValue, int inc) {
-		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( "getTableSeqValue".toUpperCase() );
-		List<ODocument> documents = (List<ODocument>) executeQuery.execute( seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc,
-				valueColumnName );
-		return documents.get( 0 ).field( valueColumnName, Long.class );
+			Integer initValue, Integer inc) {
+		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( FUNC_NAME );
+		return ( (Long) executeQuery.execute( seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc ) );
 	}
+
 }
