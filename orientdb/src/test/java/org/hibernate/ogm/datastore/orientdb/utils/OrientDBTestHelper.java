@@ -36,13 +36,10 @@ import org.hibernate.ogm.utils.GridDialectTestHelper;
 
 import com.orientechnologies.orient.client.remote.OServerAdmin;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
-import com.orientechnologies.orient.core.id.ORecordId;
-import com.orientechnologies.orient.core.metadata.function.OFunctionLibrary;
+import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -67,32 +64,39 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 
 	@Override
 	public long getNumberOfEntities(Session session) {
-		return 0;
+                SessionFactory sessionFactory = session.getSessionFactory();
+		return getNumberOfEntities(sessionFactory);
 	}
-
-	@Override
-	public long getNumberOfAssociations(Session session) {
-		return 0;
-	}
-
+        
+        private boolean isSystemClass(OClass schemaClass) {
+            boolean result = (schemaClass.getName().charAt(0)=='O' && Character.isUpperCase(schemaClass.getName().charAt(1))) ||
+                    (schemaClass.getName().equals("E")) || 
+                    (schemaClass.getName().equals("V")) || 
+                    (schemaClass.getName().equals("sequences"));
+            return result;
+        }
+        
+        
 	@Override
 	public long getNumberOfEntities(SessionFactory sessionFactory) {
-		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
-		long result = 0;
-		Map<String, ClassMetadata> meta = sessionFactory.getAllClassMetadata();
-
-		List<ODocument> docs = NativeQueryUtil.executeIdempotentQuery( db, COUNT_QUERY );
-		for ( ODocument doc : docs ) {
-			String className = doc.field( "class", String.class );
-			ClassMetadata metadata = searchMetadata( meta, className );
-			if ( metadata != null ) {
-				Long l = doc.field( "c", Long.class );
-				result += l;
-			}
-		}
+                OrientDBDatastoreProvider provider = getProvider( sessionFactory );
+                ODatabaseDocumentTx db = provider.getCurrentDatabase();
+                long result = 0;
+		OSchema schema = db.getMetadata().getSchema();
+                for (OClass schemaClass : schema.getClasses()) {
+                    if (!isSystemClass(schemaClass)) {
+                        List<ODocument> docs = NativeQueryUtil.executeIdempotentQuery( db, "select from "+schemaClass.getName() );
+                        log.debugf("found %d entities in class %s ", docs.size(),schemaClass.getName());
+                        result += docs.size();
+                    }
+                }
 		return result;
-
+	}
+        
+        @Override
+	public long getNumberOfAssociations(Session session) {
+                SessionFactory sessionFactory = session.getSessionFactory();
+		return getNumberOfAssociations(sessionFactory);
 	}
 
 	@Override
@@ -100,7 +104,8 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		long result = 0;
-		Map<String, ClassMetadata> meta = sessionFactory.getAllClassMetadata();
+                log.debugf("sessionFactory.getAllCollectionMetadata(): %s", sessionFactory.getAllCollectionMetadata());
+		/*Map<String, ClassMetadata> meta = sessionFactory.getAllCollectionMetadata();
 
 		List<ODocument> docs = NativeQueryUtil.executeIdempotentQuery( db, COUNT_QUERY );
 		for ( ODocument doc : docs ) {
@@ -110,7 +115,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 				Long l = doc.field( "c", Long.class );
 				result += l;
 			}
-		}
+		} */
 		return result;
 
 	}
@@ -154,51 +159,19 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 				.concat( "'" ) );
 
 	}
-
-	@Override
-	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
-		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
+        public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
+            OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
 		OrientDBProperties.StorageModeEnum databaseType = propertyReader
 				.property( OrientDBProperties.STORAGE_MODE_TYPE, OrientDBProperties.StorageModeEnum.class )
 				.withDefault( OrientDBProperties.StorageModeEnum.MEMORY ).getValue();
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
-		log.infof( "call dropSchemaAndDatabase! db closed: %b ", db.isClosed() );
-
-		Set<String> docClassSet = new HashSet<>();
-		docClassSet.add( "sequences" );
-
-		// remove all documents and classes
-		log.info( "try to delete all documents" );
-		List<ODocument> result = NativeQueryUtil.executeIdempotentQuery( db, "select from V" );
-		for ( ODocument doc : result ) {
-			log.infof( "doc: %s ", doc.toJSON() );
-			log.infof( "rid class: %s ", doc.field( "@rid" ).getClass().getName() );
-			log.infof( "class class: %s ", doc.field( "@class" ).getClass().getName() );
-			String docClass = doc.field( "@class", String.class );
-			ORecordId rid = doc.field( "@rid", ORecordId.class );
-			docClassSet.add( docClass );
-			db.delete( rid );
-		}
-		log.infof( "try to delete classes %s", docClassSet );
-		OSchema schema = db.getMetadata().getSchema();
-		for ( String docClass : docClassSet ) {
-			if ( schema.existsClass( docClass ) ) {
-				schema.dropClass( docClass );
-			}
-		}
-		// remove all functions
-		log.info( "try to delete all functions" );
-		OFunctionLibrary functionLibrary = db.getMetadata().getFunctionLibrary();
-		for ( String funcName : functionLibrary.getFunctionNames() ) {
-			log.infof( "delete function by rid %s", funcName );
-			functionLibrary.dropFunction( funcName );
-		}
-		String rootUser = propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
-		String rootPassword = propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
-		String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
+		log.infof( "call dropSchemaAndDatabase! db closed: %b ", db.isClosed() );                		
 		String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
 		if ( OrientDBProperties.StorageModeEnum.REMOTE.equals( databaseType ) ) {
+                        String rootUser = propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
+                        String rootPassword = propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
+                        String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
 			OServerAdmin serverAdmin = null;
 			try {
 				serverAdmin = new OServerAdmin( "remote:" + host ).connect( rootUser, rootPassword );
@@ -213,12 +186,13 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 				}
 
 			}
-		}
-	}
+		} else {                    
+                    db.drop();
+                }
+        }
 
 	@Override
 	public Map<String, String> getEnvironmentProperties() {
-
 		return readProperties();
 	}
 
