@@ -122,9 +122,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 				pool.setAutoCreate( true );
 				ODatabaseDocumentTx db = pool.acquire();
 				log.debugf( "db.isClosed(): %b", db.isClosed() );
-				log.debugf( "db.isActiveOnCurrentThread(): %b", db.isActiveOnCurrentThread() );
-				// db.open(user, password);
-				// db.create();
+				log.debugf( "db.isActiveOnCurrentThread(): %b", db.isActiveOnCurrentThread() );				
 			}
 			catch (Exception e) {
 				log.error( "Database creation error!", e );
