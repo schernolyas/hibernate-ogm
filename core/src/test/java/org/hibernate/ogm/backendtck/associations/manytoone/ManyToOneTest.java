@@ -21,6 +21,7 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.ogm.utils.GridDialectType;
 import org.hibernate.ogm.utils.OgmTestCase;
+import org.hibernate.ogm.utils.SkipByGridDialect;
 import org.hibernate.ogm.utils.SkipByHelper;
 import org.hibernate.ogm.utils.TestForIssue;
 import org.hibernate.ogm.utils.TestHelper;
@@ -311,6 +312,7 @@ public class ManyToOneTest extends OgmTestCase {
 		checkCleanCache();
 	}
 
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Composite key not supported!")
 	@Test
 	public void testDefaultBiDirManyToOneCompositeKeyTest() throws Exception {
 		Session session = openSession();
