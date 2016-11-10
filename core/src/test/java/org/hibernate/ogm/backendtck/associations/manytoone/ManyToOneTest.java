@@ -19,7 +19,9 @@ import java.util.EnumSet;
 
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.ogm.utils.GridDialectType;
 import org.hibernate.ogm.utils.OgmTestCase;
+import org.hibernate.ogm.utils.SkipByHelper;
 import org.hibernate.ogm.utils.TestForIssue;
 import org.hibernate.ogm.utils.TestHelper;
 import org.junit.Test;
@@ -354,17 +356,29 @@ public class ManyToOneTest extends OgmTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] {
+		if ( SkipByHelper.skipForGridDialect( GridDialectType.ORIENTDB ) ) {
+			return new Class<?>[]{
 				JUG.class,
 				Member.class,
 				SalesForce.class,
 				SalesGuy.class,
 				Beer.class,
 				Brewery.class,
-				Game.class,
-				Court.class,
 				Employee.class,
 				Employer.class
+			};
+		}
+		return new Class<?>[]{
+			JUG.class,
+			Member.class,
+			SalesForce.class,
+			SalesGuy.class,
+			Beer.class,
+			Brewery.class,
+			Game.class,
+			Court.class,
+			Employee.class,
+			Employer.class
 		};
 	}
 }
