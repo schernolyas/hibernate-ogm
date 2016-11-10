@@ -26,7 +26,7 @@ import static org.fest.assertions.Assertions.assertThat;
  * @author Gunnar Morling
  */
 @SkipByGridDialect(
-		value = { GridDialectType.CASSANDRA, GridDialectType.INFINISPAN_REMOTE },
+		value = { GridDialectType.CASSANDRA, GridDialectType.INFINISPAN_REMOTE, GridDialectType.ORIENTDB },
 		comment = "POJOs contain lists - bag semantics unsupported (no primary key)"
 )
 public class EmbeddableExtraTest extends OgmTestCase {
