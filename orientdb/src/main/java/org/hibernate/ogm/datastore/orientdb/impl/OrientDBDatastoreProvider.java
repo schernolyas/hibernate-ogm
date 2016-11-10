@@ -76,7 +76,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 			FormatterUtil.setDateFormatter( createFormatter( propertyReader, OrientDBProperties.DATE_FORMAT, OrientDBConstant.DEFAULT_DATE_FORMAT ) );
 			FormatterUtil
-					.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
+			.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
 		}
 		catch (Exception e) {
 			throw log.unableToStartDatastoreProvider( e );
@@ -122,7 +122,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 				pool.setAutoCreate( true );
 				ODatabaseDocumentTx db = pool.acquire();
 				log.debugf( "db.isClosed(): %b", db.isClosed() );
-				log.debugf( "db.isActiveOnCurrentThread(): %b", db.isActiveOnCurrentThread() );				
+				log.debugf( "db.isActiveOnCurrentThread(): %b", db.isActiveOnCurrentThread() );
 			}
 			catch (Exception e) {
 				log.error( "Database creation error!", e );
