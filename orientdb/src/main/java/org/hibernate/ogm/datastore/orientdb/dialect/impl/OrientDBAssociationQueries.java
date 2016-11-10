@@ -85,7 +85,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 	public void removeAssociationRow(ODatabaseDocumentTx db, AssociationKey associationKey, RowKey rowKey) {
 		log.debugf( "removeAssociationRow: associationKey: %s; RowKey:%s ", associationKey, rowKey );
 		StringBuilder loadingDocsForDelete = new StringBuilder( 100 );
-		loadingDocsForDelete.append( "select " ).append( associationKey.getTable() ).append( " where " );
+		loadingDocsForDelete.append( "select from " ).append( associationKey.getTable() ).append( " where " );
 		for ( int i = 0; i < rowKey.getColumnNames().length; i++ ) {
 			String columnName = rowKey.getColumnNames()[i];
 			Object columnValue = rowKey.getColumnValues()[i];
