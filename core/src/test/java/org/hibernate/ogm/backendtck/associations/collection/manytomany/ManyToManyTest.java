@@ -94,7 +94,7 @@ public class ManyToManyTest extends OgmTestCase {
 
 	@Test
 	@SkipByGridDialect(
-			value = { GridDialectType.CASSANDRA },
+			value = { GridDialectType.CASSANDRA,GridDialectType.ORIENTDB },
 			comment = "composite PKs in associations not yet supported"
 	)
 	public void testManyToManyCompositeId() throws Exception {

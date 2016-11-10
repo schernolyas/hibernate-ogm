@@ -9,6 +9,7 @@ package org.hibernate.ogm.backendtck.massindex;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.hibernate.ogm.utils.GridDialectType.MONGODB;
 import static org.hibernate.ogm.utils.GridDialectType.NEO4J_REMOTE;
+import static org.hibernate.ogm.utils.GridDialectType.ORIENTDB;
 
 import java.io.IOException;
 import java.util.List;
@@ -32,6 +33,7 @@ import org.junit.Test;
 /**
  * @author Davide D'Alto &lt;davide@hibernate.org&gt;
  */
+@SkipByGridDialect(value = { ORIENTDB }, comment = "Embedded keys not supported")
 public class SimpleEntityMassIndexingTest extends OgmTestCase {
 
 	@Test
