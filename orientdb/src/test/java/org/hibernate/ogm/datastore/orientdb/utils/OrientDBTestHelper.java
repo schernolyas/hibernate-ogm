@@ -75,6 +75,10 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 				( schemaClass.getName().equals( "sequences" ) );
 		return result;
 	}
+	
+	private boolean isAssociationClass(OClass schemaClass) {		
+		return (!isSystemClass( schemaClass ) && schemaClass.getName().contains( "_" ));
+	}
 
 	@Override
 	public long getNumberOfEntities(SessionFactory sessionFactory) {
@@ -83,7 +87,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		long result = 0;
 		OSchema schema = db.getMetadata().getSchema();
 		for ( OClass schemaClass : schema.getClasses() ) {
-			if ( !isSystemClass( schemaClass ) ) {
+			if ( !isSystemClass( schemaClass ) && !isAssociationClass( schemaClass )) {
 				List<ODocument> docs = NativeQueryUtil.executeIdempotentQuery( db, "select from " + schemaClass.getName() );
 				log.debugf( "found %d entities in class %s ", docs.size(), schemaClass.getName() );
 				result += docs.size();
@@ -103,13 +107,14 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		long result = 0;
-		log.debugf( "sessionFactory.getAllCollectionMetadata(): %s", sessionFactory.getAllCollectionMetadata() );
-		/*
-		 * Map<String, ClassMetadata> meta = sessionFactory.getAllCollectionMetadata(); List<ODocument> docs =
-		 * NativeQueryUtil.executeIdempotentQuery( db, COUNT_QUERY ); for ( ODocument doc : docs ) { String className =
-		 * doc.field( "class", String.class ); ClassMetadata metadata = searchMetadata( meta, className ); if ( metadata
-		 * != null ) { Long l = doc.field( "c", Long.class ); result += l; } }
-		 */
+		OSchema schema = db.getMetadata().getSchema();
+		for ( OClass schemaClass : schema.getClasses() ) {
+			if (!isSystemClass( schemaClass ) && isAssociationClass( schemaClass )) {
+				List<ODocument> docs = NativeQueryUtil.executeIdempotentQuery( db, "select from " + schemaClass.getName() );
+				log.debugf( "found %d associations in class %s ", docs.size(), schemaClass.getName() );
+				result += docs.size();
+			}
+		}
 		return result;
 
 	}
