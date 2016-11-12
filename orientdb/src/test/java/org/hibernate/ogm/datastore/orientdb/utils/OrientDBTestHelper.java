@@ -37,6 +37,7 @@ import org.hibernate.ogm.utils.GridDialectTestHelper;
 import com.orientechnologies.orient.client.remote.OServerAdmin;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
+import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import java.util.List;
@@ -76,8 +77,22 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		return result;
 	}
 	
-	private boolean isAssociationClass(OClass schemaClass) {		
-		return (!isSystemClass( schemaClass ) && schemaClass.getName().contains( "_" ));
+	private boolean isAssociationClass(OClass schemaClass) {
+		if (isSystemClass( schemaClass )) {
+			return false;			
+		}
+		Map<String, OProperty> properties = schemaClass.propertiesMap();
+		log.debugf( "properties %s for class %s ", properties.keySet(), schemaClass.getName() );
+		int count = properties.size();
+		boolean result = false;
+		if (count ==2) {
+			boolean allFieldsEndsWith_id = false;
+			for ( String fieldName : properties.keySet() ) {
+				allFieldsEndsWith_id = fieldName.endsWith( "_id" );
+			}
+			result = allFieldsEndsWith_id;			
+		}
+		return result;
 	}
 
 	@Override
@@ -116,7 +131,6 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 			}
 		}
 		return result;
-
 	}
 
 	@Override
