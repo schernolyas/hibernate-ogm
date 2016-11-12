@@ -65,8 +65,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 
 	@Override
 	public long getNumberOfEntities(Session session) {
-		SessionFactory sessionFactory = session.getSessionFactory();
-		return getNumberOfEntities( sessionFactory );
+		return getNumberOfEntities( session.getSessionFactory() );
 	}
 
 	private boolean isSystemClass(OClass schemaClass) {
@@ -76,21 +75,24 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 				( schemaClass.getName().equals( "sequences" ) );
 		return result;
 	}
-	
+
 	private boolean isAssociationClass(OClass schemaClass) {
-		if (isSystemClass( schemaClass )) {
-			return false;			
-		}
 		Map<String, OProperty> properties = schemaClass.propertiesMap();
 		log.debugf( "properties %s for class %s ", properties.keySet(), schemaClass.getName() );
 		int count = properties.size();
 		boolean result = false;
-		if (count ==2) {
+		if ( count == 2 ) {
 			boolean allFieldsEndsWith_id = false;
 			for ( String fieldName : properties.keySet() ) {
-				allFieldsEndsWith_id = fieldName.endsWith( "_id" );
+				if ( fieldName.endsWith( "_id" ) ) {
+					allFieldsEndsWith_id = true;
+				}
+				else {
+					allFieldsEndsWith_id = false;
+					break;
+				}
 			}
-			result = allFieldsEndsWith_id;			
+			result = allFieldsEndsWith_id;
 		}
 		return result;
 	}
@@ -102,7 +104,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		long result = 0;
 		OSchema schema = db.getMetadata().getSchema();
 		for ( OClass schemaClass : schema.getClasses() ) {
-			if ( !isSystemClass( schemaClass ) && !isAssociationClass( schemaClass )) {
+			if ( !isSystemClass( schemaClass ) && !isAssociationClass( schemaClass ) ) {
 				List<ODocument> docs = NativeQueryUtil.executeIdempotentQuery( db, "select from " + schemaClass.getName() );
 				log.debugf( "found %d entities in class %s ", docs.size(), schemaClass.getName() );
 				result += docs.size();
@@ -124,7 +126,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		long result = 0;
 		OSchema schema = db.getMetadata().getSchema();
 		for ( OClass schemaClass : schema.getClasses() ) {
-			if (!isSystemClass( schemaClass ) && isAssociationClass( schemaClass )) {
+			if ( !isSystemClass( schemaClass ) && isAssociationClass( schemaClass ) ) {
 				List<ODocument> docs = NativeQueryUtil.executeIdempotentQuery( db, "select from " + schemaClass.getName() );
 				log.debugf( "found %d associations in class %s ", docs.size(), schemaClass.getName() );
 				result += docs.size();
