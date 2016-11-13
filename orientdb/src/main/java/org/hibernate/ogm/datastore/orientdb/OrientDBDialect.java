@@ -194,8 +194,7 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 			log.debugf( "insertOrUpdateTuple:executeNonIdempotentQuery: queryType: %s; class: %s ", queryType, result.getClass().getName() );
 			switch ( queryType ) {
 				case INSERT:
-					ODocument doc = (ODocument) result;
-					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Inserted rows: %1 ", key, 1 );
+					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Inserted rows: %d ", key,queryBuffer, 1 );
 					break;
 				case UPDATE:
 					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %d ", key, queryBuffer, (Number) result );
@@ -260,7 +259,6 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		boolean existsPrimaryKey = EntityKeyUtil.existsPrimaryKeyInDB( db, entityKey );
 		if ( !existsPrimaryKey ) {
-			// Entity now extists
 			return ASSOCIATION_NOT_FOUND;
 		}
 		Map<RowKey, Tuple> tuples = createAssociationMap( associationKey, associationContext );
@@ -470,16 +468,13 @@ implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, Id
 
 	@Override
 	public int executeBackendUpdateQuery(BackendQuery<String> query, QueryParameters queryParameters, TupleContext tupleContext) {
-		List<ODocument> documents = executeNativeQueryWithParams( query, queryParameters );
+		//List<ODocument> documents = executeNativeQueryWithParams( query, queryParameters );
 		throw new UnsupportedOperationException( "call executeBackendUpdateQuery!" );
 	}
 
 	@Override
 	public ClosableIterator<Tuple> executeBackendQuery(BackendQuery<String> query, QueryParameters queryParameters, TupleContext tupleContext) {
-
-		List<ODocument> documents = executeNativeQueryWithParams( query, queryParameters );
-		return new ODocumentListTupleIterator( documents );
-
+		return new ODocumentListTupleIterator( executeNativeQueryWithParams( query, queryParameters ) );
 	}
 
 	/**
