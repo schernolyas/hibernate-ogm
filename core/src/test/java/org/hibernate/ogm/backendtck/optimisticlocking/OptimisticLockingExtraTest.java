@@ -22,12 +22,10 @@ import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.utils.GridDialectType;
 import org.hibernate.ogm.utils.OgmTestCase;
 import org.hibernate.ogm.utils.SkipByGridDialect;
-import org.hibernate.ogm.utils.SkipByHelper;
 import org.hibernate.ogm.utils.TestHelper;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
 
 /**
  * Test for detecting concurrent updates by dialects which support atomic find/update semantics or have their own
@@ -35,15 +33,12 @@ import org.junit.rules.ExpectedException;
  *
  * @author Gunnar Morling
  */
-@SkipByGridDialect(
-		value = { GridDialectType.CASSANDRA },
-		comment = "list - bag semantics unsupported (no primary key)"
-)
+@SkipByGridDialect(value = { GridDialectType.CASSANDRA, GridDialectType.ORIENTDB }, comment = "list - bag semantics unsupported (no primary key); "
+		+ "OrientDB uses paradigm 'one thread-one connection-one transaction'")
 public class OptimisticLockingExtraTest extends OgmTestCase {
 
 	@Rule
 	public ExpectedException thrown = ExpectedException.none();
-
 
 	@Test
 	public void updateToEmbeddedCollectionCausesVersionToBeIncreased() throws Throwable {
@@ -62,13 +57,7 @@ public class OptimisticLockingExtraTest extends OgmTestCase {
 		transaction = session.beginTransaction();
 
 		entity = session.get( Galaxy.class, galaxy.getId() );
-		if ( SkipByHelper.skipForGridDialect( GridDialectType.ORIENTDB ) ) {
-			assertThat( entity.getVersion() ).isEqualTo( 2 );
-		}
-		else {
-			assertThat( entity.getVersion() ).isEqualTo( 1 );
-		}
-
+		assertThat( entity.getVersion() ).isEqualTo( 1 );
 		assertThat( entity.getStars() ).hasSize( 3 );
 
 		transaction.commit();
@@ -96,7 +85,7 @@ public class OptimisticLockingExtraTest extends OgmTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { Galaxy.class };
+		return new Class<?>[]{ Galaxy.class };
 	}
 
 	@SuppressWarnings("serial")
