@@ -274,6 +274,7 @@ public class OrientDbAssociationTest extends OgmJpaTestCase {
 		try {
 			em.getTransaction().begin();
 			Query query = em.createNativeQuery( "select from Customer where name='Ivahoe'", Customer.class );
+			@SuppressWarnings("unchecked")
 			List<Customer> customers = query.getResultList();
 			log.debug( "customers.size(): " + customers.size() );
 			assertFalse( "Customers must be", customers.isEmpty() );
