@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.impl;
 
+import org.hibernate.ogm.datastore.orientdb.schema.OrientDBDocumentSchemaDefiner;
 import com.orientechnologies.orient.client.remote.OServerAdmin;
 import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
 import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
@@ -195,7 +196,10 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 	@Override
 	public Class<? extends SchemaDefiner> getSchemaDefinerType() {
-		return OrientDBSchemaDefiner.class;
+		DatabaseTypeEnum databaseType = propertyReader
+				.property( OrientDBProperties.DATEBASE_TYPE, OrientDBProperties.DatabaseTypeEnum.class )
+				.withDefault( OrientDBProperties.DatabaseTypeEnum.DOCUMENT ).getValue();
+		return OrientDBDocumentSchemaDefiner.class;
 	}
 
 	@Override
