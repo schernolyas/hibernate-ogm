@@ -168,6 +168,7 @@ public class OrientDBCompositeIdTest extends OgmJpaTestCase {
 			em.getTransaction().begin();
 			Query query = em.createNativeQuery( "select from Passport where fio=:fio", Passport.class );
 			query.setParameter( "fio", "fio3" );
+			@SuppressWarnings("unchecked")
 			List<Passport> passports = query.getResultList();
 			assertEquals( "Must be 2 passports!", 2, passports.size() );
 			em.getTransaction().commit();

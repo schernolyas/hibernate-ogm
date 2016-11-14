@@ -22,12 +22,14 @@ import org.hibernate.ogm.type.impl.EnumType;
 import org.hibernate.ogm.type.impl.NumericBooleanType;
 import org.hibernate.ogm.type.impl.TimestampType;
 import org.hibernate.ogm.type.impl.TrueFalseType;
+import org.hibernate.ogm.type.impl.DateType;
 import org.hibernate.ogm.type.impl.YesNoType;
 import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import org.junit.BeforeClass;
 
 /**
  * Test checks CRUD for entities with associations (with links with other entities)
@@ -40,7 +42,7 @@ public class OrientDbQueryParamTest extends OgmJpaTestCase {
 	private static final Logger log = Logger.getLogger( OrientDbQueryParamTest.class.getName() );
 	private static EntityManager em;
 
-	public static Iterable<Object[]> prepareTestData() throws ParseException {
+	private static Iterable<Object[]> prepareTestData() throws ParseException {
 		TimeZone.setDefault( TimeZone.getTimeZone( "UTC" ) );
 		List<Object[]> list = new LinkedList<>();
 
@@ -93,7 +95,7 @@ public class OrientDbQueryParamTest extends OgmJpaTestCase {
 		Date today = df2.parse( df2.format( new Date() ) );
 		SimpleTypesEntity entity11 = new SimpleTypesEntity( 11L );
 		entity11.setCreatedDate( today );
-		list.add( new Object[]{ TimestampType.class, today, "createdDate", 1, entity11 } );
+		list.add( new Object[]{ DateType.class, today, "createdDate", 1, entity11 } );
 
 		return list;
 	}
@@ -124,9 +126,22 @@ public class OrientDbQueryParamTest extends OgmJpaTestCase {
 			em.clear();
 
 			em.getTransaction().begin();
+			Query query = null;
+			if ( searchByClass.equals( TimestampType.class ) ) {
+				query = em.createNativeQuery( "select from SimpleTypesEntity where " + paramName + ".asDatetime()=:" + paramName, SimpleTypesEntity.class );
+				SimpleDateFormat df = new SimpleDateFormat( OrientDBConstant.DEFAULT_DATETIME_FORMAT );
+				query.setParameter( paramName, df.format( (Date) searchByValue ) );
+			}
+			else if ( searchByClass.equals( DateType.class ) ) {
+				query = em.createNativeQuery( "select from SimpleTypesEntity where " + paramName + ".asDate()=:" + paramName, SimpleTypesEntity.class );
+				SimpleDateFormat df = new SimpleDateFormat( OrientDBConstant.DEFAULT_DATE_FORMAT );
+				query.setParameter( paramName, df.format( (Date) searchByValue ) );
+			}
+			else {
+				query = em.createNativeQuery( "select from SimpleTypesEntity where " + paramName + "=:" + paramName, SimpleTypesEntity.class );
+				query.setParameter( paramName, searchByValue );
+			}
 
-			Query query = em.createNativeQuery( "select from SimpleTypesEntity where " + paramName + "=:" + paramName, SimpleTypesEntity.class );
-			query.setParameter( paramName, searchByValue );
 			assertEquals( String.format( "Incorrect search by class %s", searchByClass ), requiredCount, Integer.valueOf( query.getResultList().size() ) );
 			em.getTransaction().commit();
 		}
@@ -150,6 +165,11 @@ public class OrientDbQueryParamTest extends OgmJpaTestCase {
 			em.getTransaction().rollback();
 		}
 		em.clear();
+	}
+
+	@BeforeClass
+	public static void setUpClass() {
+		TimeZone.setDefault( TimeZone.getTimeZone( "UTC" ) );
 	}
 
 	@Override

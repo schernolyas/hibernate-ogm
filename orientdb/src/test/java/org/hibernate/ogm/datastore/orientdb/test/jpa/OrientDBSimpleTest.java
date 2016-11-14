@@ -58,6 +58,7 @@ public class OrientDBSimpleTest extends OgmJpaTestCase {
 		em.clear();
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
 	public void test1InsertNewCustomer() {
 		log.debug( "start" );
@@ -85,6 +86,7 @@ public class OrientDBSimpleTest extends OgmJpaTestCase {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
 	public void test1InsertNewPizza() throws Exception {
 		log.debug( "start" );
@@ -149,6 +151,7 @@ public class OrientDBSimpleTest extends OgmJpaTestCase {
 
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
 	public void test3CreateNativeQuery() {
 		log.debug( "start" );
