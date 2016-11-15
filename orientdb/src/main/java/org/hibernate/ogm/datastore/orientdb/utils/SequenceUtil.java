@@ -24,7 +24,6 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 public class SequenceUtil {
 
 	private static final Log log = LoggerFactory.getLogger();
-	private static final String FUNC_NAME = "getTableSeqValue".toUpperCase();
 
 	/**
 	 * Get next value from sequence
@@ -34,12 +33,12 @@ public class SequenceUtil {
 	 * @return next value of the sequence
 	 */
 	public static long getNextSequenceValue(ODatabaseDocumentTx db, String seqName) {
-		String seqNameUpper = seqName.toUpperCase();
 		OSequenceLibrary library = db.getMetadata().getSequenceLibrary();
-		if ( !library.getSequenceNames().contains( seqNameUpper ) ) {
+		final String seqNameUpperCase = seqName.toUpperCase();
+		if ( !library.getSequenceNames().contains( seqNameUpperCase ) ) {
 			throw log.sequenceNotExists( seqName );
 		}
-		OSequence sequence = library.getSequence( seqNameUpper );
+		OSequence sequence = library.getSequence( seqNameUpperCase );
 		return sequence.next();
 	}
 
@@ -59,8 +58,8 @@ public class SequenceUtil {
 
 	public static long getNextTableValue(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String pkColumnValue, String valueColumnName,
 			Integer initValue, Integer inc) {
-		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( FUNC_NAME );
-		return ( (Long) executeQuery.execute( seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc ) );
+		OFunction getTableSeqValue = db.getMetadata().getFunctionLibrary().getFunction( "getTableSeqValue" );
+		Number nextValue = ( (Number) getTableSeqValue.execute( seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc ) );
+		return nextValue.longValue();
 	}
-
 }

@@ -29,6 +29,7 @@ import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 import org.hibernate.ogm.datastore.spi.BaseSchemaDefiner;
 import org.hibernate.ogm.datastore.spi.DatastoreProvider;
+import org.hibernate.ogm.model.key.spi.IdSourceKeyMetadata;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.type.CustomType;
 import org.hibernate.type.EntityType;
@@ -51,6 +52,7 @@ import org.hibernate.boot.model.relational.Sequence;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBMapping;
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
+import org.hibernate.ogm.model.key.spi.IdSourceKeyMetadata.IdSourceType;
 import org.hibernate.type.ComponentType;
 import org.hibernate.type.descriptor.converter.AttributeConverterTypeAdapter;
 
@@ -78,7 +80,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 	private OrientDBDatastoreProvider provider;
 
 	private String createClassQuery(String tableName) {
-		return String.format( "create class %s extends V", tableName );
+		return String.format( "create class %s ", tableName );
 	}
 
 	private String createClassQuery(Table table) {
@@ -94,18 +96,24 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		createSequence( db, name, startValue, -1 );
 	}
 
-	private void createSequence(ODatabaseDocumentTx db, String name, int startValue, int incValue) {
-		CreateParams p = new CreateParams();
-		p.setStart( (long) ( startValue == 0 ? 0 : startValue - 1 ) );
-		if ( incValue > 0 ) {
-			p.setIncrement( incValue );
+	private void createSequence(ODatabaseDocumentTx db, String seqName, int startValue, int incValue) {
+		OSequence seq = db.getMetadata().getSequenceLibrary().getSequence( seqName );
+		if ( seq == null ) {
+			CreateParams p = new CreateParams();
+			p.setStart( (long) ( startValue == 0 ? 0 : startValue - 1 ) );
+			if ( incValue > 0 ) {
+				p.setIncrement( incValue );
+			}
+			seq = db.getMetadata().getSequenceLibrary().createSequence( seqName, SEQUENCE_TYPE.ORDERED, p );
+			log.debugf( "sequence %s created. current value: %d ", seq.getName(), seq.current() );
 		}
-		OSequence seq = db.getMetadata().getSequenceLibrary().createSequence( name, SEQUENCE_TYPE.ORDERED, p );
-		log.debugf( " sequence  %s created ", seq.getName() );
 	}
 
 	private void createTableSequence(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String valueColumnName) {
 		OSchema schema = db.getMetadata().getSchema();
+		if ( schema.existsClass( seqTable ) ) {
+			return;
+		}
 		OClass seqTableClass = schema.createClass( seqTable );
 		seqTableClass.createProperty( pkColumnName, OType.STRING );
 		seqTableClass.createProperty( valueColumnName, OType.LONG );
@@ -113,65 +121,54 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	private void createGetTableSeqValueFunc(ODatabaseDocumentTx db) {
-		try {
-
-			Set<String> functions = db.getMetadata().getFunctionLibrary().getFunctionNames();
-			log.debugf( " functions : %s", functions );
-			if ( functions.contains( "getTableSeqValue".toUpperCase() ) ) {
-				log.debug( " function 'getTableSeqValue' exists!" );
-				return;
-			}
-			for ( OClass oc : db.getMetadata().getSchema().getClasses() ) {
-				log.debugf( " class: %s", oc.getName() );
-			}
-
-			OFunction executeQuery = db.getMetadata().getFunctionLibrary().createFunction( "getTableSeqValue" );
-			executeQuery.setLanguage( "groovy" );
-			executeQuery.setIdempotent( false );
-			executeQuery.setParameters( Arrays.asList( new String[]{ "seqName", "pkColumnName",
+		log.debugf( "functions : %s", db.getMetadata().getFunctionLibrary().getFunctionNames() );
+		OFunction getTableSeqValue = db.getMetadata().getFunctionLibrary().getFunction( "getTableSeqValue" );
+		if ( getTableSeqValue == null ) {
+			getTableSeqValue = db.getMetadata().getFunctionLibrary().createFunction( "getTableSeqValue" );
+			getTableSeqValue.setLanguage( "groovy" );
+			getTableSeqValue.setIdempotent( false );
+			getTableSeqValue.setParameters( Arrays.asList( new String[]{ "seqName", "pkColumnName",
 					"pkColumnValue", "valueColumnName", "initValue", "inc" } ) );
-			executeQuery.setCode( "long nextValue=-1;def db = orient.getDatabase();"
+			getTableSeqValue.setCode( "long nextValue=-1;def db = orient.getDatabase();"
 					+ " def results = null; "
-					+ "String updateQuery=\"UPDATE ${seqName} INCREMENT ${valueColumnName} = ${inc} return after \\$current WHERE ${pkColumnName} = '${pkColumnValue}'\";"
+					+ " String updateQuery=\"UPDATE ${seqName} INCREMENT ${valueColumnName} = ${inc} return after \\$current WHERE ${pkColumnName} = '${pkColumnValue}'\";"
 					+ " String selectQuery = \"select from ${seqName} where ${pkColumnName}='{pkColumnValue}'\";"
 					+ " String insertQuery = \"insert into ${seqName} (${pkColumnName},${valueColumnName}) values('${pkColumnValue}',${initValue})\";"
-					+ " try {results = db.command(updateQuery); if (results.length==0)"
-					+ " {try {db.command(insertQuery);} catch (Exception e2) {throw e2;}; nextValue=Long.parseLong(\"${initValue}\"); } "
-					+ "else { nextValue=results[0].field(\"${valueColumnName}\");}; } catch (Exception e) { throw e; };   "
+					+ " try {"
+					+ "   results = db.command(updateQuery); "
+					+ "   if (results.length==0) {"
+					+ "       try {"
+					+ "         db.command(insertQuery);"
+					+ "       } catch (Exception e2) {"
+					+ "           throw e2;"
+					+ "       }; "
+					+ "       nextValue=Long.parseLong(\"${initValue}\"); "
+					+ "   } else { "
+					+ "   nextValue=results[0].field(\"${valueColumnName}\");}; "
+					+ "} catch (Exception e) { "
+					+ "    throw e; "
+					+ "};   "
 					+ "return nextValue; " );
-			executeQuery.save();
-		}
-		catch (RuntimeException e) {
-			throw log.cannotCreateStoredProcedure( "getTableSeqValue", e );
+			getTableSeqValue.save();
+			log.infof( "stored procedure % created", "getTableSeqValue" );
 		}
 	}
 
 	private void createExecuteQueryFunc(ODatabaseDocumentTx db) {
-		try {
-
-			Set<String> functions = db.getMetadata().getFunctionLibrary().getFunctionNames();
-			log.debugf( " functions : %s", functions );
-			if ( functions.contains( "executeQuery".toUpperCase() ) ) {
-				log.debug( " function 'executeQuery' exists!" );
-				return;
-			}
-			for ( OClass oc : db.getMetadata().getSchema().getClasses() ) {
-				log.debugf( " class: %s", oc.getName() );
-			}
-
-			OFunction executeQuery = db.getMetadata().getFunctionLibrary().createFunction( "executeQuery" );
+		log.debugf( "functions : %s", db.getMetadata().getFunctionLibrary().getFunctionNames() );
+		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( "executeQuery" );
+		if ( executeQuery == null ) {
+			executeQuery = db.getMetadata().getFunctionLibrary().createFunction( "executeQuery" );
 			executeQuery.setLanguage( "groovy" );
 			executeQuery.setIdempotent( false );
 			executeQuery.setParameters( Arrays.asList( new String[]{ "insertQuery" } ) );
 			executeQuery.setCode( "return orient.getDatabase().command(insertQuery);" );
 			executeQuery.save();
-
-		}
-		catch (RuntimeException e) {
-			throw log.cannotCreateStoredProcedure( "executeQuery", e );
+			log.infof( "stored procedure % created", "executeQuery" );
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private boolean isAlreadyCreatedInParent(Table currentTable, Column currentColumn, Collection<Table> tables) {
 		boolean created = false;
 		Table inheritedFromTable = null;
@@ -182,8 +179,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			}
 		}
 		if ( inheritedFromTable != null ) {
-			for ( @SuppressWarnings("unchecked")
-			Iterator<Column> it = inheritedFromTable.getColumnIterator(); it.hasNext(); ) {
+			for ( Iterator<Column> it = inheritedFromTable.getColumnIterator(); it.hasNext(); ) {
 				Column column = it.next();
 				if ( currentColumn.getName().equals( column.getName() ) ) {
 					created = true;
@@ -194,7 +190,9 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		return created;
 	}
 
+	@SuppressWarnings("unchecked")
 	private void createEntities(ODatabaseDocumentTx db, SchemaDefinitionContext context) {
+		OSchema schema = db.getMetadata().getSchema();
 
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			for ( Sequence sequence : namespace.getSequences() ) {
@@ -206,10 +204,12 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			for ( Table table : namespace.getTables() ) {
 				boolean isEmbeddedListTableName = isEmbeddedListTable( table );
 				String tableName = table.getName();
+				if ( schema.existsClass( tableName ) ) {
+					return;
+				}
 
 				if ( isEmbeddedListTableName ) {
 					tableName = table.getName().substring( 0, table.getName().indexOf( "_" ) );
-
 					EmbeddedColumnInfo embeddedListColumn = new EmbeddedColumnInfo( table.getName().substring( table.getName().indexOf( "_" ) + 1 ) );
 					for ( String className : embeddedListColumn.getClassNames() ) {
 						if ( !createdEmbeddedClassSet.contains( className ) ) {
@@ -218,7 +218,6 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 							tables.add( className );
 						}
 					}
-
 					throw new UnsupportedOperationException( String.format( "Table name %s not supported!", tableName ) );
 				}
 				else {
@@ -227,7 +226,6 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 					tables.add( tableName );
 				}
 
-				@SuppressWarnings("unchecked")
 				Iterator<Column> columnIterator = table.getColumnIterator();
 				while ( columnIterator.hasNext() ) {
 					Column column = columnIterator.next();
@@ -334,7 +332,6 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		log.debugf( "primary key query: %s", uniqueIndexQuery );
 		NativeQueryUtil.executeNonIdempotentQuery( db, uniqueIndexQuery );
 
-		StringBuilder seq = new StringBuilder( 100 );
 		if ( primaryKey.getColumns().size() == 1 && OrientDBMapping.SEQ_TYPES.contains( primaryKey.getColumns().get( 0 ).getValue().getType().getClass() ) ) {
 			createSequence( db, generateSeqName( primaryKey.getTable().getName(), primaryKey.getColumns().get( 0 ).getName() ), 0 );
 		}
@@ -491,11 +488,21 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
 		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
-		OSchema schema = db.getMetadata().getSchema();
+
+		log.debugf( "context.getAllEntityKeyMetadata(): %s", context.getAllEntityKeyMetadata() );
+		log.debugf( "context.getAllAssociationKeyMetadata(): %s", context.getAllAssociationKeyMetadata() );
+		log.debugf( "context.getAllIdSourceKeyMetadata(): %s", context.getAllIdSourceKeyMetadata() );
+		log.debugf( "context.getTableEntityTypeMapping(): %s", context.getTableEntityTypeMapping() );
+
 		createExecuteQueryFunc( db );
-		// createSequence( connection, OrientDBConstant.HIBERNATE_SEQUENCE, 0, 1 );
-		createTableSequence( db, OrientDBConstant.HIBERNATE_SEQUENCE_TABLE, "key", "seed" );
 		createGetTableSeqValueFunc( db );
+		for ( IdSourceKeyMetadata metadata : context.getAllIdSourceKeyMetadata() ) {
+			log.debugf( "Name: %s ;KeyColumnName:%s ;ValueColumnName:%s ",
+					metadata.getName(), metadata.getKeyColumnName(), metadata.getValueColumnName() );
+			if ( metadata.getType().equals( IdSourceType.TABLE ) ) {
+				createTableSequence( db, metadata.getName(), metadata.getKeyColumnName(), metadata.getValueColumnName() );
+			}
+		}
 		createEntities( db, context );
 	}
 
