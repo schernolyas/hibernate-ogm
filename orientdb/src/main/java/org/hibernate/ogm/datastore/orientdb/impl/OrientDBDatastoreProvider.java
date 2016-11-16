@@ -60,9 +60,11 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 			StorageModeEnum storageMode = propertyReader
 					.property( OrientDBProperties.STORAGE_MODE_TYPE, OrientDBProperties.StorageModeEnum.class )
 					.withDefault( OrientDBProperties.StorageModeEnum.MEMORY ).getValue();
+
 			DatabaseTypeEnum databaseType = propertyReader
 					.property( OrientDBProperties.DATEBASE_TYPE, OrientDBProperties.DatabaseTypeEnum.class )
 					.withDefault( OrientDBProperties.DatabaseTypeEnum.DOCUMENT ).getValue();
+
 			if ( DatabaseTypeEnum.GRAPH.equals( databaseType ) ) {
 				throw new UnsupportedOperationException( "Graph API is not supported yet. Use Document API!" );
 			}
@@ -76,8 +78,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 			databaseHolder = new DatabaseHolder( orientDBUrl, user, password, poolSize );
 
 			FormatterUtil.setDateFormatter( createFormatter( propertyReader, OrientDBProperties.DATE_FORMAT, OrientDBConstant.DEFAULT_DATE_FORMAT ) );
-			FormatterUtil
-			.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
+			FormatterUtil.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
 		}
 		catch (Exception e) {
 			throw log.unableToStartDatastoreProvider( e );
@@ -196,9 +197,6 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 	@Override
 	public Class<? extends SchemaDefiner> getSchemaDefinerType() {
-		DatabaseTypeEnum databaseType = propertyReader
-				.property( OrientDBProperties.DATEBASE_TYPE, OrientDBProperties.DatabaseTypeEnum.class )
-				.withDefault( OrientDBProperties.DatabaseTypeEnum.DOCUMENT ).getValue();
 		return OrientDBDocumentSchemaDefiner.class;
 	}
 
