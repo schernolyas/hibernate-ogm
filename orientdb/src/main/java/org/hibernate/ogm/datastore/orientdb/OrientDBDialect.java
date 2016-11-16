@@ -101,10 +101,8 @@ import org.hibernate.ogm.model.spi.EntityMetadataInformation;
  * @see IdentityColumnAwareGridDialect
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
-public class OrientDBDialect extends BaseGridDialect
-implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
-	private static final long serialVersionUID = 1L;
 	private static final Log log = LoggerFactory.getLogger();
 	private static final Association ASSOCIATION_NOT_FOUND = null;
 	private static final InsertQueryGenerator INSERT_QUERY_GENERATOR = new InsertQueryGenerator();
