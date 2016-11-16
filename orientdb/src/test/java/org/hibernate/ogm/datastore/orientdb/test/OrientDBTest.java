@@ -6,11 +6,11 @@
  */
 package org.hibernate.ogm.datastore.orientdb.test;
 
-import org.hibernate.ogm.backendtck.type.BuiltInTypeTest;
+import org.hibernate.ogm.backendtck.simpleentity.CRUDTest;
 
 /**
  * @author Davide D'Alto
  */
-public class OrientDBTest extends BuiltInTypeTest {
+public class OrientDBTest extends CRUDTest {
 
 }
