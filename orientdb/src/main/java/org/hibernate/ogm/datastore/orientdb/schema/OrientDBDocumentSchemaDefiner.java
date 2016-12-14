@@ -47,11 +47,14 @@ import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.metadata.sequence.OSequence;
 import com.orientechnologies.orient.core.metadata.sequence.OSequence.CreateParams;
 import com.orientechnologies.orient.core.metadata.sequence.OSequence.SEQUENCE_TYPE;
+import javax.persistence.Entity;
+import org.hibernate.HibernateException;
 
 import org.hibernate.boot.model.relational.Sequence;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBMapping;
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
+import org.hibernate.ogm.datastore.orientdb.utils.AnnotationUtil;
 import org.hibernate.ogm.model.key.spi.IdSourceKeyMetadata.IdSourceType;
 import org.hibernate.type.ComponentType;
 import org.hibernate.type.descriptor.converter.AttributeConverterTypeAdapter;
@@ -221,96 +224,109 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			Set<String> tables = new HashSet<>();
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
 			for ( Table table : namespace.getTables() ) {
-				boolean isEmbeddedListTableName = isEmbeddedListTable( table );
-				String tableName = table.getName();
-				if ( schema.existsClass( tableName ) ) {
-					return;
-				}
+				log.debugf( "table: %s, in inheritance: %s; superclass: %s ; is abstract: %s",
+						table.getName(), isTablePerClassInheritance( table ),
+						getSuperClassName( context, table ),
+						table.isAbstract() );
+				// createTable(table , schema, createdEmbeddedClassSet, db, tables, namespace, context);
+			}
+		}
+	}
 
-				if ( isEmbeddedListTableName ) {
-					tableName = table.getName().substring( 0, table.getName().indexOf( "_" ) );
-					EmbeddedColumnInfo embeddedListColumn = new EmbeddedColumnInfo( table.getName().substring( table.getName().indexOf( "_" ) + 1 ) );
-					for ( String className : embeddedListColumn.getClassNames() ) {
-						if ( !createdEmbeddedClassSet.contains( className ) ) {
-							String classQuery = createClassQuery( className );
-							NativeQueryUtil.executeNonIdempotentQuery( db, classQuery );
-							tables.add( className );
-						}
-					}
-					throw new UnsupportedOperationException( String.format( "Table name %s not supported!", tableName ) );
+	private boolean createTable(Table table, OSchema schema, Set<String> createdEmbeddedClassSet, ODatabaseDocumentTx db, Set<String> tables,
+			Namespace namespace, SchemaDefinitionContext context) throws UnsupportedOperationException, HibernateException {
+		boolean isEmbeddedListTableName = isEmbeddedListTable( table );
+		String tableName = table.getName();
+		if ( schema.existsClass( tableName ) ) {
+			return true;
+		}
+		if ( isEmbeddedListTableName ) {
+			tableName = table.getName().substring( 0, table.getName().indexOf( "_" ) );
+			EmbeddedColumnInfo embeddedListColumn = new EmbeddedColumnInfo( table.getName().substring( table.getName().indexOf( "_" ) + 1 ) );
+			for ( String className : embeddedListColumn.getClassNames() ) {
+				if ( !createdEmbeddedClassSet.contains( className ) ) {
+					String classQuery = createClassQuery( className );
+					NativeQueryUtil.executeNonIdempotentQuery( db, classQuery );
+					tables.add( className );
+				}
+			}
+			throw new UnsupportedOperationException( String.format( "Table name %s not supported!", tableName ) );
+		}
+		else {
+			String classQuery = createClassQuery( table );
+			NativeQueryUtil.executeNonIdempotentQuery( db, classQuery );
+			tables.add( tableName );
+		}
+		createColumnsForTable( table, namespace, context, db, createdEmbeddedClassSet );
+		if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table ) && !isEmbeddedObjectTable( table ) ) {
+			PrimaryKey primaryKey = table.getPrimaryKey();
+			if ( primaryKey != null ) {
+				createPrimaryKey( db, primaryKey );
+			}
+			else {
+				log.debugf( "Table %s has not a primary key", table.getName() );
+			}
+		}
+		return false;
+	}
+
+	private void createColumnsForTable(Table table, Namespace namespace, SchemaDefinitionContext context, ODatabaseDocumentTx db,
+			Set<String> createdEmbeddedClassSet) throws HibernateException, UnsupportedOperationException {
+		String tableName = table.getName();
+		Iterator<Column> columnIterator = table.getColumnIterator();
+		while ( columnIterator.hasNext() ) {
+			Column column = columnIterator.next();
+			log.debugf( "column: %s ", column );
+			log.debugf( "relation type: %s", column.getValue().getType().getClass() );
+
+			if ( column.getName().startsWith( "_identifierMapper" ) ||
+					OrientDBConstant.SYSTEM_FIELDS.contains( column.getName() ) ||
+					( isTablePerClassInheritance( table ) && isAlreadyCreatedInParent( table, column, namespace.getTables() ) ) ) {
+				continue;
+			}
+
+			if ( ComponentType.class.equals( column.getValue().getType().getClass() ) ) {
+				throw new UnsupportedOperationException( "Component type not supported yet " );
+			}
+			else if ( OrientDBMapping.RELATIONS_TYPES.contains( column.getValue().getType().getClass() ) ) {
+				Value value = column.getValue();
+				if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
+					EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
+					// TODO: ???
 				}
 				else {
-					String classQuery = createClassQuery( table );
-					NativeQueryUtil.executeNonIdempotentQuery( db, classQuery );
-					tables.add( tableName );
+					Class<?> mappedByClass = searchMappedByReturnedClass( context, namespace.getTables(), (EntityType) value.getType(), column );
+					String propertyQuery = createValueProperyQuery( table, column, OrientDBMapping.FOREIGN_KEY_TYPE_MAPPING.get( mappedByClass ) );
+					NativeQueryUtil.executeNonIdempotentQuery( db, propertyQuery );
 				}
-
-				Iterator<Column> columnIterator = table.getColumnIterator();
-				while ( columnIterator.hasNext() ) {
-					Column column = columnIterator.next();
-					log.debugf( "column: %s ", column );
-					log.debugf( "relation type: %s", column.getValue().getType().getClass() );
-
-					if ( column.getName().startsWith( "_identifierMapper" ) ||
-							OrientDBConstant.SYSTEM_FIELDS.contains( column.getName() ) ||
-							( isTablePerClassInheritance( table ) && isAlreadyCreatedInParent( table, column, namespace.getTables() ) ) ) {
-						continue;
-					}
-
-					if ( ComponentType.class.equals( column.getValue().getType().getClass() ) ) {
-						throw new UnsupportedOperationException( "Component type not supported yet " );
-					}
-					else if ( OrientDBMapping.RELATIONS_TYPES.contains( column.getValue().getType().getClass() ) ) {
-						Value value = column.getValue();
-						if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
-							EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
-							// TODO: ???
-						}
-						else {
-							Class<?> mappedByClass = searchMappedByReturnedClass( context, namespace.getTables(), (EntityType) value.getType(), column );
-							String propertyQuery = createValueProperyQuery( table, column, OrientDBMapping.FOREIGN_KEY_TYPE_MAPPING.get( mappedByClass ) );
-							NativeQueryUtil.executeNonIdempotentQuery( db, propertyQuery );
-						}
-					}
-					else if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
-						EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
-						boolean isPrimaryKeyColumn = isPrimaryKeyColumn( table, column );
-						if ( !isPrimaryKeyColumn ) {
-							createEmbeddedColumn( createdEmbeddedClassSet, tableName, column, ec );
-						}
-						else {
-							String columnName = column.getName().substring( column.getName().indexOf( "." ) + 1 );
-							SimpleValue simpleValue = (SimpleValue) column.getValue();
-							String propertyQuery = createValueProperyQuery( column, tableName, columnName,
-									simpleValue.getType().getClass() );
-							log.debugf( "create property query: %s", propertyQuery );
-							NativeQueryUtil.executeNonIdempotentQuery( db, propertyQuery );
-						}
+			}
+			else if ( EntityKeyUtil.isEmbeddedColumn( column ) ) {
+				EmbeddedColumnInfo ec = new EmbeddedColumnInfo( column.getName() );
+				boolean isPrimaryKeyColumn = isPrimaryKeyColumn( table, column );
+				if ( !isPrimaryKeyColumn ) {
+					createEmbeddedColumn( createdEmbeddedClassSet, tableName, column, ec );
+				}
+				else {
+					String columnName = column.getName().substring( column.getName().indexOf( "." ) + 1 );
+					SimpleValue simpleValue = (SimpleValue) column.getValue();
+					String propertyQuery = createValueProperyQuery( column, tableName, columnName,
+							simpleValue.getType().getClass() );
+					log.debugf( "create property query: %s", propertyQuery );
+					NativeQueryUtil.executeNonIdempotentQuery( db, propertyQuery );
+				}
+			}
+			else {
+				String propertyQuery = createValueProperyQuery( tableName, column );
+				try {
+					NativeQueryUtil.executeNonIdempotentQuery( db, propertyQuery );
+				}
+				catch (OCommandExecutionException oe) {
+					log.debugf( "orientdb message: %s; ", oe.getMessage() );
+					if ( oe.getMessage().contains( "already exists" ) ) {
+						log.debugf( "property %s already exists. Continue ", column.getName() );
 					}
 					else {
-						String propertyQuery = createValueProperyQuery( tableName, column );
-						try {
-							NativeQueryUtil.executeNonIdempotentQuery( db, propertyQuery );
-						}
-						catch (OCommandExecutionException oe) {
-							log.debugf( "orientdb message: %s; ", oe.getMessage() );
-							if ( oe.getMessage().contains( "already exists" ) ) {
-								log.debugf( "property %s already exists. Continue ", column.getName() );
-							}
-							else {
-								throw log.cannotExecuteQuery( propertyQuery, oe );
-							}
-						}
-					}
-				}
-
-				if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table ) && !isEmbeddedObjectTable( table ) ) {
-					PrimaryKey primaryKey = table.getPrimaryKey();
-					if ( primaryKey != null ) {
-						createPrimaryKey( db, primaryKey );
-					}
-					else {
-						log.debugf( "Table %s has not a primary key", table.getName() );
+						throw log.cannotExecuteQuery( propertyQuery, oe );
 					}
 				}
 			}
@@ -326,13 +342,27 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		return !tableName.equals( primaryKeyTableName );
 	}
 
+	private String getSuperClassName(SchemaDefinitionContext context, Table table) {
+		if ( !isTablePerClassInheritance( table ) ) {
+			return null;
+		}
+		Class entityClass = context.getTableEntityTypeMapping().get( table.getName() );
+		log.debugf( "entityClass %s ; super class %s",
+				entityClass.getName(), entityClass.getSuperclass().getName() );
+		Entity entityAnnotation = AnnotationUtil.findEntityAnnotation( entityClass.getSuperclass() );
+		String superEntityName = entityAnnotation.name();
+		log.debugf( "superEntityName %s ;", superEntityName );
+
+		return table.getPrimaryKey().getTable().getName();
+	}
+
 	private void createPrimaryKey(ODatabaseDocumentTx db, PrimaryKey primaryKey) {
 		StringBuilder uniqueIndexQuery = new StringBuilder( 100 );
 		uniqueIndexQuery.append( "CREATE INDEX " )
-				.append( primaryKey.getName() != null
-						? primaryKey.getName()
-						: PrimaryKey.generateName( primaryKey.generatedConstraintNamePrefix(), primaryKey.getTable(), primaryKey.getColumns() ) )
-				.append( " ON " ).append( primaryKey.getTable().getName() ).append( " (" );
+		.append( primaryKey.getName() != null
+		? primaryKey.getName()
+				: PrimaryKey.generateName( primaryKey.generatedConstraintNamePrefix(), primaryKey.getTable(), primaryKey.getColumns() ) )
+		.append( " ON " ).append( primaryKey.getTable().getName() ).append( " (" );
 		for ( Iterator<Column> it = primaryKey.getColumns().iterator(); it.hasNext(); ) {
 			Column column = it.next();
 			String columnName = column.getName();
