@@ -96,7 +96,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			return String.format( "create class %s extends %s", table.getName(), getSuperClassName( context, table ) );
 		}
 		else {
-			return String.format( "create class %s", table.getName() );
+			return createClassQuery( table.getName() );
 		}
 	}
 
@@ -389,7 +389,11 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		log.debugf( "entityClass %s ; super class %s",
 				entityClass.getName(), entityClass.getSuperclass().getName() );
 		Entity entityAnnotation = AnnotationUtil.findEntityAnnotation( entityClass.getSuperclass() );
+		log.debugf( "superEntityName %s ;", entityAnnotation );
 		String superEntityName = entityAnnotation.name();
+		if ( entityAnnotation.name().trim().length() == 0 ) {
+			superEntityName = entityClass.getSuperclass().getSimpleName();
+		}
 		log.debugf( "superEntityName %s ;", superEntityName );
 
 		return superEntityName;
@@ -405,10 +409,10 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 	private void createPrimaryKey(ODatabaseDocumentTx db, PrimaryKey primaryKey) {
 		StringBuilder uniqueIndexQuery = new StringBuilder( 100 );
 		uniqueIndexQuery.append( "CREATE INDEX " )
-		.append( primaryKey.getName() != null
-		? primaryKey.getName()
-				: PrimaryKey.generateName( primaryKey.generatedConstraintNamePrefix(), primaryKey.getTable(), primaryKey.getColumns() ) )
-		.append( " ON " ).append( primaryKey.getTable().getName() ).append( " (" );
+				.append( primaryKey.getName() != null
+						? primaryKey.getName()
+						: PrimaryKey.generateName( primaryKey.generatedConstraintNamePrefix(), primaryKey.getTable(), primaryKey.getColumns() ) )
+				.append( " ON " ).append( primaryKey.getTable().getName() ).append( " (" );
 		for ( Iterator<Column> it = primaryKey.getColumns().iterator(); it.hasNext(); ) {
 			Column column = it.next();
 			String columnName = column.getName();
