@@ -42,6 +42,7 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
+import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.metadata.sequence.OSequence;
@@ -51,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import javax.persistence.Entity;
 import org.hibernate.HibernateException;
 
@@ -195,28 +197,6 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	@SuppressWarnings("unchecked")
-	private boolean isAlreadyCreatedInParent(Table currentTable, Column currentColumn, Collection<Table> tables) {
-		boolean created = false;
-		Table inheritedFromTable = null;
-		for ( Table table : tables ) {
-			if ( table.getName().equals( currentTable.getPrimaryKey().getTable().getName() ) ) {
-				inheritedFromTable = table;
-				break;
-			}
-		}
-		if ( inheritedFromTable != null ) {
-			for ( Iterator<Column> it = inheritedFromTable.getColumnIterator(); it.hasNext(); ) {
-				Column column = it.next();
-				if ( currentColumn.getName().equals( column.getName() ) ) {
-					created = true;
-					break;
-				}
-			}
-		}
-		return created;
-	}
-
-	@SuppressWarnings("unchecked")
 	private void createEntities(ODatabaseDocumentTx db, SchemaDefinitionContext context) {
 		OSchema schema = db.getMetadata().getSchema();
 
@@ -228,27 +208,27 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			Set<String> tables = new HashSet<>();
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
 			List<HierarhyLevel> tableHierarhy = sortTablesByHierarhyLevel( context, namespace.getTables() );
-			log.debugf( "3.table hierarhy: %s", tableHierarhy );
+			log.debugf( "table hierarhy: %s", tableHierarhy );
 			for ( HierarhyLevel hierarhyLevel : tableHierarhy ) {
-				// createTable(hierarhyLevel.getTable() , schema, createdEmbeddedClassSet, db, tables, namespace,
-				// context);
+				createTable( hierarhyLevel.getTable(), schema, createdEmbeddedClassSet, db, tables, namespace,
+						context );
+				OSchema currentSchema = db.getMetadata().getSchema();
+				OClass currentClass = currentSchema.getClass( hierarhyLevel.getTable().getName() );
+				Map<String, OProperty> propertiesMap = currentClass.propertiesMap();
+				log.infof( "properties: %s ", propertiesMap.keySet() );
 			}
-
 		}
 	}
 
 	private List<HierarhyLevel> sortTablesByHierarhyLevel(SchemaDefinitionContext context, Collection<Table> tables) {
 		Set<HierarhyLevel> hierarhyLevelSet = new HashSet<>();
-		log.debugf( "1.tables.size(): %s", tables.size() );
 		// load all tables
 		for ( Table currentTable : tables ) {
 			HierarhyLevel hl = new HierarhyLevel();
 			hl.setTable( currentTable );
 			hl.setLevel( 0 );
-			log.debugf( "current table hierarhy: %s", hl );
 			hierarhyLevelSet.add( hl );
 		}
-		log.debugf( "1.table hierarhy: %s", hierarhyLevelSet );
 		// analyse hierarhy
 		for ( HierarhyLevel hierarhyLevel : hierarhyLevelSet ) {
 			Table table = hierarhyLevel.getTable();
@@ -260,7 +240,6 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			}
 
 		}
-		log.debugf( "2.table hierarhy: %s", hierarhyLevelSet );
 		List<HierarhyLevel> hierarhyLevelList = new ArrayList<>( hierarhyLevelSet );
 		Collections.sort( hierarhyLevelList, new Comparator<HierarhyLevel>() {
 
@@ -273,7 +252,6 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 				return result;
 			}
 		} );
-		log.debugf( "3.table hierarhy: %s", hierarhyLevelList );
 		return hierarhyLevelList;
 	}
 
@@ -288,10 +266,12 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		return l;
 	}
 
-		private boolean createTable(Table table, OSchema schema, Set<String> createdEmbeddedClassSet, ODatabaseDocumentTx db, Set<String> tables,
+	private boolean createTable(Table table, OSchema schema, Set<String> createdEmbeddedClassSet, ODatabaseDocumentTx db, Set<String> tables,
 			Namespace namespace, SchemaDefinitionContext context) throws UnsupportedOperationException, HibernateException {
-		boolean isEmbeddedListTableName = isEmbeddedListTable( table );
 		String tableName = table.getName();
+		log.debugf( "create table %s", tableName );
+		boolean isEmbeddedListTableName = isEmbeddedListTable( table );
+
 		if ( schema.existsClass( tableName ) ) {
 			return true;
 		}
@@ -327,6 +307,10 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 
 	private void createColumnsForTable(Table table, Namespace namespace, SchemaDefinitionContext context, ODatabaseDocumentTx db,
 			Set<String> createdEmbeddedClassSet) throws HibernateException, UnsupportedOperationException {
+		OSchema currentSchema = db.getMetadata().getSchema();
+		OClass currentClass = currentSchema.getClass( table.getName() );
+		Map<String, OProperty> propertiesMap = currentClass.propertiesMap();
+		log.infof( "current properties: %s ", propertiesMap.keySet() );
 		String tableName = table.getName();
 		Iterator<Column> columnIterator = table.getColumnIterator();
 		while ( columnIterator.hasNext() ) {
@@ -336,7 +320,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 
 			if ( column.getName().startsWith( "_identifierMapper" ) ||
 					OrientDBConstant.SYSTEM_FIELDS.contains( column.getName() ) ||
-					( isTablePerClassInheritance( table ) && isAlreadyCreatedInParent( table, column, namespace.getTables() ) ) ) {
+					propertiesMap.containsKey( column.getName() ) ) {
 				continue;
 			}
 
