@@ -47,6 +47,10 @@ import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.metadata.sequence.OSequence;
 import com.orientechnologies.orient.core.metadata.sequence.OSequence.CreateParams;
 import com.orientechnologies.orient.core.metadata.sequence.OSequence.SEQUENCE_TYPE;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import javax.persistence.Entity;
 import org.hibernate.HibernateException;
 
@@ -85,9 +89,9 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		return String.format( "create class %s ", tableName );
 	}
 
-	private String createClassQuery(Table table) {
+	private String createClassQuery(SchemaDefinitionContext context, Table table) {
 		if ( isTablePerClassInheritance( table ) ) {
-			return String.format( "create class %s extends %s", table.getName(), table.getPrimaryKey().getTable().getName() );
+			return String.format( "create class %s extends %s", table.getName(), getSuperClassName( context, table ) );
 		}
 		else {
 			return String.format( "create class %s", table.getName() );
@@ -223,17 +227,68 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 
 			Set<String> tables = new HashSet<>();
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
-			for ( Table table : namespace.getTables() ) {
-				log.debugf( "table: %s, in inheritance: %s; superclass: %s ; is abstract: %s",
-						table.getName(), isTablePerClassInheritance( table ),
-						getSuperClassName( context, table ),
-						table.isAbstract() );
-				// createTable(table , schema, createdEmbeddedClassSet, db, tables, namespace, context);
+			List<HierarhyLevel> tableHierarhy = sortTablesByHierarhyLevel( context, namespace.getTables() );
+			log.debugf( "3.table hierarhy: %s", tableHierarhy );
+			for ( HierarhyLevel hierarhyLevel : tableHierarhy ) {
+				// createTable(hierarhyLevel.getTable() , schema, createdEmbeddedClassSet, db, tables, namespace,
+				// context);
 			}
+
 		}
 	}
 
-	private boolean createTable(Table table, OSchema schema, Set<String> createdEmbeddedClassSet, ODatabaseDocumentTx db, Set<String> tables,
+	private List<HierarhyLevel> sortTablesByHierarhyLevel(SchemaDefinitionContext context, Collection<Table> tables) {
+		Set<HierarhyLevel> hierarhyLevelSet = new HashSet<>();
+		log.debugf( "1.tables.size(): %s", tables.size() );
+		// load all tables
+		for ( Table currentTable : tables ) {
+			HierarhyLevel hl = new HierarhyLevel();
+			hl.setTable( currentTable );
+			hl.setLevel( 0 );
+			log.debugf( "current table hierarhy: %s", hl );
+			hierarhyLevelSet.add( hl );
+		}
+		log.debugf( "1.table hierarhy: %s", hierarhyLevelSet );
+		// analyse hierarhy
+		for ( HierarhyLevel hierarhyLevel : hierarhyLevelSet ) {
+			Table table = hierarhyLevel.getTable();
+			String superClass = null;
+			while ( ( superClass = getSuperClassName( context, table ) ) != null ) {
+				HierarhyLevel superLevel = searchHierarhyLevelByTableName( hierarhyLevelSet, superClass );
+				hierarhyLevel.setLevel( hierarhyLevel.getLevel() + 1 );
+				table = superLevel.getTable();
+			}
+
+		}
+		log.debugf( "2.table hierarhy: %s", hierarhyLevelSet );
+		List<HierarhyLevel> hierarhyLevelList = new ArrayList<>( hierarhyLevelSet );
+		Collections.sort( hierarhyLevelList, new Comparator<HierarhyLevel>() {
+
+			@Override
+			public int compare(HierarhyLevel o1, HierarhyLevel o2) {
+				int result = 0;
+				if ( o1 != null && o2 != null ) {
+					result = o1.getLevel().compareTo( o2.getLevel() );
+				}
+				return result;
+			}
+		} );
+		log.debugf( "3.table hierarhy: %s", hierarhyLevelList );
+		return hierarhyLevelList;
+	}
+
+	private HierarhyLevel searchHierarhyLevelByTableName(Set<HierarhyLevel> set, String tableName) {
+		HierarhyLevel l = null;
+		for ( HierarhyLevel hierarhyLevel : set ) {
+			if ( hierarhyLevel.getTable().getName().equals( tableName ) ) {
+				l = hierarhyLevel;
+				break;
+			}
+		}
+		return l;
+	}
+
+		private boolean createTable(Table table, OSchema schema, Set<String> createdEmbeddedClassSet, ODatabaseDocumentTx db, Set<String> tables,
 			Namespace namespace, SchemaDefinitionContext context) throws UnsupportedOperationException, HibernateException {
 		boolean isEmbeddedListTableName = isEmbeddedListTable( table );
 		String tableName = table.getName();
@@ -253,7 +308,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			throw new UnsupportedOperationException( String.format( "Table name %s not supported!", tableName ) );
 		}
 		else {
-			String classQuery = createClassQuery( table );
+			String classQuery = createClassQuery( context, table );
 			NativeQueryUtil.executeNonIdempotentQuery( db, classQuery );
 			tables.add( tableName );
 		}
@@ -353,6 +408,13 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		String superEntityName = entityAnnotation.name();
 		log.debugf( "superEntityName %s ;", superEntityName );
 
+		return superEntityName;
+	}
+
+	private String getHierarhyPrimaryKeyOwner(Table table) {
+		if ( !isTablePerClassInheritance( table ) ) {
+			return null;
+		}
 		return table.getPrimaryKey().getTable().getName();
 	}
 
