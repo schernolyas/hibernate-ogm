@@ -174,9 +174,11 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			getTableSeqValue.setLanguage( "groovy" );
 			getTableSeqValue.setIdempotent( false );
 			getTableSeqValue.setParameters( Arrays.asList( new String[]{ "seqName" } ) );
-			getTableSeqValue.setCode( " def db = orient.getDatabase();"
-					+ " com.orientechnologies.orient.core.metadata.sequence.OSequenceLibrary library = db.getMetadata().getSequenceLibrary(); "
-					+ " return library.getSequence( seqName.toUpperCase() ).next(); " );
+			getTableSeqValue.setCode( "def db = orient.getDatabase(); \n" +
+					"String selectQuery = \"select sequence('${seqName}').next()\";\n" +
+					"def executeQuery = db.getMetadata().getFunctionLibrary().getFunction( \"executeQuery\" );\n" +
+					"com.orientechnologies.orient.core.db.record.OIdentifiable[] arr = executeQuery.execute (selectQuery)\n" +
+					"return ((com.orientechnologies.orient.core.record.impl.ODocument)arr[0]).field('sequence')" );
 			getTableSeqValue.save();
 			log.infof( "stored procedure % created", OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
 		}
@@ -307,10 +309,14 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 
 	private void createColumnsForTable(Table table, Namespace namespace, SchemaDefinitionContext context, ODatabaseDocumentTx db,
 			Set<String> createdEmbeddedClassSet) throws HibernateException, UnsupportedOperationException {
+		db.getMetadata().reload();
 		OSchema currentSchema = db.getMetadata().getSchema();
-		OClass currentClass = currentSchema.getClass( table.getName() );
-		Map<String, OProperty> propertiesMap = currentClass.propertiesMap();
-		log.infof( "current properties: %s ", propertiesMap.keySet() );
+		Map<String, OProperty> propertiesMap = Collections.emptyMap();
+		if ( currentSchema.existsClass( table.getName() ) ) {
+			OClass currentClass = currentSchema.getClass( table.getName() );
+			propertiesMap = currentClass.propertiesMap();
+			log.infof( "current properties: %s ", propertiesMap.keySet() );
+		}
 		String tableName = table.getName();
 		Iterator<Column> columnIterator = table.getColumnIterator();
 		while ( columnIterator.hasNext() ) {

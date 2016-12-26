@@ -73,12 +73,16 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 			String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
 			Integer poolSize = propertyReader.property( OrientDBProperties.POOL_SIZE, Integer.class ).withDefault( 10 ).getValue();
 			String orientDBUrl = prepareOrientDbUrl( storageMode );
-			createDB( orientDBUrl, storageMode, databaseType, poolSize );
+
+			if ( propertyReader.property( OgmProperties.CREATE_DATABASE, Boolean.class ).withDefault( Boolean.FALSE ).getValue() ) {
+				createDB( orientDBUrl, storageMode, databaseType, poolSize );
+			}
 
 			databaseHolder = new DatabaseHolder( orientDBUrl, user, password, poolSize );
 
 			FormatterUtil.setDateFormatter( createFormatter( propertyReader, OrientDBProperties.DATE_FORMAT, OrientDBConstant.DEFAULT_DATE_FORMAT ) );
-			FormatterUtil.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
+			FormatterUtil
+					.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
 		}
 		catch (Exception e) {
 			throw log.unableToStartDatastoreProvider( e );
