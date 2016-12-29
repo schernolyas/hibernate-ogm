@@ -71,7 +71,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 			String user = propertyReader.property( OgmProperties.USERNAME, String.class ).getValue();
 			String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
-			Integer poolSize = propertyReader.property( OrientDBProperties.POOL_SIZE, Integer.class ).withDefault( 10 ).getValue();
+			Integer poolSize = propertyReader.property( OrientDBProperties.POOL_SIZE, Integer.class ).withDefault( 90 ).getValue();
 			String orientDBUrl = prepareOrientDbUrl( storageMode );
 
 			if ( propertyReader.property( OgmProperties.CREATE_DATABASE, Boolean.class ).withDefault( Boolean.FALSE ).getValue() ) {
@@ -182,6 +182,9 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 	@Override
 	public void stop() {
 		log.debug( "---stop---" );
+                this.databaseHolder.closeCurrentPool();
+                log.info( "connection pool closed!" );
+                
 	}
 
 	@SuppressWarnings("rawtypes")

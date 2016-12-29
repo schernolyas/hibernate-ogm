@@ -129,7 +129,8 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	private void createGetTableSeqValueFunc(ODatabaseDocumentTx db) {
-		log.debugf( "functions : %s", db.getMetadata().getFunctionLibrary().getFunctionNames() );
+                db.getMetadata().reload();
+		log.debugf( "functions : %s", db.getMetadata().getFunctionLibrary().getFunctionNames() );                
 		OFunction getTableSeqValue = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.GET_TABLE_SEQ_VALUE_FUNC );
 		if ( getTableSeqValue == null ) {
 			getTableSeqValue = db.getMetadata().getFunctionLibrary().createFunction( OrientDBConstant.GET_TABLE_SEQ_VALUE_FUNC );
@@ -167,6 +168,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	private void createGetNextSeqValueFunc(ODatabaseDocumentTx db) {
+                db.getMetadata().reload();
 		log.debugf( "functions : %s", db.getMetadata().getFunctionLibrary().getFunctionNames() );
 		OFunction getTableSeqValue = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
 		if ( getTableSeqValue == null ) {
@@ -176,7 +178,8 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			getTableSeqValue.setParameters( Arrays.asList( new String[]{ "seqName" } ) );
 			getTableSeqValue.setCode( "def db = orient.getDatabase(); \n" +
 					"String selectQuery = \"select sequence('${seqName}').next()\";\n" +
-					"def executeQuery = db.getMetadata().getFunctionLibrary().getFunction( \"executeQuery\" );\n" +
+                                        "def metadata = db.getMetadata();\n" +                                        
+					"def executeQuery = metadata.getFunctionLibrary().getFunction( \""+OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC+"\" );\n" +
 					"com.orientechnologies.orient.core.db.record.OIdentifiable[] arr = executeQuery.execute (selectQuery)\n" +
 					"return ((com.orientechnologies.orient.core.record.impl.ODocument)arr[0]).field('sequence')" );
 			getTableSeqValue.save();
@@ -185,6 +188,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	private void createExecuteQueryFunc(ODatabaseDocumentTx db) {
+                db.getMetadata().reload();
 		log.debugf( "functions : %s", db.getMetadata().getFunctionLibrary().getFunctionNames() );
 		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.EXECUTE_QUERY_FUNC );
 		if ( executeQuery == null ) {
@@ -200,12 +204,14 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 
 	@SuppressWarnings("unchecked")
 	private void createEntities(ODatabaseDocumentTx db, SchemaDefinitionContext context) {
+                db.getMetadata().reload();
 		OSchema schema = db.getMetadata().getSchema();
 
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			for ( Sequence sequence : namespace.getSequences() ) {
 				createSequence( db, sequence.getName().getSequenceName().getCanonicalName(), sequence.getInitialValue(), sequence.getIncrementSize() );
 			}
+                        schema.reload();
 
 			Set<String> tables = new HashSet<>();
 			Set<String> createdEmbeddedClassSet = new HashSet<>();
@@ -596,6 +602,8 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
 		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+                db.getMetadata().reload();
+                db.getLocalCache().clear();
 
 		log.debugf( "context.getAllEntityKeyMetadata(): %s", context.getAllEntityKeyMetadata() );
 		log.debugf( "context.getAllAssociationKeyMetadata(): %s", context.getAllAssociationKeyMetadata() );
@@ -605,6 +613,8 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		createExecuteQueryFunc( db );
 		createGetTableSeqValueFunc( db );
 		createGetNextSeqValueFunc( db );
+                db.getMetadata().reload();
+                log.debugf( "total functions: %s",db.getMetadata().getFunctionLibrary().getFunctionNames() );
 		for ( IdSourceKeyMetadata metadata : context.getAllIdSourceKeyMetadata() ) {
 			log.debugf( "Name: %s ;KeyColumnName:%s ;ValueColumnName:%s ",
 					metadata.getName(), metadata.getKeyColumnName(), metadata.getValueColumnName() );

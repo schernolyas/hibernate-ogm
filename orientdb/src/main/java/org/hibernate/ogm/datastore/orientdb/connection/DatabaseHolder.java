@@ -32,14 +32,15 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
 	private final String orientDbUrl;
 	private final String user;
 	private final String password;
-	private final OPartitionedDatabasePoolFactory factory;
+	private final OPartitionedDatabasePool pool;
 
 	public DatabaseHolder(String orientDbUrl, String user, String password, Integer poolSize) {
 		super();
 		this.orientDbUrl = orientDbUrl;
 		this.user = user;
 		this.password = password;
-		this.factory = new OPartitionedDatabasePoolFactory( poolSize );
+		//this.factory = new OPartitionedDatabasePoolFactory( poolSize );
+                this.pool = new OPartitionedDatabasePool(orientDbUrl, user, password, 10, 500);
 	}
 
 	@Override
@@ -55,9 +56,20 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
 		super.remove();
 	}
 
-	private ODatabaseDocumentTx createConnectionForCurrentThread() {
-		OPartitionedDatabasePool pool = factory.get( this.orientDbUrl, this.user, this.password );
-		return pool.acquire();
+	private ODatabaseDocumentTx createConnectionForCurrentThread() {                
+		//OPartitionedDatabasePool pool = factory.get( this.orientDbUrl, this.user, this.password );
+                //OPartitionedDatabasePool pool = new OPartitionedDatabasePool(user, user, password, 10, 500);
+                log.debugf( "pool info : availableConnections %s ;createdInstances: %s; maxPartitonSize: %s",
+                        pool.getAvailableConnections(),pool.getCreatedInstances(),pool.getMaxPartitonSize() );
+                ODatabaseDocumentTx db = pool.acquire();
+                db.getLocalCache().setEnable(false);
+                db.reload();                
+                db.getMetadata().reload();
+		return db;
 	}
+
+        public void closeCurrentPool() {
+                this.pool.close();
+        }
 
 }

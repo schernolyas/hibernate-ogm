@@ -59,7 +59,7 @@ public class UpdateQueryGenerator {
 
 		StringBuilder updateQuery = generateMainPart( associationKey.getTable(),
 				TupleUtil.toMap( tuple ), whereColumnNames.toArray( new String[1] ) );
-		updateQuery.append( " return count" );
+		updateQuery.append( " RETURN COUNT" );
 		// generate 'where' part
 		updateQuery.append( " where " );
 
@@ -104,7 +104,7 @@ public class UpdateQueryGenerator {
 	public GenerationResult generate(String className, Map<String, Object> valuesMap, EntityKey primaryKey, Integer currentVersion) {
 		StringBuilder updateQuery = generateMainPart( className, valuesMap, primaryKey.getColumnNames() );
 
-		updateQuery.append( " where " );
+		updateQuery.append( " WHERE " );
 		log.debugf( "generate: primaryKey : %s", primaryKey );
 		updateQuery.append( EntityKeyUtil.generatePrimaryKeyPredicate( primaryKey ) );
 		// and version protection
@@ -117,7 +117,7 @@ public class UpdateQueryGenerator {
 
 	private StringBuilder generateMainPart(String className, Map<String, Object> valuesMap, String[] primaryKeyColumnNames) {
 		StringBuilder updateQuery = new StringBuilder( 200 );
-		updateQuery.append( "update " ).append( className ).append( " set " );
+		updateQuery.append( "UPDATE " ).append( className ).append( " SET " );
 
 		Map<String, Object> allValuesMap = new LinkedHashMap<>( valuesMap.size() );
 		for ( Map.Entry<String, Object> entry : valuesMap.entrySet() ) {
@@ -181,7 +181,9 @@ public class UpdateQueryGenerator {
 			}
 			updateQuery.append( "," );
 		}
-		updateQuery.setCharAt( updateQuery.lastIndexOf( "," ), ' ' );
+                if (updateQuery.lastIndexOf( "," )!=-1) {
+                        updateQuery.setCharAt( updateQuery.lastIndexOf( "," ), ' ' );
+                }
 		return updateQuery;
 	}
 
