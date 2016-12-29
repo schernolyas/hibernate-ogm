@@ -42,7 +42,6 @@ public class Pizza implements Serializable {
 	private List<Product> products;
 
 	@Version
-	@Column(name = "@version")
 	private int version;
 	@Column(name = "@rid")
 	private ORecordId rid;

@@ -323,6 +323,9 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			Column column = columnIterator.next();
 			log.debugf( "column: %s ", column );
 			log.debugf( "relation type: %s", column.getValue().getType().getClass() );
+			if ( OrientDBConstant.UNSUPPORTED_SYSTEM_FIELDS_IN_ENTITY.contains( column.getName() ) ) {
+				throw log.cannotUseInEntityUnsupportedSystemField( column.getName(), tableName );
+			}
 
 			if ( column.getName().startsWith( "_identifierMapper" ) ||
 					OrientDBConstant.SYSTEM_FIELDS.contains( column.getName() ) ||
@@ -331,7 +334,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			}
 
 			if ( ComponentType.class.equals( column.getValue().getType().getClass() ) ) {
-				throw new UnsupportedOperationException( "Component type not supported yet " );
+				throw log.cannotUseUnsupportedType( ComponentType.class );
 			}
 			else if ( OrientDBMapping.RELATIONS_TYPES.contains( column.getValue().getType().getClass() ) ) {
 				Value value = column.getValue();

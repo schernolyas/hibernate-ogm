@@ -310,6 +310,6 @@ public class OrientDbAssociationTest extends OgmJpaTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 		return new Class<?>[]{ Customer.class, OrderItem.class, BuyingOrder.class, Pizza.class, Product.class,
-			ProductType.class };
+				ProductType.class };
 	}
 }

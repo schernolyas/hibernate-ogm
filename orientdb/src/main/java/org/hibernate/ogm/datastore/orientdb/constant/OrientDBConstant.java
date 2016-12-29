@@ -10,9 +10,7 @@ package org.hibernate.ogm.datastore.orientdb.constant;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -43,7 +41,7 @@ public class OrientDBConstant {
 	/**
 	 * Mapping between entity field and system OrientDB field
 	 */
-	public static final Map<String, String> MAPPING_FIELDS;
+	public static final Set<String> UNSUPPORTED_SYSTEM_FIELDS_IN_ENTITY = new HashSet<>( Arrays.asList( new String[]{ SYSTEM_VERSION } ) );
 	/**
 	 * Set of types that saved as binary
 	 */
@@ -80,9 +78,6 @@ public class OrientDBConstant {
 		set.add( SYSTEM_VERSION );
 		set.add( SYSTEM_CLASS );
 		SYSTEM_FIELDS = Collections.unmodifiableSet( set );
-		Map<String, String> map = new HashMap<>();
-		map.put( "version", "@version" );
-		MAPPING_FIELDS = Collections.unmodifiableMap( map );
 
 		Set<Class> set1 = new HashSet<>();
 		set1.add( BigInteger.class );

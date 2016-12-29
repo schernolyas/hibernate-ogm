@@ -36,7 +36,6 @@ public class OrderItem implements Serializable {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long bKey;
 	@Version
-	@Column(name = "@version")
 	private int version;
 	@Column(name = "@rid")
 	private ORecordId rid;

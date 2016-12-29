@@ -47,6 +47,7 @@ import java.util.List;
 public class OrientDBTestHelper implements GridDialectTestHelper {
 
 	private static final Log log = LoggerFactory.getLogger();
+
 	@Override
 	public long getNumberOfEntities(Session session) {
 		return getNumberOfEntities( session.getSessionFactory() );
@@ -159,6 +160,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 
 	}
 
+	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();

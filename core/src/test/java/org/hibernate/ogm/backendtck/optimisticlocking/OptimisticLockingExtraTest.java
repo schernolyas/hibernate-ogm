@@ -24,7 +24,6 @@ import org.hibernate.ogm.util.impl.LoggerFactory;
 import org.hibernate.ogm.utils.GridDialectType;
 import org.hibernate.ogm.utils.OgmTestCase;
 import org.hibernate.ogm.utils.SkipByGridDialect;
-import org.hibernate.ogm.utils.SkipByHelper;
 import org.hibernate.ogm.utils.TestHelper;
 import org.junit.Rule;
 import org.junit.Test;
@@ -65,14 +64,8 @@ public class OptimisticLockingExtraTest extends OgmTestCase {
 
 		entity = session.get( Galaxy.class, galaxy.getId() );
 
-		if ( SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB ) ) {
-			// version 1 after 'persistGalaxy()' and 2 - after 'entity.getStars().add( new Star( "Algol" ) );'
-			assertThat( entity.getVersion() ).isEqualTo( 2 );
-		}
-		else {
-			assertThat( entity.getVersion() ).isEqualTo( 1 );
+		assertThat( entity.getVersion() ).isEqualTo( 1 );
 
-		}
 		assertThat( entity.getStars() ).hasSize( 3 );
 
 		transaction.commit();
