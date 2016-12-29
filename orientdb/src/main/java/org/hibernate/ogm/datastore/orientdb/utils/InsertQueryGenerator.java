@@ -84,7 +84,8 @@ public class InsertQueryGenerator {
 		for ( Map.Entry<String, Object> entry : valuesMap.entrySet() ) {
 			String columnName = entry.getKey();
 			Object columnValue = entry.getValue();
-			if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) || OrientDBConstant.MAPPING_FIELDS.containsKey( columnName ) ) {
+			//if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) || OrientDBConstant.MAPPING_FIELDS.containsKey( columnName ) ) {
+                        if ( OrientDBConstant.SYSTEM_FIELDS.contains( columnName ) || OrientDBConstant.MAPPING_FIELDS.containsKey( columnName ) ) {
 				continue;
 			}
 			log.debugf( "createJSON: Column %s; value: %s (class: %s). is primary key: %b ",

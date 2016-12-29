@@ -51,11 +51,11 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 		OClass schemaClass = document.getSchemaClass();
 		log.debugf( "schemaClass: %s", schemaClass );
 		Object value = null;
-		if ( targetColumnName.equals( OrientDBConstant.SYSTEM_VERSION ) || targetColumnName.equals( "version" ) ) {
+		/*if ( targetColumnName.equals( OrientDBConstant.SYSTEM_VERSION ) || targetColumnName.equals( "version" ) ) {
 			value = document.getVersion();
 			log.debugf( "targetColumnName: %s, value: %d", targetColumnName, value );
 		}
-		else if ( targetColumnName.startsWith( "_identifierMapper." ) ) {
+		else */if ( targetColumnName.startsWith( "_identifierMapper." ) ) {
 			String fieldName = targetColumnName.substring( "_identifierMapper.".length() );
 			value = get( fieldName );
 		}
