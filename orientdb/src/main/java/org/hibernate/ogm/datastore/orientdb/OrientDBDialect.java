@@ -100,7 +100,8 @@ import org.hibernate.ogm.model.spi.EntityMetadataInformation;
  * @see IdentityColumnAwareGridDialect
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
-public class OrientDBDialect extends BaseGridDialect implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
+public class OrientDBDialect extends BaseGridDialect
+		implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
 	private static final Log log = LoggerFactory.getLogger();
 	private static final Association ASSOCIATION_NOT_FOUND = null;
@@ -188,7 +189,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 			log.debugf( "insertOrUpdateTuple:executeNonIdempotentQuery: queryType: %s; class: %s ", queryType, result.getClass().getName() );
 			switch ( queryType ) {
 				case INSERT:
-					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Inserted rows: %d ", key,queryBuffer, 1 );
+					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Inserted rows: %d ", key, queryBuffer, 1 );
 					break;
 				case UPDATE:
 					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %d ", key, queryBuffer, (Number) result );
@@ -462,7 +463,7 @@ public class OrientDBDialect extends BaseGridDialect implements QueryableGridDia
 
 	@Override
 	public int executeBackendUpdateQuery(BackendQuery<String> query, QueryParameters queryParameters, TupleContext tupleContext) {
-		//List<ODocument> documents = executeNativeQueryWithParams( query, queryParameters );
+		// List<ODocument> documents = executeNativeQueryWithParams( query, queryParameters );
 		throw new UnsupportedOperationException( "call executeBackendUpdateQuery!" );
 	}
 

@@ -108,10 +108,11 @@ public class UpdateQueryGenerator {
 		log.debugf( "generate: primaryKey : %s", primaryKey );
 		updateQuery.append( EntityKeyUtil.generatePrimaryKeyPredicate( primaryKey ) );
 		// and version protection
-		/*if ( currentVersion != null && currentVersion > 0 ) {
-			log.debugf( "version of entity : %d", currentVersion );
-			updateQuery.append( " AND " ).append( OrientDBConstant.SYSTEM_VERSION ).append( "=" ).append( currentVersion );
-		} */
+		/*
+		 * if ( currentVersion != null && currentVersion > 0 ) { log.debugf( "version of entity : %d", currentVersion );
+		 * updateQuery.append( " AND " ).append( OrientDBConstant.SYSTEM_VERSION ).append( "=" ).append( currentVersion
+		 * ); }
+		 */
 		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
 	}
 
@@ -132,10 +133,11 @@ public class UpdateQueryGenerator {
 			}
 		}
 
+		log.debugf( " generateMainPart: allColumnNames: %s;", allValuesMap.keySet() );
 		LinkedHashSet<String> allColumnNames = new LinkedHashSet<>( allValuesMap.keySet() );
-		allColumnNames.removeAll( Arrays.asList( primaryKeyColumnNames ) );
+		// allColumnNames.removeAll( Arrays.asList( primaryKeyColumnNames ) );
 		allColumnNames.removeAll( OrientDBConstant.SYSTEM_FIELDS );
-		//allColumnNames.removeAll( OrientDBConstant.MAPPING_FIELDS.keySet() );
+		// allColumnNames.removeAll( OrientDBConstant.MAPPING_FIELDS.keySet() );
 		log.debugf( " generateMainPart: allColumnNames: %s;", allColumnNames );
 
 		for ( String columnName : allColumnNames ) {

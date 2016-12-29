@@ -17,10 +17,11 @@ import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
-
+import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 
 /**
  * Util class for execute queries by native OrientDB API
+ *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class NativeQueryUtil {
@@ -44,7 +45,11 @@ public class NativeQueryUtil {
 	}
 
 	public static Object executeNonIdempotentQuery(ODatabaseDocumentTx db, String query) {
-		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( "executeQuery".toUpperCase() );
+		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.EXECUTE_QUERY_FUNC );
+		if ( executeQuery == null ) {
+			db.getMetadata().reload();
+			executeQuery = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.EXECUTE_QUERY_FUNC );
+		}
 		return executeQuery.execute( query );
 	}
 }

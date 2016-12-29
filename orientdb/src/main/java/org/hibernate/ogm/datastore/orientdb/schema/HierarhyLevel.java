@@ -9,6 +9,7 @@ package org.hibernate.ogm.datastore.orientdb.schema;
 import org.hibernate.mapping.Table;
 
 public class HierarhyLevel {
+
 	private Table table;
 	private Integer level;
 
@@ -27,8 +28,6 @@ public class HierarhyLevel {
 	public void setLevel(Integer level) {
 		this.level = level;
 	}
-
-
 
 	@Override
 	public int hashCode() {

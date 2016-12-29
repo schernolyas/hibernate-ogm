@@ -57,7 +57,10 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
 
 	private ODatabaseDocumentTx createConnectionForCurrentThread() {
 		OPartitionedDatabasePool pool = factory.get( this.orientDbUrl, this.user, this.password );
-		return pool.acquire();
+		ODatabaseDocumentTx db = pool.acquire();
+		// db.getLocalCache().setEnable(false);
+		db.getMetadata().reload();
+		return db;
 	}
 
 }

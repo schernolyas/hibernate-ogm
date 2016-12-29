@@ -11,7 +11,6 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
 
-
 /**
  * Description of errors and messages, that can be throw by the module
  *

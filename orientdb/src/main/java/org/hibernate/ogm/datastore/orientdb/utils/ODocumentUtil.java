@@ -20,10 +20,10 @@ public class ODocumentUtil {
 	public static Map<String, Object> toMap(ODocument document) {
 		Map<String, Object> allFields = new LinkedHashMap<>( 20 );
 		allFields.putAll( document.toMap() );
-		/*allFields.put( "@version", document.getVersion() );
-		if ( document.containsField( "version" ) ) {
-			allFields.put( "version", document.getVersion() );
-		}*/
+		/*
+		 * allFields.put( "@version", document.getVersion() ); if ( document.containsField( "version" ) ) {
+		 * allFields.put( "version", document.getVersion() ); }
+		 */
 		return allFields;
 	}
 }

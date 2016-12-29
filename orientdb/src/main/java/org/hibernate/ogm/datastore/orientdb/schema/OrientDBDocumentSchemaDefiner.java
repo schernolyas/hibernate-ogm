@@ -176,8 +176,13 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			getTableSeqValue.setParameters( Arrays.asList( new String[]{ "seqName" } ) );
 			getTableSeqValue.setCode( "def db = orient.getDatabase(); \n" +
 					"String selectQuery = \"select sequence('${seqName}').next()\";\n" +
-					"def executeQuery = db.getMetadata().getFunctionLibrary().getFunction( \"executeQuery\" );\n" +
-					"com.orientechnologies.orient.core.db.record.OIdentifiable[] arr = executeQuery.execute (selectQuery)\n" +
+					"def metadata = db.getMetadata(); \n" +
+					"def executeQuery = metadata.getFunctionLibrary().getFunction( \"" + OrientDBConstant.EXECUTE_QUERY_FUNC + "\" );\n" +
+					"if (executeQuery==null) {\n" +
+					"   metadata.reload();\n" +
+					"   executeQuery = metadata.getFunctionLibrary().getFunction( \"" + OrientDBConstant.EXECUTE_QUERY_FUNC + "\" );\n" +
+					"}; \n" +
+					"com.orientechnologies.orient.core.db.record.OIdentifiable[] arr = executeQuery.execute (selectQuery);\n" +
 					"return ((com.orientechnologies.orient.core.record.impl.ODocument)arr[0]).field('sequence')" );
 			getTableSeqValue.save();
 			log.infof( "stored procedure % created", OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
@@ -198,7 +203,6 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	private void createEntities(ODatabaseDocumentTx db, SchemaDefinitionContext context) {
 		OSchema schema = db.getMetadata().getSchema();
 
@@ -294,7 +298,12 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			NativeQueryUtil.executeNonIdempotentQuery( db, classQuery );
 			tables.add( tableName );
 		}
-		createColumnsForTable( table, namespace, context, db, createdEmbeddedClassSet );
+		try {
+			createColumnsForTable( table, namespace, context, db, createdEmbeddedClassSet );
+		}
+		catch (Exception e) {
+			log.error( "Cannot create Columns", e );
+		}
 		if ( table.hasPrimaryKey() && !isTablePerClassInheritance( table ) && !isEmbeddedObjectTable( table ) ) {
 			PrimaryKey primaryKey = table.getPrimaryKey();
 			if ( primaryKey != null ) {
@@ -307,6 +316,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		return false;
 	}
 
+	@SuppressWarnings("unchecked")
 	private void createColumnsForTable(Table table, Namespace namespace, SchemaDefinitionContext context, ODatabaseDocumentTx db,
 			Set<String> createdEmbeddedClassSet) throws HibernateException, UnsupportedOperationException {
 		db.getMetadata().reload();
@@ -390,6 +400,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		return !tableName.equals( primaryKeyTableName );
 	}
 
+	@SuppressWarnings("rawtypes")
 	private String getSuperClassName(SchemaDefinitionContext context, Table table) {
 		if ( !isTablePerClassInheritance( table ) ) {
 			return null;
@@ -408,6 +419,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		return superEntityName;
 	}
 
+	@SuppressWarnings("unused")
 	private String getHierarhyPrimaryKeyOwner(Table table) {
 		if ( !isTablePerClassInheritance( table ) ) {
 			return null;

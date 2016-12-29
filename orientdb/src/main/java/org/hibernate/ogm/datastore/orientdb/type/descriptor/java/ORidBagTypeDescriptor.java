@@ -46,6 +46,7 @@ public class ORidBagTypeDescriptor extends AbstractTypeDescriptor<ORidBag> {
 		return t;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public <X> X unwrap(ORidBag value, Class<X> type, WrapperOptions wo) {
 		if ( value == null ) {

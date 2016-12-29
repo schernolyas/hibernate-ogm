@@ -40,6 +40,7 @@ public class ORecordIdTypeDescriptor extends AbstractTypeDescriptor<ORecordId> {
 		return new ORecordId( rid );
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public <X> X unwrap(ORecordId value, Class<X> type, WrapperOptions wo) {
 		if ( value == null ) {

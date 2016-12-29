@@ -12,7 +12,6 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
 
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import com.orientechnologies.orient.core.metadata.schema.OClass;
 import java.math.BigDecimal;
 
 import java.util.Arrays;
@@ -48,8 +47,6 @@ public class OrientDBTupleSnapshot implements TupleSnapshot {
 	@Override
 	public Object get(String targetColumnName) {
 		log.debugf( "targetColumnName: %s", targetColumnName );
-		OClass schemaClass = document.getSchemaClass();
-		log.debugf( "schemaClass: %s", schemaClass );
 		Object value = null;
 		if ( targetColumnName.startsWith( "_identifierMapper." ) ) {
 			String fieldName = targetColumnName.substring( "_identifierMapper.".length() );
