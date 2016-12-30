@@ -20,7 +20,6 @@ import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
 
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
 
 /**
  * Represents a association tuple snapshot as loaded by the datastore.
@@ -63,7 +62,7 @@ public class OrientDBTupleAssociationSnapshot implements TupleSnapshot {
 				}
 			}
 		}
-		properties.putAll( ODocumentUtil.toMap( relationship ) );
+		properties.putAll( relationship.toMap() );
 		log.debug( "1.collectProperties: " + properties );
 	}
 

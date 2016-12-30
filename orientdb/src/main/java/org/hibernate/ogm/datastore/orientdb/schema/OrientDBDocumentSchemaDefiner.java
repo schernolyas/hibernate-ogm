@@ -162,7 +162,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 					+ "};   \n"
 					+ "return nextValue; " );
 			getTableSeqValue.save();
-			log.infof( "stored procedure % created", OrientDBConstant.GET_TABLE_SEQ_VALUE_FUNC );
+			log.infof( "stored procedure %s created", OrientDBConstant.GET_TABLE_SEQ_VALUE_FUNC );
 		}
 	}
 
@@ -185,7 +185,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 					"com.orientechnologies.orient.core.db.record.OIdentifiable[] arr = executeQuery.execute (selectQuery);\n" +
 					"return ((com.orientechnologies.orient.core.record.impl.ODocument)arr[0]).field('sequence')" );
 			getTableSeqValue.save();
-			log.infof( "stored procedure % created", OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
+			log.infof( "stored procedure %s created", OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
 		}
 	}
 
@@ -199,7 +199,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 			executeQuery.setParameters( Arrays.asList( new String[]{ "insertQuery" } ) );
 			executeQuery.setCode( "return orient.getDatabase().command(insertQuery);" );
 			executeQuery.save();
-			log.infof( "stored procedure % created", OrientDBConstant.EXECUTE_QUERY_FUNC );
+			log.infof( "stored procedure %s created", OrientDBConstant.EXECUTE_QUERY_FUNC );
 		}
 	}
 

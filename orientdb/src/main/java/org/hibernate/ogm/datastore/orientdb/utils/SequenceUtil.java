@@ -7,6 +7,7 @@
 package org.hibernate.ogm.datastore.orientdb.utils;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.metadata.OMetadata;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
@@ -30,7 +31,12 @@ public class SequenceUtil {
 	 * @return next value of the sequence
 	 */
 	public static synchronized long getNextSequenceValue(ODatabaseDocumentTx db, String seqName) {
-		OFunction getNextSeqValue = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
+		OMetadata metadata = db.getMetadata();
+		OFunction getNextSeqValue = metadata.getFunctionLibrary().getFunction( OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
+		if ( getNextSeqValue == null ) {
+			metadata.reload();
+			getNextSeqValue = metadata.getFunctionLibrary().getFunction( OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
+		}
 		Number value = (Number) getNextSeqValue.execute( seqName );
 		return value.longValue();
 	}
@@ -51,7 +57,12 @@ public class SequenceUtil {
 	public static synchronized long getNextTableValue(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String pkColumnValue,
 			String valueColumnName,
 			Integer initValue, Integer inc) {
-		OFunction getTableSeqValue = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.GET_TABLE_SEQ_VALUE_FUNC );
+		OMetadata metadata = db.getMetadata();
+		OFunction getTableSeqValue = metadata.getFunctionLibrary().getFunction( OrientDBConstant.GET_TABLE_SEQ_VALUE_FUNC );
+		if ( getTableSeqValue == null ) {
+			metadata.reload();
+			getTableSeqValue = metadata.getFunctionLibrary().getFunction( OrientDBConstant.GET_TABLE_SEQ_VALUE_FUNC );
+		}
 		Number nextValue = (Number) getTableSeqValue.execute( seqTable, pkColumnName, pkColumnValue, valueColumnName, initValue, inc );
 		return nextValue.longValue();
 	}

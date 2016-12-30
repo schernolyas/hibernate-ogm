@@ -17,7 +17,6 @@ import org.hibernate.ogm.dialect.query.spi.ClosableIterator;
 import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.model.spi.Tuple.SnapshotType;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import org.hibernate.ogm.datastore.orientdb.utils.ODocumentUtil;
 
 /**
  * Closable iterator through {@link ResultSet}
@@ -41,7 +40,7 @@ public class ODocumentListTupleIterator implements ClosableIterator<Tuple> {
 
 	@Override
 	public Tuple next() {
-		return new Tuple( new MapTupleSnapshot( ODocumentUtil.toMap( docIt.next() ) ), SnapshotType.UNKNOWN );
+		return new Tuple( new MapTupleSnapshot( docIt.next().toMap() ), SnapshotType.UNKNOWN );
 	}
 
 	@Override
