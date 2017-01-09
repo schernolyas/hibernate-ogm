@@ -32,3 +32,5 @@ include::modules/couchdb.asciidoc[]
 include::modules/cassandra.asciidoc[]
 
 include::modules/redis.asciidoc[]
+
+include::modules/orientdb.asciidoc[]
