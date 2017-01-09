@@ -100,6 +100,7 @@ import org.hibernate.ogm.model.spi.EntityMetadataInformation;
  * @see IdentityColumnAwareGridDialect
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
+@SuppressWarnings("serial")
 public class OrientDBDialect extends BaseGridDialect
 		implements QueryableGridDialect<String>, SessionFactoryLifecycleAwareDialect, IdentityColumnAwareGridDialect {
 
