@@ -9,7 +9,6 @@ package org.hibernate.ogm.datastore.orientdb.utils;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -73,7 +72,7 @@ public class UpdateQueryGenerator {
 			}
 		}
 
-		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
+		return new GenerationResult( updateQuery.toString() );
 	}
 
 	/**
@@ -82,12 +81,11 @@ public class UpdateQueryGenerator {
 	 * @param className name of OrientDB class
 	 * @param tuple tuple
 	 * @param primaryKey primary key
-	 * @param currentVersion version for update
 	 * @return result
 	 * @see GenerationResult
 	 */
-	public GenerationResult generate(String className, Tuple tuple, EntityKey primaryKey, Integer currentVersion) {
-		return generate( className, TupleUtil.toMap( tuple ), primaryKey, currentVersion );
+	public GenerationResult generate(String className, Tuple tuple, EntityKey primaryKey) {
+		return generate( className, TupleUtil.toMap( tuple ), primaryKey );
 	}
 
 	/**
@@ -101,19 +99,13 @@ public class UpdateQueryGenerator {
 	 * @see GenerationResult
 	 */
 
-	public GenerationResult generate(String className, Map<String, Object> valuesMap, EntityKey primaryKey, Integer currentVersion) {
+	public GenerationResult generate(String className, Map<String, Object> valuesMap, EntityKey primaryKey) {
 		StringBuilder updateQuery = generateMainPart( className, valuesMap, primaryKey.getColumnNames() );
 
 		updateQuery.append( " where " );
 		log.debugf( "generate: primaryKey : %s", primaryKey );
 		updateQuery.append( EntityKeyUtil.generatePrimaryKeyPredicate( primaryKey ) );
-		// and version protection
-		/*
-		 * if ( currentVersion != null && currentVersion > 0 ) { log.debugf( "version of entity : %d", currentVersion );
-		 * updateQuery.append( " AND " ).append( OrientDBConstant.SYSTEM_VERSION ).append( "=" ).append( currentVersion
-		 * ); }
-		 */
-		return new GenerationResult( Collections.emptyList(), updateQuery.toString() );
+		return new GenerationResult( updateQuery.toString() );
 	}
 
 	private StringBuilder generateMainPart(String className, Map<String, Object> valuesMap, String[] primaryKeyColumnNames) {

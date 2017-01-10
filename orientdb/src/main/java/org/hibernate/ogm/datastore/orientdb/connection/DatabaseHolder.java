@@ -50,17 +50,17 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
 
 	@Override
 	public void remove() {
-		log.debugf( "remove database for thread %s", Thread.currentThread().getName() );
-		get().close();
+		log.debugf( "drop database for thread %s", Thread.currentThread().getName() );
+		ODatabaseDocumentTx currentDb = get();
+		currentDb.close();		
 		super.remove();
 	}
 
 	private ODatabaseDocumentTx createConnectionForCurrentThread() {
 		OPartitionedDatabasePool pool = factory.get( this.orientDbUrl, this.user, this.password );
 		ODatabaseDocumentTx db = pool.acquire();
-		// db.getLocalCache().setEnable(false);
 		db.getMetadata().reload();
+		db.setValidationEnabled( true );
 		return db;
 	}
-
 }

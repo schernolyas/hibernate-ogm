@@ -24,6 +24,7 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.transaction.impl.OrientDbTransactionCoordinatorBuilder;
 import org.hibernate.ogm.datastore.orientdb.utils.FormatterUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.PropertyReaderUtil;
 import org.hibernate.ogm.datastore.spi.BaseDatastoreProvider;
 import org.hibernate.ogm.datastore.spi.SchemaDefiner;
 import org.hibernate.ogm.dialect.spi.GridDialect;
@@ -57,24 +58,20 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 	public void start() {
 		log.debug( "---start---" );
 		try {
-			StorageModeEnum storageMode = propertyReader
-					.property( OrientDBProperties.STORAGE_MODE_TYPE, OrientDBProperties.StorageModeEnum.class )
-					.withDefault( OrientDBProperties.StorageModeEnum.MEMORY ).getValue();
+			StorageModeEnum storageMode = PropertyReaderUtil.readStorateModeProperty( propertyReader );
 
-			DatabaseTypeEnum databaseType = propertyReader
-					.property( OrientDBProperties.DATEBASE_TYPE, OrientDBProperties.DatabaseTypeEnum.class )
-					.withDefault( OrientDBProperties.DatabaseTypeEnum.DOCUMENT ).getValue();
+			DatabaseTypeEnum databaseType = PropertyReaderUtil.readDatabaseTypeProperty( propertyReader );
 
 			if ( DatabaseTypeEnum.GRAPH.equals( databaseType ) ) {
 				throw new UnsupportedOperationException( "Graph API is not supported yet. Use Document API!" );
 			}
 
-			String user = propertyReader.property( OgmProperties.USERNAME, String.class ).getValue();
-			String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
-			Integer poolSize = propertyReader.property( OrientDBProperties.POOL_SIZE, Integer.class ).withDefault( 10 ).getValue();
+			String user = PropertyReaderUtil.readUserProperty( propertyReader );
+			String password = PropertyReaderUtil.readPasswordProperty( propertyReader );
+			Integer poolSize = PropertyReaderUtil.readPoolSizeProperty( propertyReader );
 			String orientDBUrl = prepareOrientDbUrl( storageMode );
 
-			if ( propertyReader.property( OgmProperties.CREATE_DATABASE, Boolean.class ).withDefault( Boolean.FALSE ).getValue() ) {
+			if ( PropertyReaderUtil.readCreateDatabaseProperty( propertyReader ) ) {
 				createDB( orientDBUrl, storageMode, databaseType, poolSize );
 			}
 
@@ -100,7 +97,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 	}
 
 	private String prepareOrientDbUrl(OrientDBProperties.StorageModeEnum databaseType) {
-		String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
+		String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
 		StringBuilder orientDbUrl = new StringBuilder( 100 );
 		orientDbUrl.append( databaseType.name().toLowerCase() );
 		switch ( databaseType ) {
@@ -108,7 +105,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 				orientDbUrl.append( ":" ).append( database );
 				break;
 			case REMOTE:
-				String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
+				String host = PropertyReaderUtil.readHostProperty( propertyReader );
 				orientDbUrl.append( ":" ).append( host ).append( "/" ).append( database );
 				break;
 			default:
@@ -119,8 +116,9 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 	private void createDB(String orientDbUrl, StorageModeEnum storageMode, DatabaseTypeEnum databaseType, Integer poolSize) {
 		log.debug( "---createDB---" );
-		String user = propertyReader.property( OgmProperties.USERNAME, String.class ).getValue();
-		String password = propertyReader.property( OgmProperties.PASSWORD, String.class ).getValue();
+		String user = PropertyReaderUtil.readUserProperty( propertyReader );
+		String password = PropertyReaderUtil.readPasswordProperty( propertyReader );
+		log.debugf( "User: %s; Password: %s ", user, password ); 
 		if ( OrientDBProperties.StorageModeEnum.MEMORY.equals( storageMode ) ) {
 			try {
 				OPartitionedDatabasePoolFactory factory = new OPartitionedDatabasePoolFactory( poolSize );
@@ -135,12 +133,13 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 			}
 		}
 		else if ( OrientDBProperties.StorageModeEnum.REMOTE.equals( storageMode ) ) {
-			if ( propertyReader.property( OgmProperties.CREATE_DATABASE, Boolean.class ).withDefault( Boolean.FALSE ).getValue() ) {
-				String rootUser = propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
-				String rootPassword = propertyReader.property( OrientDBProperties.ROOT_PASSWORD, String.class ).withDefault( "root" ).getValue();
-				String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
-				String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
-				log.debugf( "Try to create remote database in JDBC URL %s ", orientDbUrl );
+			if ( PropertyReaderUtil .readCreateDatabaseProperty( propertyReader )) {
+				String rootUser = PropertyReaderUtil.readRootUserProperty( propertyReader );
+				String rootPassword = PropertyReaderUtil.readRootPasswordProperty( propertyReader );
+				log.debugf( "Root user: %s; root password: %s ", rootUser, rootPassword ); 
+				String host = PropertyReaderUtil.readHostProperty( propertyReader );
+				String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
+				log.debugf( "Try to create remote database in URL %s ", orientDbUrl );
 				OServerAdmin serverAdmin = null;
 				try {
 					serverAdmin = new OServerAdmin( "remote:" + host );
@@ -154,9 +153,10 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 					else {
 						log.infof( "Database %s already exists", database );
 					}
+					
 					// open the database
 					ODatabaseDocumentTx db = new ODatabaseDocumentTx( "remote:" + host + "/" + database );
-					db.open( user, password );
+					db.open( rootUser, rootPassword );
 				}
 				catch (Exception ioe) {
 					throw log.cannotCreateDatabase( database, ioe );

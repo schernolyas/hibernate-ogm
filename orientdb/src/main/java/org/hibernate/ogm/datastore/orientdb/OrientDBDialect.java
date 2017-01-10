@@ -78,7 +78,6 @@ import org.hibernate.type.Type;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
-import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
@@ -154,6 +153,7 @@ public class OrientDBDialect extends BaseGridDialect
 		throw new UnsupportedOperationException( "Not supported yet." );
 	}
 
+	@SuppressWarnings("incomplete-switch")
 	@Override
 	public void insertOrUpdateTuple(EntityKey key, TuplePointer tuplePointer, TupleContext tupleContext) throws TupleAlreadyExistsException {
 		Tuple tuple = tuplePointer.getTuple();
@@ -175,32 +175,24 @@ public class OrientDBDialect extends BaseGridDialect
 				queryBuffer.append( insertResult.getExecutionQuery() );
 				break;
 			case UPDATE:
-				Integer currentVersion = (Integer) snapshot.get( OrientDBConstant.SYSTEM_VERSION );
-				log.debugf( "insertOrUpdateTuple:@version: %s. current tread: %s;",
-						snapshot.get( OrientDBConstant.SYSTEM_VERSION ), Thread.currentThread().getName() );
-				GenerationResult updateResult = UPDATE_QUERY_GENERATOR.generate( key.getTable(), tuple, key, currentVersion );
+				GenerationResult updateResult = UPDATE_QUERY_GENERATOR.generate( key.getTable(), tuple, key );
 				queryBuffer.append( updateResult.getExecutionQuery() );
 				break;
 			case ERROR:
 				throw new StaleObjectStateException( key.getTable(), (Serializable) EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
 		}
 
-		try {
-			Object result = NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
-			log.debugf( "insertOrUpdateTuple:executeNonIdempotentQuery: queryType: %s; class: %s ", queryType, result.getClass().getName() );
-			switch ( queryType ) {
-				case INSERT:
-					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Inserted rows: %d ", key, queryBuffer, 1 );
-					break;
-				case UPDATE:
-					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %d ", key, queryBuffer, (Number) result );
-					break;
-			}
+		Object result = NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
+		log.debugf( "insertOrUpdateTuple:executeNonIdempotentQuery: queryType: %s; class: %s ", queryType, result.getClass().getName() );
+		switch ( queryType ) {
+			case INSERT:
+				log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Inserted rows: %d ", key, queryBuffer, 1 );
+				break;
+			case UPDATE:
+				log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %d ", key, queryBuffer, (Number) result );
+				break;
+		}
 
-		}
-		catch (OConcurrentModificationException cme) {
-			throw new StaleObjectStateException( key.getTable(), (Serializable) EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
-		}
 	}
 
 	@Override

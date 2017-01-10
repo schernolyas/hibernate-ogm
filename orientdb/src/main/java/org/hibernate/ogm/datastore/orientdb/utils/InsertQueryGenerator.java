@@ -9,7 +9,6 @@ package org.hibernate.ogm.datastore.orientdb.utils;
 import org.hibernate.ogm.datastore.orientdb.dto.GenerationResult;
 import java.math.BigInteger;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 import java.util.Set;
@@ -68,7 +67,7 @@ public class InsertQueryGenerator {
 		JSONObject queryJsonContent = createJSON( isStoreTuple, keyColumnNames, valuesMap );
 		StringBuilder insertQuery = new StringBuilder( 100 );
 		insertQuery.append( "insert into " ).append( className ).append( " content " ).append( queryJsonContent.toJSONString() );
-		return new GenerationResult( Collections.emptyList(), insertQuery.toString() );
+		return new GenerationResult( insertQuery.toString() );
 	}
 
 	/**

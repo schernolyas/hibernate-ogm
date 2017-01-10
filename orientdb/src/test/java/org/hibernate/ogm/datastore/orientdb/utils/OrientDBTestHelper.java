@@ -15,7 +15,6 @@ import java.util.Properties;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.document.options.AssociationStorageType;
 import org.hibernate.ogm.datastore.orientdb.OrientDB;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
@@ -162,18 +161,16 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
+		log.infof( "call dropSchemaAndDatabase!" );
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
-		OrientDBProperties.StorageModeEnum databaseType = propertyReader
-				.property( OrientDBProperties.STORAGE_MODE_TYPE, OrientDBProperties.StorageModeEnum.class )
-				.withDefault( OrientDBProperties.StorageModeEnum.MEMORY ).getValue();
+		OrientDBProperties.StorageModeEnum databaseType = PropertyReaderUtil.readStorateModeProperty( propertyReader );
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
-		log.infof( "call dropSchemaAndDatabase! db closed: %b ", db.isClosed() );
-		String database = propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
+		String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
 		if ( OrientDBProperties.StorageModeEnum.REMOTE.equals( databaseType ) ) {
-			String rootUser = propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
-			String rootPassword = propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
-			String host = propertyReader.property( OgmProperties.HOST, String.class ).withDefault( "localhost" ).getValue();
+			String rootUser = PropertyReaderUtil.readRootUserProperty( propertyReader );
+			String rootPassword = PropertyReaderUtil.readRootPasswordProperty( propertyReader );
+			String host = PropertyReaderUtil.readHostProperty( propertyReader );
 			OServerAdmin serverAdmin = null;
 			try {
 				serverAdmin = new OServerAdmin( "remote:" + host ).connect( rootUser, rootPassword );
@@ -186,7 +183,6 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 				if ( serverAdmin != null ) {
 					serverAdmin.close( true );
 				}
-
 			}
 		}
 		else {
