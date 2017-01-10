@@ -90,7 +90,7 @@ keep the existing constraints and create the missing one.
 Default value is `DROP_RECREATE_QUIETLY`.
 (!)hibernate.ogm.datastore.host (optional)::
 The host name and the port to use when connecting to a remote server.
-Default value is `localhost:7474`.
+Default value is `localhost:2424` (Port 2424 is used for native binary protocol).
 hibernate.ogm.datastore.username::
 The authentication username for the datastorage.
 hibernate.ogm.datastore.password::
