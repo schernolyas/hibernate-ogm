@@ -59,7 +59,7 @@ You can select a different host, port and enable authentication with the followi
 [subs="verbatim,attributes"]
 ----
 hibernate.ogm.datastore.provider = orientdb
-hibernate.ogm.datastore.host = example.com
+hibernate.ogm.datastore.host = example.com:2424
 hibernate.ogm.datastore.username = example_username
 hibernate.ogm.datastore.password = example_password
 ----
@@ -69,18 +69,13 @@ hibernate.ogm.datastore.password = example_password
 
 The following properties are available to configure OrientDB support:
 
-hibernate.ogm.orientdb.format.datetime (optional)::
-Datetime format for OrientDB. Default value is: `yyyy-MM-dd HH:mm:ss z`
-hibernate.ogm.orientdb.format.date (optional)::
-Date format for OrientDB. Default value is: `yyyy-MM-dd`
+hibernate.ogm.orientdb.format.datetime (optional)::Datetime format for OrientDB. Default value is: `yyyy-MM-dd HH:mm:ss z`
+hibernate.ogm.orientdb.format.date (optional)::Date format for OrientDB. Default value is: `yyyy-MM-dd`
 hibernate.ogm.orientdb.dbtype (optional):: Type of database. Available values are: `document`, `graph`. Default value is `document`.
 hibernate.ogm.orientdb.storage (optional):: Type of storage. Available values are: `memory`,`remote`. Default value is `memory`.
 hibernate.ogm.orientdb.pool.size (optional):: Size of connection pool to datastorage. Default value is 10.
-
 hibernate.ogm.orientdb.root.username (optional):: Username of OrientDB root user. The root user name requred for create/remote database in `remote` storage. Default value is `root`
 hibernate.ogm.orientdb.root.password (optional):: Password of OrientDB root user. Default value is `root`
-
-
 (!)hibernate.schema_update.unique_constraint_strategy (optional)::
 If set to `SKIP`, Hibernate OGM won't create any unique constraints on the nodes representing the entities.
 This property won't affect the unique constraints generated for sequences.
