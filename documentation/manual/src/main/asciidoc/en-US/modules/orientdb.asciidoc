@@ -69,23 +69,23 @@ hibernate.ogm.datastore.password = example_password
 
 The following properties are available to configure OrientDB support:
 
-hibernate.ogm.orientdb.format.datetime (optional)::Datetime format for OrientDB. Default value is: `yyyy-MM-dd HH:mm:ss z`
-hibernate.ogm.orientdb.format.date (optional)::Date format for OrientDB. Default value is: `yyyy-MM-dd`
-hibernate.ogm.orientdb.dbtype (optional):: Type of database. Available values are: `document`, `graph`. Default value is `document`.
-hibernate.ogm.orientdb.storage (optional):: Type of storage. Available values are: `memory`,`remote`. Default value is `memory`.
-hibernate.ogm.orientdb.pool.size (optional):: Size of connection pool to datastorage. Default value is 10.
-hibernate.ogm.orientdb.root.username (optional):: Username of OrientDB root user. The root user name requred for create/remote database in `remote` storage. Default value is `root`
-hibernate.ogm.orientdb.root.password (optional):: Password of OrientDB root user. Default value is `root`
-(!)hibernate.schema_update.unique_constraint_strategy (optional)::
-If set to `SKIP`, Hibernate OGM won't create any unique constraints on the nodes representing the entities.
-This property won't affect the unique constraints generated for sequences.
-Other possible values (defined on the `org.hibernate.tool.hbm2ddl.UniqueConstraintSchemaUpdateStrategy` enum) are `DROP_RECREATE_QUIETLY` and `RECREATE_QUIETLY`
-but the effect will be the same (since Neo4j constraints don't have a name):
-keep the existing constraints and create the missing one.
-Default value is `DROP_RECREATE_QUIETLY`.
-(!)hibernate.ogm.datastore.host (optional)::
+.OrientDB datastore configuration properties
+hibernate.ogm.orientdb.format.datetime (optional)::
+Datetime format for OrientDB. Default value is: `yyyy-MM-dd HH:mm:ss z`
+hibernate.ogm.orientdb.format.date (optional)::
+Date format for OrientDB. Default value is: `yyyy-MM-dd`
+hibernate.ogm.orientdb.dbtype (optional)::
+Type of database. Available values are: `document`, `graph`. Default value is `document`.
+hibernate.ogm.orientdb.storage (optional)::
+Type of storage. Available values are: `memory`,`remote`. Default value is `memory`.
+hibernate.ogm.orientdb.pool.size (optional)::
+Size of connection pool to datastorage. Default value is 10.
+hibernate.ogm.orientdb.root.username (optional)::
+Username of OrientDB root user. The root user name requred for create/remote database in `remote` storage. Default value is `root`
+hibernate.ogm.orientdb.root.password (optional)::
+Password of OrientDB root user. Default value is `root`
+hibernate.ogm.datastore.host (optional)::
 The host name and the port to use when connecting to a remote server.
-Default value is `localhost:2424` (Port 2424 is used for native binary protocol).
 hibernate.ogm.datastore.username::
 The authentication username for the datastorage.
 hibernate.ogm.datastore.password::
@@ -110,19 +110,17 @@ Hibernate OGM tries to make the mapping to the underlying datastore as natural a
 so that third party applications not using Hibernate OGM can still read
 and update the same datastore.
 
-To make things simple, each entity is represented by a class (see ),
-each embedded object is also represented by a class.
-Links between entities (whether to-one to to-many associations)
-are represented by links between classes (by field with type `LINK`).
+Each entity is represented by a class (see details at link:http://orientdb.com/docs/2.2.x/Concepts.html#class[Class] ).
+All Links between entities are represented by links between classes (see details at link:http://orientdb.com/docs/2.2.x/Concepts.html#relationships[Relationships]).
 
 [[ogm-orientdb-built-in-types]]
 ==== Properties and built-in types
 
 Each entity is represented by a class.
-Each property or more precisely column is represented by an property of the class (see http://orientdb.com/docs/2.2.x/Concepts.html).
-Supported data types located in http://orientdb.com/docs/2.2/Types.html
+Each property or more precisely column is represented by an property of the class.
+Supported data types described in link:http://orientdb.com/docs/2.2/Types.html[Types]
 
-The following types NOT supported in OrientDB and the module:
+The following types *NOT* supported in OrientDB and the module:
 * [classname]`java.lang.Calendar`
 
 The following types (and corresponding primitives) get passed to OrientDB without any conversion:
@@ -158,10 +156,10 @@ This can have consequences when it comes to queries on null value.
 
 Entities are stored as OrientDB classes,
 which means each entity property will be translated into a property of the class.
-The name of the table mapping the entity is used as label.
+The name of the class mapping the entity is used as label.
 
 You can use the name property of the [classname]`@Table` and [classname]`@Column` annotations
-to rename the label and the node's properties.
+to rename the label and the class's properties.
 
 .Default JPA mapping for an entity
 ====
@@ -943,3 +941,6 @@ Poem poem2 = (Poem) session.getNamedQuery( "AthanasiaPoem" )
 
 Hibernate OGM stores data in a natural way so you can still execute queries using your favorite tool,
 the main drawback is that the results are going to be raw Neo4j elements and not managed entities.
+
+==== Known Limitations & Future improvements
+limitations
