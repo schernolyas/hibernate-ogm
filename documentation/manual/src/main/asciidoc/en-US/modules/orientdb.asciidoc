@@ -849,7 +849,7 @@ Expanding our support in this area is high on our priority list.
 [[ogm-orientdb-queries-native]]
 ==== SQL queries (native OrientDB dialect)
 
-Hibernate OGM also supports http://docs.neo4j.org/chunked/stable/cypher-query-lang.html[Cypher queries] for Neo4j.
+Hibernate OGM also supports link:http://orientdb.com/docs/2.2.x/SQL.html[OrientDB dialect for SQL].
 You can execute native queries as shown in the following example:
 
 .Using the JPA API
@@ -923,7 +923,7 @@ Native queries can also be created using the `@NamedNativeQuery` annotation:
 @Entity
 @NamedNativeQuery(
    name = "AthanasiaPoem",
-   query = "MATCH ( n:Poem { name:'Athanasia', author:'Oscar Wilde' } ) RETURN n",
+   query = "SELECT FROM Poem where name='Athanasia' and author='Oscar Wilde'",
    resultClass = Poem.class )
 public class Poem { ... }
 
@@ -942,5 +942,7 @@ Poem poem2 = (Poem) session.getNamedQuery( "AthanasiaPoem" )
 Hibernate OGM stores data in a natural way so you can still execute queries using your favorite tool,
 the main drawback is that the results are going to be raw Neo4j elements and not managed entities.
 
-==== Known Limitations & Future improvements
+
+[[ogm-orientdb-limitations]]
+=== Known Limitations & Future improvements
 limitations
