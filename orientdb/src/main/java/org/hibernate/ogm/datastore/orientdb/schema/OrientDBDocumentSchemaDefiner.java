@@ -81,6 +81,7 @@ import org.hibernate.type.descriptor.converter.AttributeConverterTypeAdapter;
  */
 public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 
+	private static final long serialVersionUID = 1L;
 	private static final String CREATE_PROPERTY_TEMPLATE = "create property {0}.{1} {2}";
 	private static final String CREATE_EMBEDDED_PROPERTY_TEMPLATE = "create property {0}.{1} embedded {2}";
 	private static final Log log = LoggerFactory.getLogger();
@@ -388,6 +389,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 					}
 				}
 			}
+			// TODO: support @Column( unique = true )
 		}
 	}
 
