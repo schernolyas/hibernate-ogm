@@ -204,12 +204,14 @@ image::neo4j-@Column-@Table-example.png[align="center", depth="", scalefit="1"]
 
 [WARNING]
 ====
-Neo4j does not support constraints on more than one property.
+OrientDB does not support constraints on more than one property.
 For this reason, Hibernate OGM will create a unique constraint ONLY when it spans
 a single property and it will ignore the ones spanning multiple properties.
 
 The lack of unique constraints on node properties might result in the creation of multiple
 nodes with the same identifier.
+
+For details see link:http://orientdb.com/docs/2.2/Schema.html#constraints[Constraints] 
 ====
 
 Hibernate OGM will create unique constraints for the identifier of entities and for the properties
