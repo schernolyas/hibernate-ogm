@@ -20,6 +20,10 @@ public class PropertyReaderUtil {
 		return propertyReader.property( OgmProperties.DATABASE, String.class ).getValue();
 	}
 
+	public static String readDatabasePathProperty(ConfigurationPropertyReader propertyReader) {
+		return propertyReader.property( OrientDBProperties.PLOCAL_PATH, String.class ).withDefault( "./target/" ).getValue();
+	}
+
 	public static String readRootUserProperty(ConfigurationPropertyReader propertyReader) {
 		return propertyReader.property( OrientDBProperties.ROOT_USERNAME, String.class ).withDefault( "root" ).getValue();
 	}

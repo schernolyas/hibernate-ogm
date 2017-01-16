@@ -52,6 +52,11 @@ public class OrientDBProperties implements OgmProperties {
 	 */
 	public static final String ROOT_PASSWORD = "hibernate.ogm.orientdb.root.password";
 
+	/**
+	 * Property for setting the file path to database. Accepts {@code String}.
+	 */
+	public static final String PLOCAL_PATH = "hibernate.ogm.orientdb.plocal.path";
+
 	private OrientDBProperties() {
 	}
 

@@ -14,7 +14,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 
-import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.StorageModeEnum;
@@ -37,6 +36,7 @@ import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import java.io.File;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
 
 /**
@@ -70,6 +70,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 			String password = PropertyReaderUtil.readPasswordProperty( propertyReader );
 			Integer poolSize = PropertyReaderUtil.readPoolSizeProperty( propertyReader );
 			String orientDBUrl = prepareOrientDbUrl( storageMode );
+			log.debugf( "connect to URL %s", orientDBUrl );
 
 			if ( PropertyReaderUtil.readCreateDatabaseProperty( propertyReader ) ) {
 				createDB( orientDBUrl, storageMode, databaseType, poolSize );
@@ -100,13 +101,19 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
 		StringBuilder orientDbUrl = new StringBuilder( 100 );
 		orientDbUrl.append( databaseType.name().toLowerCase() );
+		orientDbUrl.append( ":" );
+
 		switch ( databaseType ) {
 			case MEMORY:
-				orientDbUrl.append( ":" ).append( database );
+				orientDbUrl.append( database );
+				break;
+			case PLOCAL:
+				String path = PropertyReaderUtil.readDatabasePathProperty( propertyReader );
+				orientDbUrl.append( path ).append( File.separator ).append( database );
 				break;
 			case REMOTE:
 				String host = PropertyReaderUtil.readHostProperty( propertyReader );
-				orientDbUrl.append( ":" ).append( host ).append( "/" ).append( database );
+				orientDbUrl.append( host ).append( "/" ).append( database );
 				break;
 			default:
 				throw new UnsupportedOperationException( String.format( "Database type %s unsupported!", databaseType ) );
@@ -118,8 +125,9 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		log.debug( "---createDB---" );
 		String user = PropertyReaderUtil.readUserProperty( propertyReader );
 		String password = PropertyReaderUtil.readPasswordProperty( propertyReader );
-		log.debugf( "User: %s; Password: %s ", user, password ); 
-		if ( OrientDBProperties.StorageModeEnum.MEMORY.equals( storageMode ) ) {
+		log.debugf( "User: %s; Password: %s ", user, password );
+		if ( OrientDBProperties.StorageModeEnum.MEMORY.equals( storageMode ) ||
+				OrientDBProperties.StorageModeEnum.PLOCAL.equals( storageMode ) ) {
 			try {
 				OPartitionedDatabasePoolFactory factory = new OPartitionedDatabasePoolFactory( poolSize );
 				OPartitionedDatabasePool pool = factory.get( orientDbUrl, user, password );
@@ -129,14 +137,14 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 				log.debugf( "db.isActiveOnCurrentThread(): %b", db.isActiveOnCurrentThread() );
 			}
 			catch (Exception e) {
-				log.error( "Database creation error!", e );
+				throw log.cannotCreateDatabase( String.format( "Can not create OrientDB URL %s", orientDbUrl ), e );
 			}
 		}
 		else if ( OrientDBProperties.StorageModeEnum.REMOTE.equals( storageMode ) ) {
-			if ( PropertyReaderUtil .readCreateDatabaseProperty( propertyReader )) {
+			if ( PropertyReaderUtil.readCreateDatabaseProperty( propertyReader ) ) {
 				String rootUser = PropertyReaderUtil.readRootUserProperty( propertyReader );
 				String rootPassword = PropertyReaderUtil.readRootPasswordProperty( propertyReader );
-				log.debugf( "Root user: %s; root password: %s ", rootUser, rootPassword ); 
+				log.debugf( "Root user: %s; root password: %s ", rootUser, rootPassword );
 				String host = PropertyReaderUtil.readHostProperty( propertyReader );
 				String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
 				log.debugf( "Try to create remote database in URL %s ", orientDbUrl );
@@ -153,8 +161,9 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 					else {
 						log.infof( "Database %s already exists", database );
 					}
-					
+
 					// open the database
+					@SuppressWarnings("resource")
 					ODatabaseDocumentTx db = new ODatabaseDocumentTx( "remote:" + host + "/" + database );
 					db.open( rootUser, rootPassword );
 				}

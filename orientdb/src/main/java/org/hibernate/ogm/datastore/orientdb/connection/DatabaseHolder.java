@@ -52,7 +52,7 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
 	public void remove() {
 		log.debugf( "drop database for thread %s", Thread.currentThread().getName() );
 		ODatabaseDocumentTx currentDb = get();
-		currentDb.close();		
+		currentDb.close();
 		super.remove();
 	}
 
