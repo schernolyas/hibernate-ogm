@@ -192,37 +192,10 @@ OrientDB not supports composite primary keys. In this way, annotation `@Embedded
 
 Embedded identifiers are currently stored as dot separated properties.
 
-.Entity with @EmbeddedId
-====
-[source, JAVA]
-----
-@Entity
-public class News {
-
-    @EmbeddedId
-    private NewsID newsId;
-
-    private String content
-
-    // getters, setters ...
-}
-
-@Embeddable
-public class NewsID implements Serializable {
-
-    private String title;
-    private String author;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-@EmbeddedId-example.png[align="center", depth="", scalefit="1"]
-====
 
 ===== Embedded objects and collections
 
-Embedded elements are stored as separate nodes labeled with `EMBEDDED`.
+Embedded entities stored as other OrientDB class. Link between embedded class and container is field with type `EMBEDDED`.
 
 The type of the relationship that connects the entity node to the embedded node is
 the attribute name representing the embedded in the java class.
@@ -329,14 +302,14 @@ image::neo4j-@ElementCollection-@OrderColumn-example.png[align="center", depth="
 
 An association, bidirectional or unidirectional, is always mapped using one relationship,
 beginning at the owning side of the association.
-This is possible because in Neo4j relationships can be navigated in both directions.
+This is possible because in OrientDB relationships can be navigated in both directions.
 
 The type of the relationships depends on the type of the association,
 but in general it is the role of the association on the main side.
 The only property stored on the relationship is going to be the index of the association when required,
 for example when the association is annotated with `@OrderColumn` or when a `java.util.Map` is used.
 
-In Neo4j nodes are connected via relationship, this means that we don't need to create properties
+In OrientDB classes are connected via relationship, this means that we don't need to create properties
 which store foreign column keys. This means that annotation like `@JoinColumn` won't have any effect.
 
 .Unidirectional one-to-one
@@ -713,22 +686,6 @@ If required, you can set the initial value of a sequence and the increment size 
 `@TableGenerator#initialValue()` and `@TableGenerator#allocationSize()`, respectively.
 The options `@TableGenerator#catalog()`, `@TableGenerator#schema()`, `@TableGenerator#uniqueConstraints()` and `@TableGenerator#indexes()`  are not supported.
 
-==== Labels summary
-
-The maximum number of labels the database can contain is roughly 2 billion.
-
-The following summary will help you to keep track of the labels assigned to a new node:
-
-.Summary of the labels assigned to a new node
-[cols="2*", options="header"]
-|===
-     ^| NODE TYPE                   ^| LABELS
-
-      | Entity                       | ENTITY, <Entity class name>
-      | Embeddable                   | EMBEDDED, <Embeddable class name>
-      | GenerationType.SEQUENCE      | SEQUENCE
-      | GenerationType.TABLE         | TABLE_BASED_SEQUENCE, <Table name>
-|===
 
 [[ogm-orientdb-transactions]]
 === Transactions
