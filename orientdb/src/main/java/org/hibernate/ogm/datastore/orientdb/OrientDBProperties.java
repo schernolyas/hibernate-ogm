@@ -57,9 +57,6 @@ public class OrientDBProperties implements OgmProperties {
 	 */
 	public static final String PLOCAL_PATH = "hibernate.ogm.orientdb.plocal.path";
 
-	private OrientDBProperties() {
-	}
-
 	/**
 	 * Enumeration of database's types
 	 *
