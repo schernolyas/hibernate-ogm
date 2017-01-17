@@ -77,7 +77,7 @@ Date format for OrientDB. Default value is: `yyyy-MM-dd`
 hibernate.ogm.orientdb.dbtype (optional)::
 Type of database. Available values are: `document`, `graph`. Default value is `document`.
 hibernate.ogm.orientdb.storage (optional)::
-Type of storage. Available values are: `memory`,`remote`. Default value is `memory`.
+Type of storage. Available values are: `memory`,`plocal`,`remote`. Default value is `memory`.
 hibernate.ogm.orientdb.pool.size (optional)::
 Size of connection pool to datastorage. Default value is 10.
 hibernate.ogm.orientdb.root.username (optional)::
@@ -123,6 +123,8 @@ Supported data types described in link:http://orientdb.com/docs/2.2/Types.html[T
 The following types *NOT* supported in OrientDB and the module:
 * [classname]`java.lang.Calendar`
 
+Also, OrientDB not supports BLOB objects.
+
 The following types (and corresponding primitives) get passed to OrientDB without any conversion:
 
 * [classname]`java.lang.Boolean`; Optionally the annotations `@Type(type = "true_false")`, `@Type(type = "yes_no")` and `@Type(type = "numeric_boolean")` can be used to map boolean properties to the characters 'T'/'F', 'Y'/'N' or the int values 0/1, respectively.
@@ -161,45 +163,6 @@ The name of the class mapping the entity is used as label.
 You can use the name property of the [classname]`@Table` and [classname]`@Column` annotations
 to rename the label and the class's properties.
 
-.Default JPA mapping for an entity
-====
-[source, JAVA]
-----
-@Entity
-public class News {
-
-    @Id
-    private String id;
-    private String title;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-single-node-example.png[align="center", depth="", scalefit="1"]
-====
-
-.Rename node label and properties using @Table and @Column
-====
-[source, JAVA]
-----
-@Entity
-@Table(name="ARTICLE")
-public class News {
-
-    @Id
-    private String id;
-
-    @Column(name = "headline")
-    private String title;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-@Column-@Table-example.png[align="center", depth="", scalefit="1"]
-====
-
 ===== Identifiers and unique constraints
 
 [WARNING]
@@ -211,17 +174,21 @@ a single property and it will ignore the ones spanning multiple properties.
 The lack of unique constraints on node properties might result in the creation of multiple
 nodes with the same identifier.
 
-For details see link:http://orientdb.com/docs/2.2/Schema.html#constraints[Constraints] 
+For details see link:http://orientdb.com/docs/2.2/Schema.html#constraints[Constraints]
 ====
 
 Hibernate OGM will create unique constraints for the identifier of entities and for the properties
 annotated with:
 
 * `@Id`
-* `@EmbeddedId`
 * `@NaturalId`
 * `@Column( unique = true )`
 * `@Table( uniqueConstraints = @UniqueConstraint(columnNames = { "column_name" } ) )`
+
+[NOTE]
+====
+OrientDB not supports composite primary keys. In this way, annotation `@EmbeddedId` not supported.
+====
 
 Embedded identifiers are currently stored as dot separated properties.
 
