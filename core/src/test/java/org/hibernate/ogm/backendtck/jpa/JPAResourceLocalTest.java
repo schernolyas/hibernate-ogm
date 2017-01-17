@@ -15,10 +15,8 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-import org.hibernate.ogm.utils.GridDialectType;
 import org.hibernate.ogm.utils.PackagingRule;
 import org.hibernate.ogm.utils.RequiresTransactionalCapabilitiesRule;
-import org.hibernate.ogm.utils.SkipByGridDialect;
 import org.hibernate.ogm.utils.TestHelper;
 import org.junit.Rule;
 import org.junit.Test;
@@ -26,7 +24,7 @@ import org.junit.Test;
 /**
  * @author Emmanuel Bernard &lt;emmanuel@hibernate.org&gt;
  */
-@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Remote OrientDB not supports rollback of transactions")
+//@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Remote OrientDB not supports rollback of transactions")
 public class JPAResourceLocalTest {
 
 	@Rule
