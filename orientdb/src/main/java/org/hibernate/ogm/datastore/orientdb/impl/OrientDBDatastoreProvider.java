@@ -6,21 +6,20 @@
  */
 package org.hibernate.ogm.datastore.orientdb.impl;
 
-import org.hibernate.ogm.datastore.orientdb.schema.OrientDBDocumentSchemaDefiner;
-import com.orientechnologies.orient.client.remote.OServerAdmin;
-import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
-import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
+import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
+import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.StorageModeEnum;
 import org.hibernate.ogm.datastore.orientdb.connection.DatabaseHolder;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.ogm.datastore.orientdb.schema.OrientDBDocumentSchemaDefiner;
 import org.hibernate.ogm.datastore.orientdb.transaction.impl.OrientDbTransactionCoordinatorBuilder;
 import org.hibernate.ogm.datastore.orientdb.utils.FormatterUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.PropertyReaderUtil;
@@ -35,9 +34,9 @@ import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
 
+import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
+import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
-import java.io.File;
-import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -58,8 +57,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 	public void start() {
 		log.debug( "---start---" );
 		try {
-			StorageModeEnum storageMode = PropertyReaderUtil.readStorateModeProperty( propertyReader );
-
+			StorageModeEnum storageMode = PropertyReaderUtil.readStorateModeProperty( propertyReader, getDefaultStorage() );
 			DatabaseTypeEnum databaseType = PropertyReaderUtil.readDatabaseTypeProperty( propertyReader );
 
 			if ( DatabaseTypeEnum.GRAPH.equals( databaseType ) ) {
@@ -97,13 +95,13 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		};
 	}
 
-	private String prepareOrientDbUrl(OrientDBProperties.StorageModeEnum databaseType) {
+	private String prepareOrientDbUrl(OrientDBProperties.StorageModeEnum storage) {
 		String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
 		StringBuilder orientDbUrl = new StringBuilder( 100 );
-		orientDbUrl.append( databaseType.name().toLowerCase() );
+		orientDbUrl.append( storage.name().toLowerCase() );
 		orientDbUrl.append( ":" );
 
-		switch ( databaseType ) {
+		switch ( storage ) {
 			case MEMORY:
 				orientDbUrl.append( database );
 				break;
@@ -116,18 +114,18 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 				orientDbUrl.append( host ).append( "/" ).append( database );
 				break;
 			default:
-				throw new UnsupportedOperationException( String.format( "Database type %s unsupported!", databaseType ) );
+				throw log.unsupportedStorage( storage );
 		}
 		return orientDbUrl.toString();
 	}
 
-	private void createDB(String orientDbUrl, StorageModeEnum storageMode, DatabaseTypeEnum databaseType, Integer poolSize) {
+	protected void createDB(String orientDbUrl, StorageModeEnum storage, DatabaseTypeEnum databaseType, Integer poolSize) {
 		log.debug( "---createDB---" );
 		String user = PropertyReaderUtil.readUserProperty( propertyReader );
 		String password = PropertyReaderUtil.readPasswordProperty( propertyReader );
 		log.debugf( "User: %s; Password: %s ", user, password );
-		if ( OrientDBProperties.StorageModeEnum.MEMORY.equals( storageMode ) ||
-				OrientDBProperties.StorageModeEnum.PLOCAL.equals( storageMode ) ) {
+		if ( OrientDBProperties.StorageModeEnum.MEMORY.equals( storage ) ||
+				OrientDBProperties.StorageModeEnum.PLOCAL.equals( storage ) ) {
 			try {
 				OPartitionedDatabasePoolFactory factory = new OPartitionedDatabasePoolFactory( poolSize );
 				OPartitionedDatabasePool pool = factory.get( orientDbUrl, user, password );
@@ -140,48 +138,17 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 				throw log.cannotCreateDatabase( String.format( "Can not create OrientDB URL %s", orientDbUrl ), e );
 			}
 		}
-		else if ( OrientDBProperties.StorageModeEnum.REMOTE.equals( storageMode ) ) {
-			if ( PropertyReaderUtil.readCreateDatabaseProperty( propertyReader ) ) {
-				String rootUser = PropertyReaderUtil.readRootUserProperty( propertyReader );
-				String rootPassword = PropertyReaderUtil.readRootPasswordProperty( propertyReader );
-				log.debugf( "Root user: %s; root password: %s ", rootUser, rootPassword );
-				String host = PropertyReaderUtil.readHostProperty( propertyReader );
-				String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
-				log.debugf( "Try to create remote database in URL %s ", orientDbUrl );
-				OServerAdmin serverAdmin = null;
-				try {
-					serverAdmin = new OServerAdmin( "remote:" + host );
-					serverAdmin.connect( rootUser, rootPassword );
-					boolean isDbExists = serverAdmin.existsDatabase( database, OrientDBConstant.PLOCAL_STORAGE_TYPE );
-					log.infof( "Database %s esists? %s.", database, String.valueOf( isDbExists ) );
-					if ( !isDbExists ) {
-						log.infof( "Database %s not exists. Try to create it.", database );
-						serverAdmin.createDatabase( database, databaseType.name().toLowerCase(), OrientDBConstant.PLOCAL_STORAGE_TYPE );
-					}
-					else {
-						log.infof( "Database %s already exists", database );
-					}
-
-					// open the database
-					@SuppressWarnings("resource")
-					ODatabaseDocumentTx db = new ODatabaseDocumentTx( "remote:" + host + "/" + database );
-					db.open( rootUser, rootPassword );
-				}
-				catch (Exception ioe) {
-					throw log.cannotCreateDatabase( database, ioe );
-				}
-				finally {
-					if ( serverAdmin != null ) {
-						serverAdmin.close( true );
-					}
-				}
-			}
-
+		else {
+			throw log.unsupportedStorage( storage );
 		}
 	}
 
 	public ODatabaseDocumentTx getCurrentDatabase() {
 		return databaseHolder.get();
+	}
+
+	protected OrientDBProperties.StorageModeEnum getDefaultStorage() {
+		return OrientDBProperties.StorageModeEnum.MEMORY;
 	}
 
 	public void closeCurrentDatabase() {

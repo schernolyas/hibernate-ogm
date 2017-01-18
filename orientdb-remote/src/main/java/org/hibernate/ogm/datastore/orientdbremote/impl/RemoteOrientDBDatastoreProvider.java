@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdbremote.impl;
 
+import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.StorageModeEnum;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
@@ -16,7 +17,6 @@ import org.hibernate.ogm.datastore.orientdbremote.utils.PropertyReaderUtil;
 
 import com.orientechnologies.orient.client.remote.OServerAdmin;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
-
 
 public class RemoteOrientDBDatastoreProvider extends OrientDBDatastoreProvider {
 
@@ -61,8 +61,11 @@ public class RemoteOrientDBDatastoreProvider extends OrientDBDatastoreProvider {
 			}
 		}
 	}
-	
-	
+
+	@Override
+	protected StorageModeEnum getDefaultStorage() {
+		return OrientDBProperties.StorageModeEnum.REMOTE;
+	}
 	
 
 }

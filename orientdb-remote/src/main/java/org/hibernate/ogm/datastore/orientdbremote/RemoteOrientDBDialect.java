@@ -6,22 +6,20 @@
  */
 package org.hibernate.ogm.datastore.orientdbremote;
 
-import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
+import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
-import org.hibernate.ogm.dialect.identity.spi.IdentityColumnAwareGridDialect;
-import org.hibernate.ogm.dialect.query.spi.QueryableGridDialect;
-import org.hibernate.ogm.dialect.spi.SessionFactoryLifecycleAwareDialect;
+import org.hibernate.ogm.datastore.orientdbremote.impl.RemoteOrientDBDatastoreProvider;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.AssociationKeyMetadata;
 import org.hibernate.ogm.model.key.spi.RowKey;
 import org.hibernate.ogm.model.spi.Association;
 import org.hibernate.ogm.model.spi.Tuple;
+
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 
 /**
- * Implementation of dialect for OrientDB
+ * Implementation of dialect for Remote OrientDB
  * <p>
  * A {@link Tuple} is saved as a {@link ODocument} where the columns are converted into properties of the node.<br>
  * In the version, an {@link Association} is stored like relation DBMS and identified by the {@link AssociationKey} and
@@ -31,9 +29,6 @@ import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
  * If the value of a property is set to null the property will be removed (OrientDB does not allow to store null
  * values).
  *
- * @see QueryableGridDialect
- * @see SessionFactoryLifecycleAwareDialect
- * @see IdentityColumnAwareGridDialect
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @SuppressWarnings("serial")
@@ -41,9 +36,8 @@ public class RemoteOrientDBDialect extends OrientDBDialect {
 
 	private static final Log log = LoggerFactory.getLogger();
 
-    public RemoteOrientDBDialect(OrientDBDatastoreProvider provider) {
-        super( provider );
-    }
-	
+	public RemoteOrientDBDialect(RemoteOrientDBDatastoreProvider provider) {
+		super( provider );
+	}
 
 }

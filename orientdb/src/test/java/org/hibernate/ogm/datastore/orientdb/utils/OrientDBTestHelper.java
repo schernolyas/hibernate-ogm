@@ -9,6 +9,7 @@ package org.hibernate.ogm.datastore.orientdb.utils;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -18,8 +19,6 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.ogm.datastore.document.options.AssociationStorageType;
 import org.hibernate.ogm.datastore.orientdb.OrientDB;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
-import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
-import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
@@ -32,13 +31,11 @@ import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReade
 import org.hibernate.ogm.utils.GridDialectOperationContexts;
 import org.hibernate.ogm.utils.GridDialectTestHelper;
 
-import com.orientechnologies.orient.client.remote.OServerAdmin;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import java.util.List;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -149,12 +146,10 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		log.infof( "call prepareDatabase! db closed: %s ", db.isClosed() );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE TIMEZONE UTC" );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATEFORMAT '"
-				.concat( propertyReader.property( OrientDBProperties.DATE_FORMAT, String.class ).withDefault( OrientDBConstant.DEFAULT_DATE_FORMAT )
-						.getValue() )
+				.concat( PropertyReaderUtil.readDateFormatProperty( propertyReader ) )
 				.concat( "'" ) );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATETIMEFORMAT '"
-				.concat( propertyReader.property( OrientDBProperties.DATETIME_FORMAT, String.class ).withDefault( OrientDBConstant.DEFAULT_DATETIME_FORMAT )
-						.getValue() )
+				.concat( PropertyReaderUtil.readDateTimeFormatProperty( propertyReader ) )
 				.concat( "'" ) );
 
 	}
@@ -163,31 +158,8 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
 		log.infof( "call dropSchemaAndDatabase!" );
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
-		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
-		OrientDBProperties.StorageModeEnum databaseType = PropertyReaderUtil.readStorateModeProperty( propertyReader );
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
-		String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
-		if ( OrientDBProperties.StorageModeEnum.REMOTE.equals( databaseType ) ) {
-			String rootUser = PropertyReaderUtil.readRootUserProperty( propertyReader );
-			String rootPassword = PropertyReaderUtil.readRootPasswordProperty( propertyReader );
-			String host = PropertyReaderUtil.readHostProperty( propertyReader );
-			OServerAdmin serverAdmin = null;
-			try {
-				serverAdmin = new OServerAdmin( "remote:" + host ).connect( rootUser, rootPassword );
-				serverAdmin.dropDatabase( database, OrientDBConstant.PLOCAL_STORAGE_TYPE );
-			}
-			catch (IOException ioe) {
-				log.error( "Canot drop database", ioe );
-			}
-			finally {
-				if ( serverAdmin != null ) {
-					serverAdmin.close( true );
-				}
-			}
-		}
-		else {
-			db.drop();
-		}
+		db.drop();
 	}
 
 	@Override

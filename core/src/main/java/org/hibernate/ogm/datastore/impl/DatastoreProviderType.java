@@ -37,7 +37,8 @@ public enum DatastoreProviderType {
 	COUCHDB_EXPERIMENTAL( "org.hibernate.ogm.datastore.couchdb.impl.CouchDBDatastoreProvider" ),
 	CASSANDRA_EXPERIMENTAL( "org.hibernate.ogm.datastore.cassandra.impl.CassandraDatastoreProvider" ),
 	REDIS_EXPERIMENTAL( "org.hibernate.ogm.datastore.redis.impl.RedisDatastoreProvider" ),
-	ORIENTDB( "org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider" );
+	ORIENTDB( "org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider" ),
+	ORIENTDB_REMOTE( "org.hibernate.ogm.datastore.orientdbremote.impl.RemoteOrientDBDatastoreProvider" );
 
 	private static final Log log = LoggerFactory.make();
 

@@ -221,6 +221,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 	}
 
 	// Date/time types
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB_REMOTE }, comment = "Bug in OrientDB")
 	@Test
 	public void testDatePersistedAsTemporalTypeDateSupport() throws Exception {
 		Date creationDate = new Date();
@@ -246,6 +247,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "Time zones doe not match", expectedTimeZoneOffset, actualTimeZoneOffset );
 	}
 
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB_REMOTE }, comment = "Bug in OrientDB")
 	@Test
 	public void testDatePersistedAsTemporalTypeTimeSupport() throws Exception {
 		Date updateTime = new Date();
@@ -271,6 +273,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "Time zones doe not match", expectedTimeZoneOffset, actualTimeZoneOffset );
 	}
 
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB_REMOTE }, comment = "Bug in OrientDB")
 	@Test
 	public void testDatePersistedAsTemporalTypeTimestampSupport() throws Exception {
 		Date destructionDate = new Date();
@@ -371,7 +374,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 		return new Class<?>[]{
-				Bookmark.class
+			Bookmark.class
 		};
 	}
 }

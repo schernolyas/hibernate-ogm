@@ -50,6 +50,12 @@
             <artifactId>hibernate-ogm-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-search-orm</artifactId>
+            <optional>true</optional>
+        </dependency>
+        
+        <dependency>
             <groupId>org.hibernate.ogm</groupId>
             <artifactId>hibernate-ogm-orientdb</artifactId>
         </dependency>

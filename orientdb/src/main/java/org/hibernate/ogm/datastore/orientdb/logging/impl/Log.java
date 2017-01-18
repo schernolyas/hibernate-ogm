@@ -7,6 +7,7 @@
 package org.hibernate.ogm.datastore.orientdb.logging.impl;
 
 import org.hibernate.HibernateException;
+import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.StorageModeEnum;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
@@ -26,8 +27,11 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 	HibernateException cannotExecuteQuery(String propertyQuery, @Cause Exception cause);
 
 	@Message(id = 1702, value = "Cannot use unsupported type %s!")
-	HibernateException cannotUseUnsupportedType(Class type);
+	HibernateException cannotUseUnsupportedType(@SuppressWarnings("rawtypes") Class type);
 
 	@Message(id = 1703, value = "Cannot create database %s !")
 	HibernateException cannotCreateDatabase(String database, @Cause Exception cause);
+
+	@Message(id = 1704, value = "Unsupported storage type %s !")
+	HibernateException unsupportedStorage(StorageModeEnum storage);
 }

@@ -19,6 +19,7 @@ public class OrientDBProperties implements OgmProperties {
 	 * Format of datetime. Default value 'yyyy-MM-dd HH:mm:ss z'
 	 */
 	public static final String DATETIME_FORMAT = "hibernate.ogm.orientdb.format.datetime";
+
 	/**
 	 * Format of date. Default value 'yyyy-MM-dd'
 	 */
@@ -30,27 +31,20 @@ public class OrientDBProperties implements OgmProperties {
 	 * @see DatabaseTypeEnum
 	 */
 	public static final String DATEBASE_TYPE = "hibernate.ogm.orientdb.dbtype";
+
 	/**
 	 * Type of storage.
 	 *
 	 * @see StorageModeEnum
 	 */
 	public static final String STORAGE_MODE_TYPE = "hibernate.ogm.orientdb.storage";
+
 	/**
 	 * Database pool size
 	 *
 	 * @see StorageModeEnum
 	 */
 	public static final String POOL_SIZE = "hibernate.ogm.orientdb.pool.size";
-	/**
-	 * Property for setting the user name to connect with. Accepts {@code String}.
-	 */
-	public static final String ROOT_USERNAME = "hibernate.ogm.orientdb.root.username";
-
-	/**
-	 * Property for setting the password to connect with. Accepts {@code String}.
-	 */
-	public static final String ROOT_PASSWORD = "hibernate.ogm.orientdb.root.password";
 
 	/**
 	 * Property for setting the file path to database. Accepts {@code String}.

@@ -14,5 +14,5 @@ import org.hibernate.ogm.backendtck.simpleentity.CRUDTest;
  */
 public class RemoteOrientDbCRUDTest extends CRUDTest {
 
-	private static final Logger LOG = Logger.getLogger(RemoteOrientDbCRUDTest.class.getName() );
+	private static final Logger LOG = Logger.getLogger( RemoteOrientDbCRUDTest.class.getName() );
 }

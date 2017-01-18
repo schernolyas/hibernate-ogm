@@ -9,6 +9,7 @@ package org.hibernate.ogm.datastore.orientdbremote.utils;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -16,13 +17,14 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.ogm.datastore.document.options.AssociationStorageType;
-import org.hibernate.ogm.datastore.orientdbremote.RemoteOrientDB;
-import org.hibernate.ogm.datastore.orientdbremote.RemoteOrientDBDialect;
-import org.hibernate.ogm.datastore.orientdbremote.RemoteOrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
+import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
+import org.hibernate.ogm.datastore.orientdbremote.RemoteOrientDB;
+import org.hibernate.ogm.datastore.orientdbremote.RemoteOrientDBDialect;
+import org.hibernate.ogm.datastore.orientdbremote.impl.RemoteOrientDBDatastoreProvider;
 import org.hibernate.ogm.datastore.spi.DatastoreConfiguration;
 import org.hibernate.ogm.datastore.spi.DatastoreProvider;
 import org.hibernate.ogm.dialect.spi.GridDialect;
@@ -38,9 +40,6 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import java.util.List;
-import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
-import org.hibernate.ogm.datastore.orientdb.utils.PropertyReaderUtil;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -150,13 +149,11 @@ public class RemoteOrientDBTestHelper implements GridDialectTestHelper {
 		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		log.infof( "call prepareDatabase! db closed: %s ", db.isClosed() );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE TIMEZONE UTC" );
-		NativeQueryUtil.executeNonIdempotentQuery(db, "ALTER DATABASE DATEFORMAT '"
-				.concat(propertyReader.property(RemoteOrientDBProperties.DATE_FORMAT, String.class ).withDefault( OrientDBConstant.DEFAULT_DATE_FORMAT )
-						.getValue() )
+		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATEFORMAT '"
+				.concat( PropertyReaderUtil.readDateFormatProperty( propertyReader ) )
 				.concat( "'" ) );
-		NativeQueryUtil.executeNonIdempotentQuery(db, "ALTER DATABASE DATETIMEFORMAT '"
-				.concat(propertyReader.property(RemoteOrientDBProperties.DATETIME_FORMAT, String.class ).withDefault( OrientDBConstant.DEFAULT_DATETIME_FORMAT )
-						.getValue() )
+		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATETIMEFORMAT '"
+				.concat( PropertyReaderUtil.readDateTimeFormatProperty( propertyReader ) )
 				.concat( "'" ) );
 
 	}
@@ -166,30 +163,24 @@ public class RemoteOrientDBTestHelper implements GridDialectTestHelper {
 		log.infof( "call dropSchemaAndDatabase!" );
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
-		RemoteOrientDBProperties.StorageModeEnum databaseType = PropertyReaderUtil.readStorateModeProperty( propertyReader );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
 		String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
-		if ( RemoteOrientDBProperties.StorageModeEnum.REMOTE.equals( databaseType ) ) {
-			String rootUser = PropertyReaderUtil.readRootUserProperty( propertyReader );
-			String rootPassword = PropertyReaderUtil.readRootPasswordProperty( propertyReader );
-			String host = PropertyReaderUtil.readHostProperty( propertyReader );
-			OServerAdmin serverAdmin = null;
-			try {
-				serverAdmin = new OServerAdmin( "remote:" + host ).connect( rootUser, rootPassword );
-				serverAdmin.dropDatabase( database, OrientDBConstant.PLOCAL_STORAGE_TYPE );
-			}
-			catch (IOException ioe) {
-				log.error( "Canot drop database", ioe );
-			}
-			finally {
-				if ( serverAdmin != null ) {
-					serverAdmin.close( true );
-				}
+		String rootUser = PropertyReaderUtil.readRootUserProperty( propertyReader );
+		String rootPassword = PropertyReaderUtil.readRootPasswordProperty( propertyReader );
+		String host = PropertyReaderUtil.readHostProperty( propertyReader );
+		OServerAdmin serverAdmin = null;
+		try {
+			serverAdmin = new OServerAdmin( "remote:" + host ).connect( rootUser, rootPassword );
+			serverAdmin.dropDatabase( database, OrientDBConstant.PLOCAL_STORAGE_TYPE );
+		}
+		catch (IOException ioe) {
+			log.error( "Canot drop database", ioe );
+		}
+		finally {
+			if ( serverAdmin != null ) {
+				serverAdmin.close( true );
 			}
 		}
-		else {
-			db.drop();
-		}
+
 	}
 
 	@Override
@@ -220,15 +211,15 @@ public class RemoteOrientDBTestHelper implements GridDialectTestHelper {
 
 	@Override
 	public GridDialect getGridDialect(DatastoreProvider datastoreProvider) {
-		return new RemoteOrientDBDialect( (OrientDBDatastoreProvider) datastoreProvider );
+		return new RemoteOrientDBDialect( (RemoteOrientDBDatastoreProvider) datastoreProvider );
 	}
 
-	private static OrientDBDatastoreProvider getProvider(SessionFactory sessionFactory) {
+	private static RemoteOrientDBDatastoreProvider getProvider(SessionFactory sessionFactory) {
 		DatastoreProvider provider = ( (SessionFactoryImplementor) sessionFactory ).getServiceRegistry().getService( DatastoreProvider.class );
-		if ( !( OrientDBDatastoreProvider.class.isInstance( provider ) ) ) {
-			throw new RuntimeException( "Not testing with OrientDB, cannot extract underlying provider" );
+		if ( !( RemoteOrientDBDatastoreProvider.class.isInstance( provider ) ) ) {
+			throw new RuntimeException( "Not testing with Remote OrientDB, cannot extract underlying provider" );
 		}
-		return OrientDBDatastoreProvider.class.cast( provider );
+		return RemoteOrientDBDatastoreProvider.class.cast( provider );
 	}
 
 	private static GridDialect getDialect(SessionFactory sessionFactory) {

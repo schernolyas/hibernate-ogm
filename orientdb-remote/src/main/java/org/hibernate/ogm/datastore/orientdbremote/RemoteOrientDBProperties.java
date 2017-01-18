@@ -9,13 +9,18 @@ package org.hibernate.ogm.datastore.orientdbremote;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 
 /**
- * Own properties of OrientDB Database Provider
+ * Own properties of Remote OrientDB Database Provider
  *
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class RemoteOrientDBProperties extends OrientDBProperties {
+	/**
+	 * Property for setting the user name to connect with. Accepts {@code String}.
+	 */
+	public static final String ROOT_USERNAME = "hibernate.ogm.orientdb.remote.root.username";
 
-    private RemoteOrientDBProperties() {
-    }
-
+	/**
+	 * Property for setting the password to connect with. Accepts {@code String}.
+	 */
+	public static final String ROOT_PASSWORD = "hibernate.ogm.orientdb.remote.root.password";
 }
