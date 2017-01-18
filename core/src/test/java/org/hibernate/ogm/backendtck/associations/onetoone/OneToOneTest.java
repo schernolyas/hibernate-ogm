@@ -125,7 +125,7 @@ public class OneToOneTest extends OgmTestCase {
 		session.close();
 	}
 
-	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "CompositeId not supported")
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE }, comment = "CompositeId not supported")
 	@Test
 	public void testBidirectionalOneToOneCompositeId() throws Exception {
 		final Session session = openSession();
@@ -168,25 +168,25 @@ public class OneToOneTest extends OgmTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 
-		if ( SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB ) ) {
+		if ( SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB ) || SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB_REMOTE ) ) {
 			return new Class<?>[]{
+					Horse.class,
+					Cavalier.class,
+					Vehicule.class,
+					Wheel.class,
+					Husband.class,
+					Wife.class
+			};
+		}
+		return new Class<?>[]{
 				Horse.class,
 				Cavalier.class,
 				Vehicule.class,
 				Wheel.class,
 				Husband.class,
-				Wife.class
-			};
-		}
-		return new Class<?>[]{
-			Horse.class,
-			Cavalier.class,
-			Vehicule.class,
-			Wheel.class,
-			Husband.class,
-			Wife.class,
-			NetworkSwitch.class,
-			PatchCable.class
+				Wife.class,
+				NetworkSwitch.class,
+				PatchCable.class
 		};
 	}
 }
