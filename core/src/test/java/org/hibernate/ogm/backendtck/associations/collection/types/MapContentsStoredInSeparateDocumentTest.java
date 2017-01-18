@@ -30,7 +30,7 @@ import org.junit.Test;
 @SkipByGridDialect(
 		value = { GridDialectType.EHCACHE, GridDialectType.HASHMAP, GridDialectType.INFINISPAN, GridDialectType.INFINISPAN_REMOTE,
 				GridDialectType.NEO4J_EMBEDDED, GridDialectType.NEO4J_REMOTE, GridDialectType.CASSANDRA, GridDialectType.REDIS_HASH,
-				GridDialectType.ORIENTDB },
+				GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE },
 		comment = "Only the document stores CouchDB and MongoDB and Redis JSON support the configuration of specific association storage strategies"
 )
 public class MapContentsStoredInSeparateDocumentTest extends OgmTestCase {

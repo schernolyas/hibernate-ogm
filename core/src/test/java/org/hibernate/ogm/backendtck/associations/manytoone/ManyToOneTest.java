@@ -312,7 +312,7 @@ public class ManyToOneTest extends OgmTestCase {
 		checkCleanCache();
 	}
 
-	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Composite key not supported!")
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE }, comment = "Composite key not supported!")
 	@Test
 	public void testDefaultBiDirManyToOneCompositeKeyTest() throws Exception {
 		Session session = openSession();
@@ -358,7 +358,7 @@ public class ManyToOneTest extends OgmTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		if ( SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB ) ) {
+		if ( SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB ) || SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB_REMOTE ) ) {
 			return new Class<?>[]{
 				JUG.class,
 				Member.class,

@@ -75,7 +75,7 @@ public class EmbeddableTest extends OgmTestCase {
 		session.close();
 	}
 
-	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Embedded classed stores with parent entities only")
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE }, comment = "Embedded classed stores with parent entities only")
 	@Test
 	public void testNestedEmbeddable() {
 		final Session session = openSession();

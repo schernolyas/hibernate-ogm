@@ -24,7 +24,7 @@ import org.hibernate.ogm.utils.SkipByGridDialect;
  * @author Guillaume Scheibel &lt;guillaume.scheibel@gmail.com&gt;
  */
 @SkipByGridDialect(
-		value = { GridDialectType.ORIENTDB },
+		value = { GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE },
 		comment = "Not supports @EmbeddedId"
 )
 public class CompositeIdTest extends OgmJpaTestCase {
