@@ -141,7 +141,7 @@ public class ListTest extends OgmTestCase {
 		checkCleanCache();
 	}
 
-	@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "CompositeId not supported")
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE }, comment = "CompositeId not supported")
 	@Test
 	public void testOrderedListAndCompositeId() throws Exception {
 		Session session = openSession();
@@ -178,7 +178,7 @@ public class ListTest extends OgmTestCase {
 
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		if ( SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB ) ) {
+		if ( SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB ) || SkipByHelper.isCurrentGridDialect( GridDialectType.ORIENTDB_REMOTE ) ) {
 			return new Class<?>[]{
 				Father.class,
 				GrandMother.class,
