@@ -6,7 +6,6 @@
  */
 package org.hibernate.ogm.datastore.orientdb.impl;
 
-import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Map;
@@ -78,7 +77,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 			FormatterUtil.setDateFormatter( createFormatter( propertyReader, OrientDBProperties.DATE_FORMAT, OrientDBConstant.DEFAULT_DATE_FORMAT ) );
 			FormatterUtil
-					.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
+			.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
 		}
 		catch (Exception e) {
 			throw log.unableToStartDatastoreProvider( e );
@@ -107,7 +106,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 				break;
 			case PLOCAL:
 				String path = PropertyReaderUtil.readDatabasePathProperty( propertyReader );
-				orientDbUrl.append( path ).append( File.separator ).append( database );
+				orientDbUrl.append( path ).append( "/" ).append( database );
 				break;
 			case REMOTE:
 				String host = PropertyReaderUtil.readHostProperty( propertyReader );

@@ -60,7 +60,7 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 
 	private void failure() {
 		if ( currentOrientDBTransaction != null && currentOrientDBTransaction.isActive() ) {
-			log.debugf( "rollback transaction (Id: %d) for database %s is %d.",
+			log.debugf( "1.rollback transaction (Id: %d) for database %s is %d.",
 					currentOrientDBTransaction.getId(),
 					currentOrientDBTransaction.getDatabase().getName() );
 			log.debugf( "transaction state: %s", currentOrientDBTransaction );
@@ -74,6 +74,7 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 
 	private void close() {
 		try {
+			log.debugf( "close connection for thread %s", Thread.currentThread().getName() );
 			datastoreProvider.closeCurrentDatabase();
 		}
 		finally {
@@ -131,11 +132,12 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 		public void rollback() {
 			try {
 				if ( currentOrientDBTransaction != null && currentOrientDBTransaction.isActive() ) {
-					log.debugf( "rollback  transaction N %s for database %s. Transaction acvite? %s",
+					log.debugf( "2.rollback  transaction N %s for database %s. Transaction acvite? %s",
 							String.valueOf( currentOrientDBTransaction.getId() ),
 							currentOrientDBTransaction.getDatabase().getName(),
 							String.valueOf( currentOrientDBTransaction.isActive() ) );
 					log.debugf( "transaction state: %s", currentOrientDBTransaction );
+					currentOrientDBTransaction.rollback( true, 0 );
 					super.rollback();
 				}
 			}

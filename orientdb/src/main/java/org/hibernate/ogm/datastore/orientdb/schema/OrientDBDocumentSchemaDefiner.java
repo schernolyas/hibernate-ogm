@@ -333,6 +333,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		while ( columnIterator.hasNext() ) {
 			Column column = columnIterator.next();
 			log.debugf( "column: %s ", column );
+			log.debugf( "column unique?: %s ", column.isUnique() );
 			log.debugf( "relation type: %s", column.getValue().getType().getClass() );
 			if ( OrientDBConstant.UNSUPPORTED_SYSTEM_FIELDS_IN_ENTITY.contains( column.getName() ) ) {
 				throw log.cannotUseInEntityUnsupportedSystemField( column.getName(), tableName );
@@ -378,6 +379,13 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 				String propertyQuery = createValueProperyQuery( tableName, column );
 				try {
 					NativeQueryUtil.executeNonIdempotentQuery( db, propertyQuery );
+					if ( column.isUnique() ) {
+						// create unique index for the column
+						String uniqueIndexQuery = String.format( "create index %s.%s unique",
+								tableName,
+								column.getName() );
+						NativeQueryUtil.executeNonIdempotentQuery( db, uniqueIndexQuery );
+					}
 				}
 				catch (OCommandExecutionException oe) {
 					log.debugf( "orientdb message: %s; ", oe.getMessage() );
@@ -390,6 +398,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 				}
 			}
 			// TODO: support @Column( unique = true )
+
 		}
 	}
 

@@ -8,8 +8,8 @@ package org.hibernate.ogm.datastore.orientdb.utils;
 
 import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
-import static org.hibernate.ogm.datastore.orientdb.OrientDBProperties.StorageModeEnum;
-import static org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
+import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
+import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.StorageModeEnum;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 
@@ -27,8 +27,9 @@ public class PropertyReaderUtil {
 	}
 
 	public static String readDatabasePathProperty(ConfigurationPropertyReader propertyReader) {
+
 		return propertyReader.property( OrientDBProperties.PLOCAL_PATH, String.class )
-				.withDefault( "./target/" )
+				.withDefault( "./target" )
 				.getValue();
 	}
 

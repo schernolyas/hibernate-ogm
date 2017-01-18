@@ -19,8 +19,6 @@ import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.NamedQueries;
-import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.PrePersist;
 import javax.persistence.Temporal;
@@ -30,11 +28,6 @@ import javax.persistence.Version;
 import org.hibernate.annotations.Type;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
-import org.hibernate.search.annotations.Analyze;
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Index;
-import org.hibernate.search.annotations.Indexed;
-import org.hibernate.search.annotations.Store;
 
 import com.orientechnologies.orient.core.id.ORecordId;
 
@@ -42,11 +35,9 @@ import com.orientechnologies.orient.core.id.ORecordId;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @Entity
-@Indexed(index = "Customer")
-@NamedQueries({
-		@NamedQuery(name = "Customer.findAll", query = "SELECT c FROM Customer c"),
-		@NamedQuery(name = "Country.findByName", query = "SELECT c FROM Customer c WHERE c.name = :name") })
 public class Customer implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	private static Log log = LoggerFactory.getLogger();
 
@@ -59,7 +50,6 @@ public class Customer implements Serializable {
 	@Column(name = "@rid")
 	private ORecordId rid;
 
-	@Field(index = Index.YES, analyze = Analyze.YES, store = Store.YES)
 	private String name;
 	@OneToMany(mappedBy = "owner")
 	private List<BuyingOrder> orders;
@@ -72,11 +62,8 @@ public class Customer implements Serializable {
 
 	@Type(type = "yes_no")
 	private boolean blocked;
-	/*
-	 * @OneToMany
-	 * @JoinTable(name="CUSTOMER_PHONE", joinColumns=@JoinColumn(name="CUSTOMER_ID"),
-	 * inverseJoinColumns=@JoinColumn(name="PHONE_ID")) private List<PhoneNumber> phones;
-	 */
+	@Column(unique = true)
+	private String customerNumber;
 
 	@PrePersist
 	public void prePersist() {
@@ -146,6 +133,14 @@ public class Customer implements Serializable {
 
 	public void setBlocked(boolean blocked) {
 		this.blocked = blocked;
+	}
+
+	public String getCustomerNumber() {
+		return customerNumber;
+	}
+
+	public void setCustomerNumber(String customerNumber) {
+		this.customerNumber = customerNumber;
 	}
 
 	@Override
