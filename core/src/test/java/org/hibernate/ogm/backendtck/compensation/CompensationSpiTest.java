@@ -53,10 +53,9 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  *
  * @author Gunnar Morling
  */
-@SkipByGridDialect(value = { GridDialectType.CASSANDRA,
-		GridDialectType.ORIENTDB }, comment = "Cassandra always upserts, doesn't read-lock before write, doesn't support unique constraints even on primary key except by explicit/slow CAS use"
-				+
-				"OrientDB has own version")
+@SkipByGridDialect(value = { GridDialectType.CASSANDRA,GridDialectType.ORIENTDB,GridDialectType.ORIENTDB_REMOTE },
+comment = "Cassandra always upserts, doesn't read-lock before write, doesn't support unique constraints even on primary key except by explicit/slow CAS use"
+		+ "OrientDB has own version")
 public class CompensationSpiTest extends OgmTestCase {
 
 	private static ExecutorService executor;

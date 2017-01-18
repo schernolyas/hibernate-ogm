@@ -171,7 +171,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertArrayEquals( "Original and loaded data do not match!", testData, loadedBookmark.getLob() );
 	}
 
-	@SkipByGridDialect(GridDialectType.ORIENTDB)
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE }, comment = "OrientDB not supports LOB")
 	@Test
 	public void testLongAsLobSupport() throws Exception {
 		bookmark.setLobWithLong( Long.MIN_VALUE );
@@ -180,7 +180,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "Original and loaded data do not match!", (Long) Long.MIN_VALUE, (Long) loadedBookmark.getLobWithLong() );
 	}
 
-	@SkipByGridDialect(GridDialectType.ORIENTDB)
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE }, comment = "OrientDB not supports LOB")
 	@Test
 	public void testStringAsLobSupport() throws Exception {
 		String text = "Very long text ...";
@@ -281,7 +281,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 		assertEquals( "Year value does not match", bookmark.getDestructionDate(), loadedBookmark.getDestructionDate() );
 	}
 
-	@SkipByGridDialect(GridDialectType.ORIENTDB)
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE }, comment = "OrientDB not supports Calendar")
 	@Test
 	public void testCalendarTemporalTypeTimestampSupport() throws Exception {
 		bookmark.setDestructionCalendar( Calendar.getInstance() );
@@ -293,7 +293,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 				loadedBookmark.getDestructionCalendar().getTime() );
 	}
 
-	@SkipByGridDialect(GridDialectType.ORIENTDB)
+	@SkipByGridDialect(value = { GridDialectType.ORIENTDB, GridDialectType.ORIENTDB_REMOTE }, comment = "OrientDB not supports Calendar")
 	@Test
 	public void testCalendarPersistedAsTemporalTypeDateSupport() throws Exception {
 		Calendar creationCalendar = Calendar.getInstance();
@@ -371,7 +371,7 @@ public class BuiltInTypeTest extends OgmTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 		return new Class<?>[]{
-			Bookmark.class
+				Bookmark.class
 		};
 	}
 }

@@ -23,7 +23,7 @@ import org.junit.Test;
  *
  * @author Gunnar Morling
  */
-@SkipByGridDialect(value = { GridDialectType.ORIENTDB }, comment = "Composite primary key not supports")
+@SkipByGridDialect(value = { GridDialectType.ORIENTDB,GridDialectType.ORIENTDB_REMOTE }, comment = "Composite primary key not supports")
 public class EmbeddableIdTest extends OgmTestCase {
 
 	@Test

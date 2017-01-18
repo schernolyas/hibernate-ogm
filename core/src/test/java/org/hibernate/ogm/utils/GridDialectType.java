@@ -9,39 +9,39 @@ package org.hibernate.ogm.utils;
 import org.hibernate.ogm.dialect.spi.GridDialect;
 
 /**
- * The test suite needs some knowledge on all NoSQL stores it is meant to support.
- * This is mainly used to disable some tests for a specific GridDialect.
+ * The test suite needs some knowledge on all NoSQL stores it is meant to support. This is mainly used to disable some
+ * tests for a specific GridDialect.
  *
-* @author Sanne Grinovero &lt;sanne@hibernate.org&gt;
-* @author Gunnar Morling
-*/
+ * @author Sanne Grinovero &lt;sanne@hibernate.org&gt;
+ * @author Gunnar Morling
+ */
 public enum GridDialectType {
 
-	HASHMAP( "org.hibernate.ogm.datastore.map.impl.MapDialect", false, false ),
+	HASHMAP("org.hibernate.ogm.datastore.map.impl.MapDialect", false, false),
 
-	INFINISPAN( "org.hibernate.ogm.datastore.infinispan.InfinispanDialect", false, false),
+	INFINISPAN("org.hibernate.ogm.datastore.infinispan.InfinispanDialect", false, false),
 
-	INFINISPAN_REMOTE( "org.hibernate.ogm.datastore.infinispanremote.InfinispanRemoteDialect", true, false ),
+	INFINISPAN_REMOTE("org.hibernate.ogm.datastore.infinispanremote.InfinispanRemoteDialect", true, false),
 
-	EHCACHE( "org.hibernate.ogm.datastore.ehcache.EhcacheDialect", false, false ),
+	EHCACHE("org.hibernate.ogm.datastore.ehcache.EhcacheDialect", false, false),
 
-	MONGODB( "org.hibernate.ogm.datastore.mongodb.MongoDBDialect", true, true ),
+	MONGODB("org.hibernate.ogm.datastore.mongodb.MongoDBDialect", true, true),
 
-	NEO4J_EMBEDDED( "org.hibernate.ogm.datastore.neo4j.EmbeddedNeo4jDialect", false, true),
+	NEO4J_EMBEDDED("org.hibernate.ogm.datastore.neo4j.EmbeddedNeo4jDialect", false, true),
 
-	NEO4J_REMOTE( "org.hibernate.ogm.datastore.neo4j.RemoteNeo4jDialect", false, true),
+	NEO4J_REMOTE("org.hibernate.ogm.datastore.neo4j.RemoteNeo4jDialect", false, true),
 
-	COUCHDB( "org.hibernate.ogm.datastore.couchdb.CouchDBDialect", true, false ),
+	COUCHDB("org.hibernate.ogm.datastore.couchdb.CouchDBDialect", true, false),
 
-	CASSANDRA( "org.hibernate.ogm.datastore.cassandra.CassandraDialect", false, false  ),
+	CASSANDRA("org.hibernate.ogm.datastore.cassandra.CassandraDialect", false, false),
 
-	REDIS_JSON( "org.hibernate.ogm.datastore.redis.RedisJsonDialect", false, false ),
+	REDIS_JSON("org.hibernate.ogm.datastore.redis.RedisJsonDialect", false, false),
 
-	REDIS_HASH( "org.hibernate.ogm.datastore.redis.RedisHashDialect", false, false ),
+	REDIS_HASH("org.hibernate.ogm.datastore.redis.RedisHashDialect", false, false),
 
-	ORIENTDB( "org.hibernate.ogm.datastore.orientdb.OrientDBDialect", false, false ),
-        
-        ORIENTDB_REMOTE( "org.hibernate.ogm.datastore.orientdbremote.RemoteOrientDBDialect", false, false );
+	ORIENTDB("org.hibernate.ogm.datastore.orientdb.OrientDBDialect", false, false),
+
+	ORIENTDB_REMOTE("org.hibernate.ogm.datastore.orientdbremote.RemoteOrientDBDialect", false, false);
 
 	private final String dialectClassName;
 	private final boolean isDocumentStore;
@@ -59,6 +59,7 @@ public enum GridDialectType {
 
 	/**
 	 * Whether this store is a document store or not.
+	 *
 	 * @return {@code true} if this is a document store, {@code false} otherwise.
 	 */
 	public boolean isDocumentStore() {
