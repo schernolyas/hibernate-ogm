@@ -3,18 +3,16 @@
 == OrientDB
 
 http://www.orientdb.com[OrientDB] is a robust (fully ACID) transactional property multi-model (graph and document) database.
-This kind of databases are suited for those type of problems that can be represented with a graph
-like social relationships or road maps for example.
 
-Hibernate OGM can connect to an embedded OrientDB (in-memory database) or a remote server.
-The connection to the remote server can occur via the native OrientDB protocol.
+Hibernate OGM can connect to an embedded OrientDB (in-memory database or local filesystem) or a remote server.
+The connection to the remote server can occur via the native OrientDB binary protocol.
 
 === How to add OrientDB integration
 
 .1. Add the dependencies to your project
 
 If your project uses Maven you can add this to the pom.xml:
-
+====
 [source, XML]
 [subs="verbatim,attributes"]
 ----
@@ -24,6 +22,19 @@ If your project uses Maven you can add this to the pom.xml:
     <version>{hibernate-ogm-version}</version>
 </dependency>
 ----
+====
+or
+====
+[source, XML]
+[subs="verbatim,attributes"]
+----
+<dependency>
+    <groupId>org.hibernate.ogm</groupId>
+    <artifactId>hibernate-ogm-orientdb-remote</artifactId>
+    <version>{hibernate-ogm-version}</version>
+</dependency>
+----
+====
 
 Alternatively you can find the required libraries in the distribution package on
 https://downloads.sourceforge.net/project/hibernate/hibernate-ogm/{hibernate-ogm-version}/hibernate-ogm-{hibernate-ogm-version}-dist.zip[SourceForge]
@@ -47,8 +58,7 @@ If you want to connect to a remote server, you can use:
 [source, properties]
 [subs="verbatim,attributes"]
 ----
-hibernate.ogm.datastore.provider = orientdb
-hibernate.ogm.orientdb.storage=remote
+hibernate.ogm.datastore.provider = orientdb_remote
 ----
 ====
 
@@ -58,7 +68,7 @@ You can select a different host, port and enable authentication with the followi
 [source, properties]
 [subs="verbatim,attributes"]
 ----
-hibernate.ogm.datastore.provider = orientdb
+hibernate.ogm.datastore.provider = orientdb_remote
 hibernate.ogm.datastore.host = example.com:2424
 hibernate.ogm.datastore.username = example_username
 hibernate.ogm.datastore.password = example_password
@@ -77,7 +87,7 @@ Date format for OrientDB. Default value is: `yyyy-MM-dd`
 hibernate.ogm.orientdb.dbtype (optional)::
 Type of database. Available values are: `document`, `graph`. Default value is `document`.
 hibernate.ogm.orientdb.storage (optional)::
-Type of storage. Available values are: `memory`,`plocal`,`remote`. Default value is `memory`.
+Type of storage. Available values are: `memory`,`plocal`,`remote`. Default value for embedded using is `memory`. Default value for remote using is `remote`.
 hibernate.ogm.orientdb.pool.size (optional)::
 Size of connection pool to datastorage. Default value is 10.
 hibernate.ogm.orientdb.root.username (optional)::
@@ -94,7 +104,7 @@ The password to use when connecting to the datastorage.
 [NOTE]
 ====
 When bootstrapping a session factory or entity manager factory programmatically,
-you should use the constants defined on `org.hibernate.ogm.datastore.orientdb.OrientDBProperties`
+you should use the constants defined on `org.hibernate.ogm.datastore.orientdb.OrientDBProperties` (or `org.hibernate.ogm.datastore.orientdbremote.RemoteOrientDBProperties` )
 when specifying the configuration properties listed above.
 
 Common properties shared between stores are declared on `OgmProperties`
@@ -185,13 +195,12 @@ annotated with:
 * `@Column( unique = true )`
 * `@Table( uniqueConstraints = @UniqueConstraint(columnNames = { "column_name" } ) )`
 
-[NOTE]
+[WARNING]
 ====
 OrientDB not supports composite primary keys. In this way, annotation `@EmbeddedId` not supported.
 ====
 
 Embedded identifiers are currently stored as dot separated properties.
-
 
 ===== Embedded objects and collections
 
@@ -199,104 +208,6 @@ Embedded entities stored as other OrientDB class. Link between embedded class an
 
 The type of the relationship that connects the entity node to the embedded node is
 the attribute name representing the embedded in the java class.
-
-.Embedded object
-====
-[source, JAVA]
-----
-@Entity
-public class News {
-
-    @EmbeddedId
-    private NewsID newsId;
-
-    @Embedded
-    private NewsPaper paper;
-
-    // getters, setters ...
-}
-
-@Embeddable
-public class NewsID implements Serializable {
-
-    private String title;
-    private String author;
-
-    // getters, setters ...
-}
-
-@Embeddable
-public class NewsPaper {
-
-    private String name;
-    private String owner;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-@Embedded-example.png[align="center", depth="", scalefit="1"]
-====
-
-.@ElementCollection
-====
-[source, JAVA]
-----
-@Entity
-public class GrandMother {
-
-    @Id
-    private String id;
-
-    @ElementCollection
-    private List<GrandChild> grandChildren = new ArrayList<GrandChild>();
-
-    // getters, setters ...
-}
-
-@Embeddable
-public class GrandChild {
-
-    private String name;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-@ElementCollection-example.png[align="center", depth="", scalefit="1"]
-====
-
-Note that in the previous examples no property is added to the relationships;
-in the following one, one property is added to keep track of the order of the elements in the list.
-
-.@ElementCollection with @OrderColumn
-====
-[source, JAVA]
-----
-@Entity
-public class GrandMother {
-
-    @Id
-    private String id;
-
-    @ElementCollection
-    @OrderColumn( name = "birth_order" )
-    private List<GrandChild> grandChildren = new ArrayList<GrandChild>();
-
-    // getters, setters ...
-}
-
-@Embeddable
-public class GrandChild {
-
-    private String name;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-@ElementCollection-@OrderColumn-example.png[align="center", depth="", scalefit="1"]
-====
 
 ==== Associations
 
@@ -312,379 +223,11 @@ for example when the association is annotated with `@OrderColumn` or when a `jav
 In OrientDB classes are connected via relationship, this means that we don't need to create properties
 which store foreign column keys. This means that annotation like `@JoinColumn` won't have any effect.
 
-.Unidirectional one-to-one
-====
-[source, JAVA]
-----
-@Entity
-public class Vehicule {
-
-    @Id
-    private String id;
-    private String brand;
-
-    // getters, setters ...
-}
-
-
-@Entity
-public class Wheel {
-
-    @Id
-    private String id;
-    private String company;
-    private double diameter;
-
-    @OneToOne
-    private Vehicule vehicule;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-uni-one-to-one-example.png[align="center", depth="", scalefit="1"]
-====
-
-.Bidirectional one-to-one
-====
-[source, JAVA]
-----
-@Entity
-public class Husband {
-
-    @Id
-    private String id;
-    private String name;
-
-    @OneToOne
-    private Wife wife;
-
-    // getters, setters ...
-}
-
-@Entity
-public class Wife {
-
-    @Id
-    private String id;
-    private String name;
-
-    @OneToOne(mappedBy = "wife")
-    private Husband husband;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-bi-one-to-one-example.png[align="center", depth="", scalefit="1"]
-====
-
-.Unidirectional one-to-many
-====
-[source, JAVA]
-----
-@Entity
-public class Basket {
-
-    @Id
-    private String id;
-
-    private String owner;
-
-    @OneToMany
-    private List<Product> products = new ArrayList<Product>();
-
-    // getters, setters ...
-}
-
-@Entity
-public class Product {
-
-    @Id
-    private String name;
-
-    private String description;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-uni-one-to-many-example.png[align="center", depth="", scalefit="1"]
-====
-
-.Unidirectional one-to-many using maps with defaults
-====
-[source, JAVA]
-----
-@Entity
-public class User {
-
-    @Id
-    private String id;
-
-    @OneToMany
-    private Map<String, Address> addresses = new HashMap<String, Address>();
-
-    // getters, setters ...
-}
-
-@Entity
-public class Address {
-
-    @Id
-    private String id;
-    private String city;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-uni-one-to-many-with-map-example.png[align="center", depth="", scalefit="1"]
-====
-
-.Unidirectional one-to-many using maps with @MapKeyColumn
-====
-[source, JAVA]
-----
-@Entity
-public class User {
-
-    @Id
-    private String id;
-
-    @OneToMany
-    @MapKeyColumn(name = "addressType")
-    private Map<String, Address> addresses = new HashMap<String, Address>();
-
-    // getters, setters ...
-}
-
-@Entity
-public class Address {
-
-    @Id
-    private String id;
-    private String city;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-uni-one-to-many-with-@MapKeyColumn-example.png[align="center", depth="", scalefit="1"]
-====
-
-.Unidirectional many-to-one
-====
-[source, JAVA]
-----
-@Entity
-public class JavaUserGroup {
-
-    @Id
-    private String jug_id;
-    private String name;
-
-    // getters, setters ...
-}
-
-@Entity
-public class Member {
-
-    @Id
-    private String id;
-    private String name;
-
-    @ManyToOne
-    private JavaUserGroup memberOf;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-uni-many-to-one-example.png[align="center", depth="", scalefit="1"]
-====
-
-.Bidirectional many-to-one
-====
-[source, JAVA]
-----
-@Entity
-public class SalesForce {
-
-    @Id
-    private String id;
-    private String corporation;
-
-    @OneToMany(mappedBy = "salesForce")
-    private Set<SalesGuy> salesGuys = new HashSet<SalesGuy>();
-
-    // getters, setters ...
-}
-
-@Entity
-public class SalesGuy {
-    private String id;
-    private String name;
-
-    @ManyToOne
-    private SalesForce salesForce;
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-bi-many-to-one-example.png[align="center", depth="", scalefit="1"]
-====
-
-.Unidirectional many-to-many
-====
-[source, JAVA]
-----
-@Entity
-public class Student {
-
-    @Id
-    private String id;
-    private String name;
-
-    // getters, setters ...
-}
-
-@Entity
-public class ClassRoom {
-
-    @Id
-    private long id;
-    private String lesson;
-
-    @ManyToMany
-    private List<Student> students = new ArrayList<Student>();
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-uni-many-to-many-example.png[align="center", depth="", scalefit="1"]
-====
-
-.Bidirectional many-to-many
-====
-[source, JAVA]
-----
-@Entity
-public class AccountOwner {
-
-    @Id
-    private String id;
-
-    private String SSN;
-
-    @ManyToMany
-    private Set<BankAccount> bankAccounts;
-
-    // getters, setters ...
-}
-
-@Entity
-public class BankAccount {
-
-    @Id
-    private String id;
-
-    private String accountNumber;
-
-    @ManyToMany( mappedBy = "bankAccounts" )
-    private Set<AccountOwner> owners = new HashSet<AccountOwner>();
-
-    // getters, setters ...
-}
-----
-
-image::neo4j-bi-many-to-many-example.png[align="center", depth="", scalefit="1"]
-====
+Details about relationships in OrientDB at link:http://orientdb.com/docs/2.2.x/Schema.html#relationships[Relationships]
 
 ==== Auto-generated Values
 
 Hibernate OGM supports the table generation strategy as well as the sequence generation strategy with OrientDB.
-It is generally recommended to work with the latter,
-as it allows a slightly more efficient querying for the next sequence value.
-
-Sequence-based generators are represented by nodes in the following form:
-
-.GenerationType.SEQUENCE
-====
-[source, JAVA]
-----
-@Entity
-public class Song {
-
-    ...
-
-    @Id
-    @GeneratedValue( strategy = GenerationType.SEQUENCE, generator = "songSequenceGenerator" )
-    @SequenceGenerator(
-            name = "songSequenceGenerator",
-            sequenceName = "song_sequence",
-            initialValue = INITIAL_VALUE,
-            allocationSize = 10)
-    public Long getId() {
-        return id;
-    }
-
-    ...
-----
-
-image::neo4j-sequence-example.png[align="center", depth="", scalefit="1"]
-====
-
-Each sequence generator node is labelled with `SEQUENCE`.
-The sequence name can be specified via `@SequenceGenerator#sequenceName()`.
-A unique constraint is applied to the property `sequence_name` in order to ensure uniqueness of sequences.
-
-If required, you can set the initial value of a sequence and the increment size via
-`@SequenceGenerator#initialValue()` and `@SequenceGenerator#allocationSize()`, respectively.
-The options `@SequenceGenerator#catalog()` and `@SequenceGenerator#schema()` are not supported.
-
-Table-based generators are represented by nodes in the following form:
-
-.GenerationType.TABLE
-====
-[source, JAVA]
-----
-@Entity
-public class Video {
-
-    ...
-
-    @Id
-    @GeneratedValue( strategy = GenerationType.TABLE, generator = "video" )
-    @TableGenerator(
-         name = "video",
-         table = "Sequences",
-         pkColumnName = "key",
-         pkColumnValue = "video",
-         valueColumnName = "seed"
-    )
-    public Integer getId() {
-        return id;
-    }
-
-    ...
-----
-
-image::neo4j-table-based-sequence-example.png[align="center", depth="", scalefit="1"]
-====
-
-Each table generator node is labelled with `TABLE_BASED_SEQUENCE`
-and the table name as specified via `@TableGenerator#table()`.
-The sequence name is to be given via `@TableGenerator#pkColumnValue()`.
-The node properties holding the sequence name and value can be configured via
-`@TableGenerator#pkColumnName()` and `@TableGenerator#valueColumnName()`, respectively.
-A unique constraint is applied to the property `sequence_name` to avoid the same sequence name is used twice within the same "table".
-
-If required, you can set the initial value of a sequence and the increment size via
-`@TableGenerator#initialValue()` and `@TableGenerator#allocationSize()`, respectively.
-The options `@TableGenerator#catalog()`, `@TableGenerator#schema()`, `@TableGenerator#uniqueConstraints()` and `@TableGenerator#indexes()`  are not supported.
 
 
 [[ogm-orientdb-transactions]]
@@ -692,6 +235,13 @@ The options `@TableGenerator#catalog()`, `@TableGenerator#schema()`, `@TableGene
 
 In OrientDB, operations must be executed inside a transaction.
 Make sure your interactions with Hibernate OGM are within a transaction when you target OrientDB.
+
+[IMPORTANT]
+====
+Transactions in OrientDB organized by paradigm *`one thread - one connection - one transaction`*.
+In this way, using of nested transactions or two transactions in one thread are *impermissible*!
+
+====
 
 .Example of starting and committing transactions
 ====
@@ -733,49 +283,10 @@ if the JTA transaction will.
 [[ogm-orientdb-queries]]
 === Queries
 
-You can express queries in a few different ways:
-
-* (!)using JP-QL
-* using the OrientDB's dialect of SQL
-
-[NOTE]
-====
-Neo4J makes use of a Lucene version which
-is not compatible with the most recent Hibernate Search version.
-This unfortunately makes it impossible to use the latest Hibernate Search version
-and Neo4J embedded in the same application.
-====
-
-While you can use JP-QL for simple queries, you might hit limitations.
-The current recommended approach is to use native Cypher queries
-if your query involves nested (list of) elements.
-
-==== JP-QL queries
-
-Hibernate OGM is a work in progress, so only a sub-set of JP-QL constructs is available
-when using the JP-QL query support. This includes:
-
-* simple comparisons using "<", "+<=+", "=", ">=" and ">"
-* `IS NULL` and `IS NOT NULL`
-* the boolean operators `AND`, `OR`, `NOT`
-* `LIKE`, `IN` and `BETWEEN`
-* `ORDER BY`
-* inner `JOIN` on embedded collections
-* projections of regular and embedded properties
-
-Queries using these constructs will be transformed into equivalent http://docs.neo4j.org/chunked/stable/cypher-query-lang.html[Cypher queries].
-
-[NOTE]
-====
-Let us know <<ogm-howtocontribute,by opening an issue or sending an email>>
-what query you wish to execute.
-Expanding our support in this area is high on our priority list.
-====
-
 [[ogm-orientdb-queries-native]]
 ==== SQL queries (native OrientDB dialect)
 
-Hibernate OGM also supports link:http://orientdb.com/docs/2.2.x/SQL.html[OrientDB dialect for SQL].
+Hibernate OGM supports link:http://orientdb.com/docs/2.2.x/SQL.html[OrientDB dialect for SQL].
 You can execute native queries as shown in the following example:
 
 .Using the JPA API
@@ -801,24 +312,15 @@ public class Poem {
 javax.persistence.EntityManager em = ...
 
 // a single result query
-String query1 = "MATCH ( n:Poem { name:'Portia', author:'Oscar Wilde' } ) RETURN n";
+String query1 = "Select from Poem where name='Portia' and author='Oscar Wilde'";
 Poem poem = (Poem) em.createNativeQuery( query1, Poem.class ).getSingleResult();
 
 // query with order by
-String query2 = "MATCH ( n:Poem { name:'Portia', author:'Oscar Wilde' } ) " +
-                "RETURN n ORDER BY n.name";
+String query2 = "Select from Poem where name='Portia' and author='Oscar Wilde' ORDER BY name";
 List<Poem> poems = em.createNativeQuery( query2, Poem.class ).getResultList();
-
-// query with projections
-String query3 = MATCH ( n:Poem ) RETURN n.name, n.author ORDER BY n.name";
-List<Object[]> poemNames = (List<Object[]>) em.createNativeQuery( query3 )
-                               .getResultList();
 
 ----
 ====
-
-The result of a query is a managed entity (or a list thereof) or a projection of attributes in form of an object array,
-just like you would get from a JP-QL query.
 
 .Using the Hibernate native API
 ====
@@ -826,14 +328,12 @@ just like you would get from a JP-QL query.
 ----
 OgmSession session = ...
 
-String query1 = "MATCH ( n:Poem { name:'Portia', author:'Oscar Wilde' } ) " +
-                "RETURN n";
+String query1 = "Select from Poem where name='Portia' and author='Oscar Wilde'";
 Poem poem = session.createNativeQuery( query1 )
                       .addEntity( "Poem", Poem.class )
                       .uniqueResult();
 
-String query2 = "MATCH ( n:Poem { name:'Portia', author:'Oscar Wilde' } ) " +
-                "RETURN n ORDER BY n.name";
+String query2 = "Select from Poem where name='Portia' and author='Oscar Wilde' ORDER BY name";
 List<Poem> poems = session.createNativeQuery( query2 )
                       .addEntity( "Poem", Poem.class )
                       .list();
@@ -866,9 +366,14 @@ Poem poem2 = (Poem) session.getNamedQuery( "AthanasiaPoem" )
 ====
 
 Hibernate OGM stores data in a natural way so you can still execute queries using your favorite tool,
-the main drawback is that the results are going to be raw Neo4j elements and not managed entities.
-
+the main drawback is that the results are going to be raw OrientDB elements and not managed entities.
 
 [[ogm-orientdb-limitations]]
 === Known Limitations & Future improvements
-limitations
+.Limitations
+. Hibernate OGM uses version `2.2.14` of OrientDB. The version not supports transactions in `remote` mode correctry. (OrientDB team promises to fix the problem in version `3.0.0`.)
+. Embedded entities can not be indexed. (OrientDB team promises to fix the problem in version `3.0.0`.)
+. Embedded entities can not be a primary key. (OrientDB team promises to fix the problem in version `3.0.0`.)
+
+.Future improvements
+. Support `graph` database API
