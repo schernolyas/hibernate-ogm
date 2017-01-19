@@ -8,7 +8,9 @@ package org.hibernate.ogm.datastore.orientdb.impl;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.EnumSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
@@ -44,6 +46,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 	private static final long serialVersionUID = 1L;
 	private static Log log = LoggerFactory.getLogger();
+	private static final Set<StorageModeEnum> SUPPORTED_STORAGES = EnumSet.of( StorageModeEnum.MEMORY, StorageModeEnum.PLOCAL );
 	private DatabaseHolder databaseHolder;
 	private ConfigurationPropertyReader propertyReader;
 
@@ -56,7 +59,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 	public void start() {
 		log.debug( "---start---" );
 		try {
-			StorageModeEnum storageMode = PropertyReaderUtil.readStorateModeProperty( propertyReader, getDefaultStorage() );
+			StorageModeEnum storageMode = PropertyReaderUtil.readStorateModeProperty( propertyReader, getDefaultStorage(), getSupportedStorages() );
 			DatabaseTypeEnum databaseType = PropertyReaderUtil.readDatabaseTypeProperty( propertyReader );
 
 			if ( DatabaseTypeEnum.GRAPH.equals( databaseType ) ) {
@@ -77,7 +80,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 
 			FormatterUtil.setDateFormatter( createFormatter( propertyReader, OrientDBProperties.DATE_FORMAT, OrientDBConstant.DEFAULT_DATE_FORMAT ) );
 			FormatterUtil
-			.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
+					.setDateTimeFormatter( createFormatter( propertyReader, OrientDBProperties.DATETIME_FORMAT, OrientDBConstant.DEFAULT_DATETIME_FORMAT ) );
 		}
 		catch (Exception e) {
 			throw log.unableToStartDatastoreProvider( e );
@@ -146,8 +149,12 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		return databaseHolder.get();
 	}
 
-	protected OrientDBProperties.StorageModeEnum getDefaultStorage() {
-		return OrientDBProperties.StorageModeEnum.MEMORY;
+	protected StorageModeEnum getDefaultStorage() {
+		return StorageModeEnum.MEMORY;
+	}
+
+	protected Set<StorageModeEnum> getSupportedStorages() {
+		return SUPPORTED_STORAGES;
 	}
 
 	public void closeCurrentDatabase() {

@@ -6,14 +6,20 @@
  */
 package org.hibernate.ogm.datastore.orientdb.utils;
 
+import java.util.Set;
+
 import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.StorageModeEnum;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
+import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
+import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 
 public class PropertyReaderUtil {
+
+	private static Log log = LoggerFactory.getLogger();
 
 	public static String readHostProperty(ConfigurationPropertyReader propertyReader) {
 		return propertyReader.property( OgmProperties.HOST, String.class )
@@ -67,10 +73,16 @@ public class PropertyReaderUtil {
 				.getValue();
 	}
 
-	public static StorageModeEnum readStorateModeProperty(ConfigurationPropertyReader propertyReader,StorageModeEnum defaultStorage) {
-		return propertyReader.property( OrientDBProperties.STORAGE_MODE_TYPE, OrientDBProperties.StorageModeEnum.class )
+	public static StorageModeEnum readStorateModeProperty(ConfigurationPropertyReader propertyReader, StorageModeEnum defaultStorage,
+			Set<StorageModeEnum> availableStorages) {
+		StorageModeEnum storage = propertyReader.property( OrientDBProperties.STORAGE_MODE_TYPE, OrientDBProperties.StorageModeEnum.class )
 				.withDefault( defaultStorage )
 				.getValue();
+		if ( !availableStorages.contains( storage ) ) {
+			// user set unsupportable storage
+			throw log.unsupportedStorage( storage );
+		}
+		return storage;
 	}
 
 	public static DatabaseTypeEnum readDatabaseTypeProperty(ConfigurationPropertyReader propertyReader) {

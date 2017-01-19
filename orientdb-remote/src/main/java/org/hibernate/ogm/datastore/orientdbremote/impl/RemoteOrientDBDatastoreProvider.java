@@ -6,6 +6,9 @@
  */
 package org.hibernate.ogm.datastore.orientdbremote.impl;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.StorageModeEnum;
@@ -22,6 +25,7 @@ public class RemoteOrientDBDatastoreProvider extends OrientDBDatastoreProvider {
 
 	private static final long serialVersionUID = 1L;
 	private static Log log = LoggerFactory.getLogger();
+	private static final Set<StorageModeEnum> SUPPORTED_STORAGES= EnumSet.of( StorageModeEnum.REMOTE );
 
 	@Override
 	protected void createDB(String orientDbUrl, StorageModeEnum storageMode, DatabaseTypeEnum databaseType, Integer poolSize) {
@@ -65,6 +69,11 @@ public class RemoteOrientDBDatastoreProvider extends OrientDBDatastoreProvider {
 	@Override
 	protected StorageModeEnum getDefaultStorage() {
 		return OrientDBProperties.StorageModeEnum.REMOTE;
+	}
+	
+	@Override
+	protected  Set<StorageModeEnum> getSupportedStorages() {
+		return SUPPORTED_STORAGES;
 	}
 	
 
