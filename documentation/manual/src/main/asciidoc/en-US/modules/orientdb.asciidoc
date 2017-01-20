@@ -80,6 +80,8 @@ hibernate.ogm.datastore.password = example_password
 The following properties are available to configure OrientDB support:
 
 .OrientDB datastore configuration properties
+hibernate.ogm.datastore.provider::
+Used provider. Values that linked with OrientDB are `ORIENTDB` (for embedded using) and `ORIENTDB_REMOTE` (for remoting using).
 hibernate.ogm.orientdb.format.datetime (optional)::
 Datetime format for OrientDB. Default value is: `yyyy-MM-dd HH:mm:ss z`
 hibernate.ogm.orientdb.format.date (optional)::
@@ -90,9 +92,9 @@ hibernate.ogm.orientdb.storage (optional)::
 Type of storage. Available values are: `memory`,`plocal`,`remote`. Default value for embedded using is `memory`. Default value for remote using is `remote`.
 hibernate.ogm.orientdb.pool.size (optional)::
 Size of connection pool to datastorage. Default value is 10.
-hibernate.ogm.orientdb.root.username (optional)::
+hibernate.ogm.orientdb.remote.root.username (optional)::
 Username of OrientDB root user. The root user name requred for create/remote database in `remote` storage. Default value is `root`
-hibernate.ogm.orientdb.root.password (optional)::
+hibernate.ogm.orientdb.remote.root.password (optional)::
 Password of OrientDB root user. Default value is `root`
 hibernate.ogm.datastore.host (optional)::
 The host name and the port to use when connecting to a remote server.
@@ -126,8 +128,7 @@ All Links between entities are represented by links between classes (see details
 [[ogm-orientdb-built-in-types]]
 ==== Properties and built-in types
 
-Each entity is represented by a class.
-Each property or more precisely column is represented by an property of the class.
+Each entity is represented by a class.Each property or more precisely column is represented by an field of the class.
 Supported data types described in link:http://orientdb.com/docs/2.2/Types.html[Types]
 
 The following types *NOT* supported in OrientDB and the module:
@@ -147,13 +148,13 @@ The following types (and corresponding primitives) get passed to OrientDB withou
 * [classname]`java.lang.Double`
 * [classname]`java.lang.String`
 * [classname]`java.math.BigDecimal`
-* [classname]`java.util.Date`
 
 The following types get converted into [classname]`java.lang.String`:
 
 * [classname]`java.math.BigInteger`
 * [classname]`java.util.UUID`
 * [classname]`java.util.URL`
+* [classname]`java.util.Date`
 
 [NOTE]
 ====
@@ -167,11 +168,11 @@ This can have consequences when it comes to queries on null value.
 ==== Entities
 
 Entities are stored as OrientDB classes,
-which means each entity property will be translated into a property of the class.
-The name of the class mapping the entity is used as label.
+which means each entity field will be translated into a field of the class.
+The name of entity class mapping to name of class in schema.
 
 You can use the name property of the [classname]`@Table` and [classname]`@Column` annotations
-to rename the label and the class's properties.
+to rename the class's name or the class's field.
 
 ===== Identifiers and unique constraints
 
