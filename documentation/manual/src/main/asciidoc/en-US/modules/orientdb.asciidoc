@@ -156,6 +156,7 @@ The following types get converted into [classname]`java.lang.String`:
 * [classname]`java.util.URL`
 * [classname]`java.util.Date`
 
+
 [NOTE]
 ====
 Hibernate OGM doesn't store null values in OrientDB,
@@ -163,6 +164,30 @@ setting a value to null is the same as removing the corresponding entry
 from OrientDB.
 
 This can have consequences when it comes to queries on null value.
+====
+
+Hibernate OGM supports using OrientDB system field as field type.
+Entity can have field `@rid` (type is [classname]`com.orientechnologies.orient.core.id.ORecordId`).
+
+.Example of using `@rid` field
+====
+[source, JAVA]
+----
+@Entity
+public class BuyingOrder implements Serializable {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long bKey;
+  @Column(name = "@rid")
+  private ORecordId rid;
+  // getters, setters and other fields ...
+----
+====
+
+[IMPORTANT]
+====
+OrientDB generated temporary `@rid` value during transaction. OrientDB change the `@rid` after the transaction commited.
+In this way, `@rid` column can *not* be a primary key. Entity must contains field for  own primary key.
 ====
 
 ==== Entities
@@ -375,6 +400,7 @@ the main drawback is that the results are going to be raw OrientDB elements and 
 . Hibernate OGM uses version `2.2.14` of OrientDB. The version not supports transactions in `remote` mode correctry. (OrientDB team promises to fix the problem in version `3.0.0`.)
 . Embedded entities can not be indexed. (OrientDB team promises to fix the problem in version `3.0.0`.)
 . Embedded entities can not be a primary key. (OrientDB team promises to fix the problem in version `3.0.0`.)
+. System field `@rid` can not be a primary key.
 
 .Future improvements
 . Support `graph` database API
