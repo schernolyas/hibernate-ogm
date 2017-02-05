@@ -97,7 +97,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		};
 	}
 
-	private String prepareOrientDbUrl(OrientDBProperties.StorageModeEnum storage) {
+	private String prepareOrientDbUrl(StorageModeEnum storage) {
 		String database = PropertyReaderUtil.readDatabaseProperty( propertyReader );
 		StringBuilder orientDbUrl = new StringBuilder( 100 );
 		orientDbUrl.append( storage.name().toLowerCase() );
@@ -126,8 +126,8 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		String user = PropertyReaderUtil.readUserProperty( propertyReader );
 		String password = PropertyReaderUtil.readPasswordProperty( propertyReader );
 		log.debugf( "User: %s; Password: %s ", user, password );
-		if ( OrientDBProperties.StorageModeEnum.MEMORY.equals( storage ) ||
-				OrientDBProperties.StorageModeEnum.PLOCAL.equals( storage ) ) {
+		if ( StorageModeEnum.MEMORY.equals( storage ) ||
+				StorageModeEnum.PLOCAL.equals( storage ) ) {
 			try {
 				OPartitionedDatabasePoolFactory factory = new OPartitionedDatabasePoolFactory( poolSize );
 				OPartitionedDatabasePool pool = factory.get( orientDbUrl, user, password );
