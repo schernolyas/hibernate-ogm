@@ -7,18 +7,19 @@
 package org.hibernate.ogm.datastore.mongodb.query.parsing.nativequery.impl;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.hibernate.ogm.datastore.mongodb.logging.impl.Log;
+import org.hibernate.ogm.datastore.mongodb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.mongodb.query.impl.MongoDBQueryDescriptor;
 import org.hibernate.ogm.datastore.mongodb.query.impl.MongoDBQueryDescriptor.Operation;
 import org.hibernate.ogm.util.impl.StringHelper;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
+import org.bson.Document;
 
 /**
  * Builder for {@link MongoDBQueryDescriptor}s.
@@ -28,6 +29,7 @@ import com.mongodb.DBObject;
  * @author Guillaume Smet
  */
 public class MongoDBQueryDescriptorBuilder {
+	private static Log log = LoggerFactory.getLogger();
 
 	private String collection;
 	private Operation operation;
@@ -45,7 +47,7 @@ public class MongoDBQueryDescriptorBuilder {
 	private String options;
 
 	private Set<Integer> parsed = new HashSet<>();
-	private List<DBObject> pipeline = new ArrayList<>();
+	private List<Document> pipeline = new LinkedList<>();
 
 	private Deque<StackedOperation> stack = new ArrayDeque<>();
 
@@ -121,16 +123,72 @@ public class MongoDBQueryDescriptorBuilder {
 	}
 
 	public MongoDBQueryDescriptor build() {
+		//@todo redactor the spagetti!
 		if ( operation != Operation.AGGREGATE_PIPELINE ) {
-			return new MongoDBQueryDescriptor(
-				collection,
-				operation,
-				parse( criteria ),
-				parse( projection ),
-				parse( orderBy ),
-				parse( options ),
-				parse( updateOrInsert ),
-				null );
+			MongoDBQueryDescriptor descriptor = null;
+			if ( operation == Operation.INSERTMANY ) {
+				// must be array
+				Object anyDocs = parseAsObject( updateOrInsert );
+				List<Document> documents = (List<Document>) parseAsObject( updateOrInsert );
+				descriptor = new MongoDBQueryDescriptor(
+						collection,
+						operation,
+						parse( criteria ),
+						parse( projection ),
+						parse( orderBy ),
+						parse( options ),
+						null,
+						documents,
+						null
+				);
+
+			}
+			else if ( operation == Operation.INSERT ) {
+				//can be document or array
+				Object anyDocs = parseAsObject( updateOrInsert );
+				if ( anyDocs instanceof List ) {
+					//this is array
+					descriptor = new MongoDBQueryDescriptor(
+							collection,
+							operation,
+							parse( criteria ),
+							parse( projection ),
+							parse( orderBy ),
+							parse( options ),
+							null,
+							(List<Document>) anyDocs,
+							null
+					);
+				}
+				else {
+					//this is one document
+					descriptor = new MongoDBQueryDescriptor(
+							collection,
+							operation,
+							parse( criteria ),
+							parse( projection ),
+							parse( orderBy ),
+							parse( options ),
+							(Document) anyDocs,
+							null,
+							null
+					);
+				}
+			}
+			else {
+				descriptor = new MongoDBQueryDescriptor(
+						collection,
+						operation,
+						parse( criteria ),
+						parse( projection ),
+						parse( orderBy ),
+						parse( options ),
+						parse( updateOrInsert ),
+						null,
+						null
+				);
+			}
+			return descriptor;
 		}
 		return new MongoDBQueryDescriptor( collection, operation, pipeline );
 	}
@@ -142,22 +200,30 @@ public class MongoDBQueryDescriptorBuilder {
 	 * See <a href="https://jira.mongodb.org/browse/JAVA-2186">https://jira.mongodb.org/browse/JAVA-2186</a>.
 	 *
 	 * @param json a JSON string representing an array or an object
-	 * @return a {@code DBObject} representing the array ({@code BasicDBList}) or the object ({@code BasicDBObject})
+	 * @return returns the array ({@code List}) (for many documents) or the object ({@code Document}) for one document
+	 * @see <a href="https://docs.mongodb.com/manual/tutorial/insert-documents/">insert documents</a>
 	 */
-	private DBObject parse(String json) {
-		return (DBObject) parseAsObject( json );
+	private Document parse(String json) {
+		return (Document) parseAsObject( json );
 	}
 
+	/**
+	 * parse JSON
+	 * @param json
+	 * @return
+	 * @see <a href="http://stackoverflow.com/questions/34436952/json-parse-equivalent-in-mongo-driver-3-x-for-java"> JSON.parse equivalent</a>
+	 */
 	private static Object parseAsObject(String json) {
 		if ( StringHelper.isNullOrEmptyString( json ) ) {
 			return null;
 		}
-		BasicDBObject object = BasicDBObject.parse( "{ 'json': " + json + "}" );
+		log.debugf( "json: %s", json );
+		Document object = Document.parse( "{ 'json': " + json + "}" );
 		return object.get( "json" );
 	}
 
-	private static DBObject operation(StackedOperation operation, String value) {
-		DBObject stage = new BasicDBObject();
+	private static Document operation(StackedOperation operation, String value) {
+		Document stage = new Document();
 		stage.put( normalize( operation ), parseAsObject( value ) );
 		return stage;
 	}
