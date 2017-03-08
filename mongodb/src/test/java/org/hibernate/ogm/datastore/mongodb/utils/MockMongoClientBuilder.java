@@ -16,8 +16,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.mongodb.MongoClient;
+import com.mongodb.ReadConcern;
+import com.mongodb.ReadPreference;
+import com.mongodb.WriteConcern;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.MongoIterable;
+import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import org.bson.Document;
 
@@ -53,32 +60,51 @@ public class MockMongoClientBuilder {
 		 */
 		public MockMongoClientBuilderContext insert(String collectionName, Document object) {
 			MongoCollection<Document> collection = mock( MongoCollection.class );
+			when( collection.withWriteConcern( any( WriteConcern.class ) ) ).thenReturn( collection );
+			when( collection.withReadConcern( any( ReadConcern.class ) ) ).thenReturn( collection );
+			when( collection.withReadPreference( any( ReadPreference.class ) ) ).thenReturn( collection );
 			collections.put( collectionName, collection );
 
-			when( collection.find( any( Document.class ) ).projection( any( Document.class ) ).first() ).thenReturn( object );
+			FindIterable<Document> findIterableMock1 = mock( FindIterable.class );
+			FindIterable<Document> findIterableMock2 = mock( FindIterable.class );
+			when( findIterableMock1.projection( any( Document.class ) ) ).thenReturn( findIterableMock2 );
+			when( findIterableMock2.first() ).thenReturn( object );
+			when( collection.find( any( Document.class ) ) ).thenReturn( findIterableMock1 );
+			when( collection.findOneAndUpdate( any( Document.class ), any( Document.class ), any( FindOneAndUpdateOptions.class ) ) ).thenReturn( object );
+
 
 			DeleteResult deleteResult = mock( DeleteResult.class );
 			when( collection.deleteMany( any( Document.class ) ) ).thenReturn( deleteResult );
-
 			return this;
 		}
 
 		/**
 		 * Builds and returns a mock MongoDB client based on the given configuration.
+		 * @see <a href="https://jaihirsch.github.io/straw-in-a-haystack/mongodb/2016/07/25/mocking-the-mongodb-java-driver/">MongoDb Driver mocking</a>
 		 */
 		public MockMongoClient build() {
 			MongoDatabase database = mock( MongoDatabase.class );
 
 			MongoCollection<Document> defaultCollection = mock( MongoCollection.class );
+			when( defaultCollection.withWriteConcern( any( WriteConcern.class ) ) ).thenReturn( defaultCollection );
 			when( database.getCollection( anyString() ) ).thenReturn( defaultCollection );
+			when( defaultCollection.withWriteConcern( any( WriteConcern.class ) ) ).thenReturn( defaultCollection );
+			when( defaultCollection.withReadConcern( any( ReadConcern.class ) ) ).thenReturn( defaultCollection );
+			when( defaultCollection.withReadPreference( any( ReadPreference.class ) ) ).thenReturn( defaultCollection );
 
 			for ( Entry<String, MongoCollection<Document>> collection : collections.entrySet() ) {
 				when( database.getCollection( collection.getKey() ) ).thenReturn( collection.getValue() );
 			}
 
 			MongoClient mongoClient = mock( MongoClient.class );
+			MongoIterable<String> iterable = mock( MongoIterable.class );
+			MongoCursor<String> cursor = mock( MongoCursor.class );
+			when( iterable.iterator() ).thenReturn( cursor );
+			when( cursor.hasNext() ).thenReturn( true ).thenReturn( false );
+			when( cursor.next() ).thenReturn( "testdb" );
+
 			//@TODO prepare mock for MongoCursor
-			//when( mongoClient.getDatabaseNames() ).thenReturn( Collections.<String>emptyList() );
+			when( mongoClient.listDatabaseNames() ).thenReturn( iterable );
 			when( mongoClient.getDatabase( anyString() ) ).thenReturn( database );
 
 			return new MockMongoClient( collections, defaultCollection, mongoClient );

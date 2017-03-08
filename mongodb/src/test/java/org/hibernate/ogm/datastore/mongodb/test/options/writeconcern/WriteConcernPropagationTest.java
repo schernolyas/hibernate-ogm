@@ -7,6 +7,7 @@
 package org.hibernate.ogm.datastore.mongodb.test.options.writeconcern;
 
 import static org.hibernate.ogm.datastore.mongodb.utils.MockMongoClientBuilder.mockClient;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -32,7 +33,7 @@ import org.junit.After;
 import org.junit.Test;
 
 import com.mongodb.WriteConcern;
-import com.mongodb.client.model.FindOneAndUpdateOptions;
+import com.mongodb.client.model.UpdateOptions;
 import org.bson.Document;
 
 /**
@@ -67,7 +68,7 @@ public class WriteConcernPropagationTest {
 		session.close();
 
 		// then expect one (batched) insert with the configured write concern
-		verify( mockClient.getCollection( "GolfPlayer" ).withWriteConcern( WriteConcern.MAJORITY ) ).insertMany( any( List.class ) );
+		verify( mockClient.getCollection( "GolfPlayer" ) ).insertMany( any( List.class ) );
 	}
 
 	@Test
@@ -89,9 +90,8 @@ public class WriteConcernPropagationTest {
 		session.close();
 
 		// then expect one (batched) insert with the configured write concern
-		//verify( mockClient.getCollection( "GolfPlayer" ) ).update( any( DBObject.class ), any( DBObject.class ), anyBoolean(), anyBoolean(), eq( WriteConcern.MAJORITY ) );
 		verify( mockClient.getCollection( "GolfPlayer" ).withWriteConcern( WriteConcern.MAJORITY ) )
-				.findOneAndUpdate( any( Document.class ), any( Document.class ), any( FindOneAndUpdateOptions.class ) );
+				.updateOne( any( Document.class ), any( Document.class ), any( UpdateOptions.class ) );
 	}
 
 	@Test
@@ -138,10 +138,8 @@ public class WriteConcernPropagationTest {
 		session.close();
 
 		// then expect one update using the configured write concern for adding the row
-		//verify( mockClient.getCollection( "GolfPlayer" ), times( 1 ) ).update( any( Document.class ), any( Document.class ), anyBoolean(), anyBoolean(), eq( WriteConcern.MAJORITY ) );
-		//@todo correct parameters of FindOneAndUpdateOptions
 		verify( mockClient.getCollection( "GolfPlayer" ).withWriteConcern( WriteConcern.MAJORITY ), times( 1 ) )
-				.findOneAndUpdate( any( Document.class ), any( Document.class ), any( FindOneAndUpdateOptions.class ) );
+				.updateOne( any( Document.class ), any( Document.class ), any( UpdateOptions.class ) );
 	}
 
 	@Test
@@ -149,7 +147,6 @@ public class WriteConcernPropagationTest {
 		// given an empty database
 		MockMongoClient mockClient = mockClient().build();
 		setupSessionFactory( new MongoDBDatastoreProvider( mockClient.getClient() ), AssociationStorageType.ASSOCIATION_DOCUMENT );
-
 		Session session = sessions.openSession();
 		Transaction transaction = session.beginTransaction();
 
@@ -159,11 +156,11 @@ public class WriteConcernPropagationTest {
 
 		transaction.commit();
 		session.close();
-
 		// then expect association operations using the configured write concern
-		//verify( mockClient.getCollection( "Associations" ) ).update( any( Document.class ), any( Document.class ), anyBoolean(), anyBoolean(), eq( WriteConcern.MAJORITY ) );
-		//@todo correct parameters of FindOneAndUpdateOptions
-		verify( mockClient.getCollection( "Associations" ).withWriteConcern( WriteConcern.MAJORITY ) ).findOneAndUpdate( any( Document.class ), any( Document.class ), any( FindOneAndUpdateOptions.class ) );
+		assertNotNull( mockClient.getCollection( "Associations" ) );
+		assertNotNull( mockClient.getCollection( "Associations" ).withWriteConcern( WriteConcern.MAJORITY ) );
+		verify( mockClient.getCollection( "Associations" ).withWriteConcern( WriteConcern.MAJORITY ) )
+				.updateOne( any( Document.class ), any( Document.class ), any( UpdateOptions.class ) );
 	}
 
 	@SuppressWarnings("unchecked")
@@ -195,9 +192,8 @@ public class WriteConcernPropagationTest {
 		session.close();
 
 		// then expect tuple and association operations using the configured write concerns
-		//@todo correct parameters of FindOneAndUpdateOptions
 		verify( mockClient.getCollection( "GolfPlayer" ).withWriteConcern( WriteConcern.REPLICA_ACKNOWLEDGED ) ).insertMany( any( List.class ) );
-		verify( mockClient.getCollection( "Associations" ).withWriteConcern( WriteConcern.ACKNOWLEDGED ) ).findOneAndUpdate( any( Document.class ), any( Document.class ), any( FindOneAndUpdateOptions.class ) );
+		verify( mockClient.getCollection( "Associations" ).withWriteConcern( WriteConcern.ACKNOWLEDGED ) ).updateOne( any( Document.class ), any( Document.class ), any( UpdateOptions.class ) );
 	}
 
 	@Test
@@ -224,9 +220,8 @@ public class WriteConcernPropagationTest {
 		session.close();
 
 		// then expect updates to the player document using the configured write concern
-		//@todo correct parameters of FindOneAndUpdateOptions
 		verify( mockClient.getCollection( "GolfPlayer" ).withWriteConcern( WriteConcern.MAJORITY ), times( 1 ) )
-				.findOneAndUpdate( any( Document.class ), any( Document.class ), any( FindOneAndUpdateOptions.class ) );
+				.updateOne( any( Document.class ), any( Document.class ), any( UpdateOptions.class ) );
 	}
 
 	@Test
@@ -251,10 +246,8 @@ public class WriteConcernPropagationTest {
 		session.close();
 
 		// then expect one update to the association collection
-		//@todo correct parameters of FindOneAndUpdateOptions
-		//verify( mockClient.getCollection( "Associations" ), times( 1 ) ).update( any( Document.class ), any( Document.class ), anyBoolean(), anyBoolean(), eq( WriteConcern.MAJORITY ) );
 		verify( mockClient.getCollection( "Associations" ).withWriteConcern( WriteConcern.MAJORITY ), times( 1 ) )
-				.findOneAndUpdate( any( Document.class ), any( Document.class ), any( FindOneAndUpdateOptions.class ) );
+				.updateOne( any( Document.class ), any( Document.class ), any( UpdateOptions.class ) );
 	}
 
 	@Test
@@ -281,10 +274,8 @@ public class WriteConcernPropagationTest {
 		session.close();
 
 		// then expect one call to update using the configured write concern
-		//@todo correct parameters of FindOneAndUpdateOptions
-		//verify( mockClient.getCollection( "GolfPlayer" ) ).update( any( Document.class ), any( Document.class ), anyBoolean(), anyBoolean(), eq( WriteConcern.MAJORITY ) );
 		verify( mockClient.getCollection( "GolfPlayer" ).withWriteConcern( WriteConcern.MAJORITY ) )
-				.findOneAndUpdate( any( Document.class ), any( Document.class ), any( FindOneAndUpdateOptions.class ) );
+				.updateOne( any( Document.class ), any( Document.class ), any( UpdateOptions.class ) );
 	}
 
 	@Test
@@ -309,7 +300,6 @@ public class WriteConcernPropagationTest {
 		session.close();
 
 		// then expect one call to remove with the configured write concern
-		//verify( mockClient.getCollection( "Associations" ) ).remove( any( Document.class ), eq( WriteConcern.MAJORITY ) );
 		verify( mockClient.getCollection( "Associations" ).withWriteConcern( WriteConcern.MAJORITY ) ).deleteMany( any( Document.class ) );
 	}
 
