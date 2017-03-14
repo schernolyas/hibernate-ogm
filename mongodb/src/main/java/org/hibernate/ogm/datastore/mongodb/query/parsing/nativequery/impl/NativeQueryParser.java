@@ -242,6 +242,18 @@ public class NativeQueryParser extends BaseParser<MongoDBQueryDescriptorBuilder>
 		);
 	}
 
+	public Rule Distinct() {
+		return Sequence(
+				Separator(),
+				"distinct ",
+				"( ",
+				Sequence( JsonString(), builder.setDistinctFieldName( JSON.parse( match() ).toString() ) ),
+				Optional( Sequence( ", ", JsonObject(), builder.setCriteria( match() ) ) ),
+				Optional( Sequence( ", ", JsonObject(), builder.setCollation( match() ) ) ),
+				") "
+		);
+	}
+
 	public Rule JsonComposite() {
 		return FirstOf( JsonObject(), JsonArray() );
 	}

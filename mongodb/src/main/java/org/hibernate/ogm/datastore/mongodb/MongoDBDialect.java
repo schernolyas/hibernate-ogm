@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 import com.mongodb.MongoBulkWriteException;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -818,6 +819,8 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 				return doAggregatePipeline( queryDescriptor, queryParameters, collection, entityKeyMetadata );
 			case COUNT:
 				return doCount( queryDescriptor, collection );
+			case DISTINCT:
+				return doDistinct( queryDescriptor, collection );
 			case INSERT:
 			case REMOVE:
 			case UPDATE:
@@ -857,6 +860,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			case AGGREGATE:
 			case AGGREGATE_PIPELINE:
 			case COUNT:
+			case DISTINCT:
 				throw log.readQueryMustBeExecutedViaGetResultList( queryDescriptor );
 			default:
 				throw new IllegalArgumentException( "Unexpected query operation: " + queryDescriptor );
@@ -928,6 +932,12 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		Document stage = new Document();
 		stage.put( key, value );
 		return stage;
+	}
+
+	private static ClosableIterator<Tuple> doDistinct(final MongoDBQueryDescriptor queryDescriptor, final MongoCollection<Document> collection) {
+		DistinctIterable<Document> distinctFieldValues = collection.distinct( queryDescriptor.getDistinctFieldName(), queryDescriptor.getCriteria(), Document.class ).collation( queryDescriptor.getCollation() );
+		MapTupleSnapshot snapshot = new MapTupleSnapshot( Collections.<String, Object>singletonMap( "n", distinctFieldValues ) );
+		return CollectionHelper.newClosableIterator( Collections.singletonList( new Tuple( snapshot, SnapshotType.UNKNOWN ) ) );
 	}
 
 	private static ClosableIterator<Tuple> doFind(MongoDBQueryDescriptor query, QueryParameters queryParameters, MongoCollection<Document> collection,
@@ -1082,7 +1092,6 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			wc = getWriteConcern( o );
 		}
 
-		//final WriteResult result = collection.remove( query, ( wc != null ? wc : collection.getWriteConcern() ) );
 		DeleteResult result = collection.withWriteConcern( ( wc != null ? wc : collection.getWriteConcern() ) ).deleteMany( query );
 		if ( result.wasAcknowledged() ) {
 			return result.getDeletedCount();
