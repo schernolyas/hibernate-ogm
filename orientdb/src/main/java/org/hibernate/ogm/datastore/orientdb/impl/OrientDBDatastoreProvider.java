@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.HibernateException;
+import org.hibernate.ogm.datastore.orientdb.OrientDB;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
@@ -36,9 +37,11 @@ import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
 
+import com.orientechnologies.orient.core.db.ODatabaseType;
 import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
 import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.OrientDBConfig;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
@@ -139,12 +142,15 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		if ( StorageModeEnum.MEMORY.equals( storage ) ||
 				StorageModeEnum.PLOCAL.equals( storage ) ) {
 			try {
-				OPartitionedDatabasePoolFactory factory = new OPartitionedDatabasePoolFactory( poolSize );
-				OPartitionedDatabasePool pool = factory.get( orientDbUrl, user, password );
-				pool.setAutoCreate( true );
-				ODatabaseDocumentTx db = pool.acquire();
-				log.debugf( "db.isClosed(): %b", db.isClosed() );
-				log.debugf( "db.isActiveOnCurrentThread(): %b", db.isActiveOnCurrentThread() );
+				try (com.orientechnologies.orient.core.db.OrientDB orientDB = new com.orientechnologies.orient.core.db.OrientDB( "embedded:./databases/", OrientDBConfig.defaultConfig())) {
+					String databaseName = PropertyReaderUtil.readDatabaseProperty( propertyReader );
+					if ( StorageModeEnum.MEMORY.equals( storage ) ) {
+						orientDB.createIfNotExists( databaseName, ODatabaseType.MEMORY );
+					} else if ( StorageModeEnum.PLOCAL.equals( storage ) ) {
+						orientDB.createIfNotExists( databaseName, ODatabaseType.PLOCAL );
+					}
+					log.debugf( "database %s created?  %b", databaseName, orientDB.exists( databaseName  ) );
+				}
 			}
 			catch (Exception e) {
 				throw log.cannotCreateDatabase( String.format( "Can not create OrientDB URL %s", orientDbUrl ), e );
@@ -155,7 +161,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		}
 	}
 
-	public ODatabaseDocumentTx getCurrentDatabase() {
+	public ODatabaseDocument getCurrentDatabase() {
 		return databaseHolder.get();
 	}
 

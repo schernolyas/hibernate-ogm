@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OCommandSQLParsingException;
@@ -31,19 +31,20 @@ public class NativeQueryUtil {
 
 	private static final Log log = LoggerFactory.getLogger();
 
-	public static List<ODocument> executeIdempotentQuery(ODatabaseDocumentTx db, StringBuilder query) {
+	public static List<ODocument> executeIdempotentQuery(ODatabaseDocument db, StringBuilder query) {
 		return executeIdempotentQuery( db, query.toString() );
 	}
 
-	public static  List<ODocument> executeIdempotentQuery(ODatabaseDocumentTx db, String query) {
+	public static  List<ODocument> executeIdempotentQuery(ODatabaseDocument db, String query) {
 		return executeIdempotentQueryWithParams( db, query, Collections.<String, Object>emptyMap() );
 	}
 
-	public static List<ODocument> executeIdempotentQueryWithParams(ODatabaseDocumentTx db, String query, Map<String, Object> queryParams) {
+	public static List<ODocument> executeIdempotentQueryWithParams(ODatabaseDocument db, String query, Map<String, Object> queryParams) {
 		List<ODocument> resultElements = null;
 		try ( OResultSet resultSet = db.query( query, queryParams ) ) {
 			resultElements = resultSet.elementStream()
 					.map( element -> {
+						log.debugf( "NonIdempotentQuery: loaded document: %s", element.toJSON() );
 						return (ODocument) element;
 					} )
 					.collect( Collectors.toList() );
@@ -58,11 +59,11 @@ public class NativeQueryUtil {
 		return resultElements;
 	}
 
-	public static Object executeNonIdempotentQuery(ODatabaseDocumentTx db, StringBuilder query) {
+	public static Object executeNonIdempotentQuery(ODatabaseDocument db, StringBuilder query) {
 		return executeNonIdempotentQuery( db, query.toString() );
 	}
 
-	public static Object executeNonIdempotentQuery(ODatabaseDocumentTx db, String query) {
+	public static Object executeNonIdempotentQuery(ODatabaseDocument db, String query) {
 		log.debugf( "NonIdempotentQuery: %s", query );
 		ODocument result  = null;
 		try ( OResultSet resultSet = db.command( query ) ) {

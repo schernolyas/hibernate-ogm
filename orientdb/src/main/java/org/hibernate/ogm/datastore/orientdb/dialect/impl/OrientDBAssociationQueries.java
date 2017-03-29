@@ -24,7 +24,7 @@ import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.RowKey;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 
 /**
@@ -44,7 +44,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 				ownerEntityKeyMetadata, associationKeyMetadata );
 	}
 
-	public void removeAssociation(ODatabaseDocumentTx db, AssociationKey associationKey, AssociationContext associationContext) {
+	public void removeAssociation(ODatabaseDocument db, AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "removeAssociation: %s ;associationKey: %s;", associationKey );
 		log.debugf( "removeAssociation: AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
 		log.debugf( "removeAssociation: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
@@ -81,7 +81,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		log.debugf( "removeAssociation: removed ssociations: %d ", removeDocs.size() );
 	}
 
-	public void removeAssociationRow(ODatabaseDocumentTx db, AssociationKey associationKey, RowKey rowKey) {
+	public void removeAssociationRow(ODatabaseDocument db, AssociationKey associationKey, RowKey rowKey) {
 		log.debugf( "removeAssociationRow: associationKey: %s; RowKey:%s ", associationKey, rowKey );
 		StringBuilder loadingDocsForDelete = new StringBuilder( 100 );
 		loadingDocsForDelete.append( "SELECT FROM " ).append( associationKey.getTable() ).append( " WHERE " );
@@ -103,7 +103,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 
 	}
 
-	public List<Map<String, Object>> findRelationship(ODatabaseDocumentTx db, AssociationKey associationKey, RowKey rowKey) {
+	public List<Map<String, Object>> findRelationship(ODatabaseDocument db, AssociationKey associationKey, RowKey rowKey) {
 		Map<String, Object> relationshipValues = new LinkedHashMap<>();
 		log.debugf( "findRelationship: associationKey: %s", associationKey );
 		log.debugf( "findRelationship: row key : %s", rowKey );
@@ -163,6 +163,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		log.debugf( "findRelationship: queryBuilder: %s", queryBuilder );
 		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, queryBuilder );
 		for ( ODocument doc : documents ) {
+
 			dbValues.add( doc.toMap() );
 		}
 		log.debugf( "findRelationship: found: %d", dbValues.size() );

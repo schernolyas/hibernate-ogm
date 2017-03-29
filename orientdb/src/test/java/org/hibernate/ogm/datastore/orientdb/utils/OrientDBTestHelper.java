@@ -31,7 +31,7 @@ import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReade
 import org.hibernate.ogm.utils.GridDialectOperationContexts;
 import org.hibernate.ogm.utils.GridDialectTestHelper;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OSchema;
@@ -81,7 +81,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 	@Override
 	public long getNumberOfEntities(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 		long result = 0;
 		OSchema schema = db.getMetadata().getSchema();
 		for ( OClass schemaClass : schema.getClasses() ) {
@@ -103,7 +103,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 	@Override
 	public long getNumberOfAssociations(SessionFactory sessionFactory) {
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 		long result = 0;
 		OSchema schema = db.getMetadata().getSchema();
 		for ( OClass schemaClass : schema.getClasses() ) {
@@ -142,9 +142,9 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		log.info( "--- preparing database ----" );
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 		log.infof( "call prepareDatabase! db closed: %s ", db.isClosed() );
-		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE TIMEZONE UTC" );
+		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE TIMEZONE GMT" );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATEFORMAT '"
 				.concat( PropertyReaderUtil.readDateFormatProperty( propertyReader ) )
 				.concat( "'" ) );
@@ -158,8 +158,9 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
 		log.infof( "call dropSchemaAndDatabase!" );
 		OrientDBDatastoreProvider provider = getProvider( sessionFactory );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
-		db.drop();
+		ODatabaseDocument db = provider.getCurrentDatabase();
+
+		db.close();
 	}
 
 	@Override

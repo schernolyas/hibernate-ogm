@@ -10,7 +10,7 @@
 
     <groupId>org.hibernate.ogm</groupId>
     <artifactId>hibernate-ogm-bom</artifactId>
-    <version>5.1.0-SNAPSHOT</version>
+    <version>5.2.0-SNAPSHOT</version>
 
     <packaging>pom</packaging>
 
@@ -26,7 +26,7 @@
             See the version.wildfly property in the hibernate-ogm-parent pom
             See http://search.maven.org/#search|gav|1|g%3A"org.wildfly"%20AND%20a%3A"wildfly-parent"
         -->
-        <hibernateSearchVersion>5.6.0.Final</hibernateSearchVersion>
+        <hibernateSearchVersion>5.6.1.Final</hibernateSearchVersion>
         <hibernateCommonsAnnotationsVersion>5.0.1.Final</hibernateCommonsAnnotationsVersion>
         <jbossLoggingVersion>3.2.1.Final</jbossLoggingVersion>
         <jbossLoggingProcessorVersion>1.2.0.Final</jbossLoggingProcessorVersion>
@@ -39,18 +39,18 @@
         <narayanaVersion>5.4.0.Final</narayanaVersion>
 
         <!-- Hibernate ORM -->
-        <hibernateVersion>5.1.2.Final</hibernateVersion>
+        <hibernateVersion>5.1.5.Final</hibernateVersion>
 
         <!-- Careful: Lucene is shared across Neo4J dependencies, Infinispan and Hibernate Search -->
-        <luceneVersion>5.5.2</luceneVersion>
+        <luceneVersion>5.5.4</luceneVersion>
 
         <!-- Various dependencies -->
-        <hibernateHqlParserVersion>1.4.0.Beta1</hibernateHqlParserVersion>
+        <hibernateHqlParserVersion>1.4.0.Final</hibernateHqlParserVersion>
         <parboiledVersion>1.1.7</parboiledVersion> <!-- needs to be aligned with Neo4j version but is also used for MongoDB -->
         <asmVersion>5.0.3</asmVersion> <!-- used for Parboiled and Neo4j -->
 
         <!-- Infinispan -->
-        <infinispanVersion>8.2.5.Final</infinispanVersion>
+        <infinispanVersion>8.2.6.Final</infinispanVersion>
         <protostreamVersion>3.0.7.Final</protostreamVersion>
 
         <!-- Ehcache -->
@@ -59,11 +59,11 @@
         <!-- MongoDB -->
         <mongodbDriverVersion>3.4.2</mongodbDriverVersion>
         <mongodbVersion>3.4.1</mongodbVersion>
-        <fongodbVersion>2.0.7</fongodbVersion>
+        <fongodbVersion>2.0.12</fongodbVersion>
 
         <!-- Neo4j -->
         <neo4jVersion>3.0.8</neo4jVersion>
-        <neo4jJavaDriverVersion>1.1.0</neo4jJavaDriverVersion>
+        <neo4jJavaDriverVersion>1.1.2</neo4jJavaDriverVersion>
         <!-- Update dependency versions accordingly when updating Neo4j  -->
         <!-- Neo4j supports different versions of Cypher -->
         <neo4jCypherCompiler30Version>${neo4jVersion}</neo4jCypherCompiler30Version>

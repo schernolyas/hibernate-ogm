@@ -6,7 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.utils;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.metadata.OMetadata;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 
@@ -30,7 +30,7 @@ public class SequenceUtil {
 	 * @param seqName name of sequence
 	 * @return next value of the sequence
 	 */
-	public static synchronized long getNextSequenceValue(ODatabaseDocumentTx db, String seqName) {
+	public static synchronized long getNextSequenceValue(ODatabaseDocument db, String seqName) {
 		OMetadata metadata = db.getMetadata();
 		OFunction getNextSeqValue = metadata.getFunctionLibrary().getFunction( OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
 		if ( getNextSeqValue == null ) {
@@ -54,7 +54,7 @@ public class SequenceUtil {
 	 * @return next value of the sequence
 	 */
 
-	public static synchronized long getNextTableValue(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String pkColumnValue,
+	public static synchronized long getNextTableValue(ODatabaseDocument db, String seqTable, String pkColumnName, String pkColumnValue,
 			String valueColumnName,
 			Integer initValue, Integer inc) {
 		OMetadata metadata = db.getMetadata();

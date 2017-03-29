@@ -51,8 +51,8 @@ public class RemoteOrientDBDatastoreProvider extends OrientDBDatastoreProvider {
 
 				// open the database
 				@SuppressWarnings("resource")
-				ODatabaseDocumentTx db = new ODatabaseDocumentTx( "remote:" + host + "/" + database );
-				db.open( rootUser, rootPassword );
+				//ODatabaseDocumentTx db = new ODatabaseDocumentTx( "remote:" + host + "/" + database );
+				//db.open( rootUser, rootPassword );
 			}
 			catch (Exception ioe) {
 				throw log.cannotCreateDatabase( database, ioe );

@@ -6,9 +6,13 @@
  */
 package org.hibernate.ogm.datastore.orientdb.connection;
 
-import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
-import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.cache.OLocalRecordCache;
+import com.orientechnologies.orient.core.config.OGlobalConfiguration;
+import com.orientechnologies.orient.core.db.ODatabasePool;
+import com.orientechnologies.orient.core.db.ODatabaseType;
+import com.orientechnologies.orient.core.db.OrientDB;
+import com.orientechnologies.orient.core.db.OrientDBConfig;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
@@ -25,42 +29,49 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
  * @see <a href="http://orientdb.com/docs/2.2/Concurrency.html">Concurrency in OrientDB</a>
  * @see <a href="http://orientdb.com/docs/2.2/Transactions.html">Transactions in OrientDB</a>
  * @see <a href="http://orientdb.com/docs/2.2/Java-Multi-Threading.html">Multi-Threading in OrientDB</a>
+ * @see <a href="http://orientdb.com/docs/docs_review_30/java/Document-API-Database.html">Database creation in OrientDB 3</a>
  */
-public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
+public class DatabaseHolder extends ThreadLocal<ODatabaseDocument> {
 
 	private static Log log = LoggerFactory.getLogger();
 	private final String orientDbUrl;
 	private final String user;
 	private final String password;
-	private final OPartitionedDatabasePoolFactory factory;
+	private final OrientDBConfig orientDBConfig;
+	private final ODatabasePool orientDBPool;
+	private final OrientDB orientDBEnv;
 
 	public DatabaseHolder(String orientDbUrl, String user, String password, Integer poolSize) {
 		super();
 		this.orientDbUrl = orientDbUrl;
 		this.user = user;
 		this.password = password;
-		this.factory = new OPartitionedDatabasePoolFactory( poolSize );
+		this.orientDBConfig = OrientDBConfig.builder()
+				.addConfig( OGlobalConfiguration.DB_POOL_MAX, poolSize )
+				.addConfig( OGlobalConfiguration.DB_POOL_MAX, poolSize )
+				.build();
+		this.orientDBEnv = new OrientDB( "embedded:./databases/", orientDBConfig );
+		if (!orientDBEnv.exists( "ogm_test_database"  ) ) {
+			orientDBEnv.create( "ogm_test_database" , ODatabaseType.MEMORY );
+
+		}
+		this.orientDBPool = new ODatabasePool( orientDBEnv, "ogm_test_database", this.user, this.password );
 	}
 
 	@Override
-	protected ODatabaseDocumentTx initialValue() {
+	protected ODatabaseDocument initialValue() {
 		log.debugf( "create database %s for thread %s", orientDbUrl, Thread.currentThread().getName() );
-		return createConnectionForCurrentThread();
+		ODatabaseDocument db = orientDBPool.acquire();
+		OLocalRecordCache recordCache = db.getLocalCache();
+		recordCache.setEnable( false );
+		return db;
 	}
 
 	@Override
 	public void remove() {
 		log.debugf( "drop database for thread %s", Thread.currentThread().getName() );
-		ODatabaseDocumentTx currentDb = get();
-		currentDb.close();
+		get().close();
 		super.remove();
 	}
 
-	private ODatabaseDocumentTx createConnectionForCurrentThread() {
-		OPartitionedDatabasePool pool = factory.get( this.orientDbUrl, this.user, this.password );
-		ODatabaseDocumentTx db = pool.acquire();
-		db.getMetadata().reload();
-		db.setValidationEnabled( true );
-		return db;
-	}
 }

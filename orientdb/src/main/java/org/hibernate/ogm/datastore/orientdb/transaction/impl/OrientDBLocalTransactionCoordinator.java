@@ -6,7 +6,7 @@
  */
 package org.hibernate.ogm.datastore.orientdb.transaction.impl;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.tx.OTransaction.TXTYPE;
 import com.orientechnologies.orient.core.tx.OTransactionOptimistic;
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
@@ -90,7 +90,7 @@ public class OrientDBLocalTransactionCoordinator extends ForwardingTransactionCo
 
 		@Override
 		public void begin() {
-			ODatabaseDocumentTx database = datastoreProvider.getCurrentDatabase();
+			ODatabaseDocument database = datastoreProvider.getCurrentDatabase();
 			log.debugf( "begin transaction for database %s. Connection's hash code: %s",
 					database.getName(), database.hashCode() );
 			super.begin();

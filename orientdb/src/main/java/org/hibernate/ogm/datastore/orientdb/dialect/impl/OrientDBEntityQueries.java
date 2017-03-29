@@ -17,7 +17,10 @@ import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.cache.OLocalRecordCache;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
+import com.orientechnologies.orient.core.id.ORID;
+import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
 
@@ -53,7 +56,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 	 * @return the corresponding node
 	 */
 
-	public ODocument findEntity(ODatabaseDocumentTx db, EntityKey entityKey) {
+	public ODocument findEntity(ODatabaseDocument db, EntityKey entityKey) {
 		StringBuilder query = new StringBuilder( "SELECT FROM " );
 		// search by business key
 		log.debugf( "column names: %s", Arrays.asList( entityKey.getColumnNames() ) );
@@ -63,7 +66,14 @@ public class OrientDBEntityQueries extends QueriesBase {
 		if ( documents.isEmpty() ) {
 			log.debugf( " entity by primary key %s not found!", entityKey );
 			return null;
-		}
+		} /*else if ( documents.size() ==1 ) {
+			ODocument document = documents.get( 0 );
+			ORecordId rid =  document.getProperty( "@rid" );
+			log.debugf( " entity by primary key %s found! Is it temporary entity? %b", entityKey, rid.isTemporary()  );
+
+			return null;
+
+		} */
 		return documents.isEmpty() ? null : documents.get( 0 );
 	}
 
@@ -76,8 +86,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 	 * @return list of associations
 	 */
 
-	public List<ODocument> findAssociation(ODatabaseDocumentTx db, AssociationKey associationKey,
-			AssociationContext associationContext) {
+	public List<ODocument> findAssociation(ODatabaseDocument db, AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "findAssociation: associationKey: %s; associationContext: %s", associationKey, associationContext );
 		log.debugf( "findAssociation: associationKeyMetadata: %s", associationKey.getMetadata() );
 

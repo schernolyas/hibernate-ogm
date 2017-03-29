@@ -38,7 +38,7 @@ import org.hibernate.type.IntegerType;
 import org.hibernate.type.StringType;
 import org.hibernate.usertype.UserType;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.exception.OCommandExecutionException;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
@@ -101,11 +101,11 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	private void createSequence(ODatabaseDocumentTx db, String name, int startValue) {
+	private void createSequence(ODatabaseDocument db, String name, int startValue) {
 		createSequence( db, name, startValue, 0 );
 	}
 
-	private void createSequence(ODatabaseDocumentTx db, String seqName, int startValue, int incValue) {
+	private void createSequence(ODatabaseDocument db, String seqName, int startValue, int incValue) {
 		OSequence seq = db.getMetadata().getSequenceLibrary().getSequence( seqName );
 		if ( seq == null ) {
 			CreateParams p = new CreateParams();
@@ -118,7 +118,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	private void createTableSequence(ODatabaseDocumentTx db, String seqTable, String pkColumnName, String valueColumnName) {
+	private void createTableSequence(ODatabaseDocument db, String seqTable, String pkColumnName, String valueColumnName) {
 		OSchema schema = db.getMetadata().getSchema();
 		if ( schema.existsClass( seqTable ) ) {
 			return;
@@ -129,7 +129,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		seqTableClass.createIndex( seqTable + "_index", OClass.INDEX_TYPE.UNIQUE, pkColumnName );
 	}
 
-	private void createGetTableSeqValueFunc(ODatabaseDocumentTx db) {
+	private void createGetTableSeqValueFunc(ODatabaseDocument db) {
 		log.debugf( "functions : %s", db.getMetadata().getFunctionLibrary().getFunctionNames() );
 		OFunction getTableSeqValue = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.GET_TABLE_SEQ_VALUE_FUNC );
 		if ( getTableSeqValue == null ) {
@@ -167,7 +167,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	private void createGetNextSeqValueFunc(ODatabaseDocumentTx db) {
+	private void createGetNextSeqValueFunc(ODatabaseDocument db) {
 		log.debugf( "functions : %s", db.getMetadata().getFunctionLibrary().getFunctionNames() );
 		OFunction getTableSeqValue = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.GET_NEXT_SEQ_VALUE_FUNC );
 		if ( getTableSeqValue == null ) {
@@ -190,7 +190,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	private void createExecuteQueryFunc(ODatabaseDocumentTx db) {
+	private void createExecuteQueryFunc(ODatabaseDocument db) {
 		log.debugf( "functions : %s", db.getMetadata().getFunctionLibrary().getFunctionNames() );
 		OFunction executeQuery = db.getMetadata().getFunctionLibrary().getFunction( OrientDBConstant.EXECUTE_QUERY_FUNC );
 		if ( executeQuery == null ) {
@@ -204,7 +204,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		}
 	}
 
-	private void createEntities(ODatabaseDocumentTx db, SchemaDefinitionContext context) {
+	private void createEntities(ODatabaseDocument db, SchemaDefinitionContext context) {
 		OSchema schema = db.getMetadata().getSchema();
 
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
@@ -273,7 +273,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		return l;
 	}
 
-	private boolean createTable(Table table, OSchema schema, Set<String> createdEmbeddedClassSet, ODatabaseDocumentTx db, Set<String> tables,
+	private boolean createTable(Table table, OSchema schema, Set<String> createdEmbeddedClassSet, ODatabaseDocument db, Set<String> tables,
 			Namespace namespace, SchemaDefinitionContext context) throws UnsupportedOperationException, HibernateException {
 		String tableName = table.getName();
 		log.debugf( "create table %s", tableName );
@@ -318,7 +318,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void createColumnsForTable(Table table, Namespace namespace, SchemaDefinitionContext context, ODatabaseDocumentTx db,
+	private void createColumnsForTable(Table table, Namespace namespace, SchemaDefinitionContext context, ODatabaseDocument db,
 			Set<String> createdEmbeddedClassSet) throws HibernateException, UnsupportedOperationException {
 		db.getMetadata().reload();
 		OSchema currentSchema = db.getMetadata().getSchema();
@@ -381,7 +381,9 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 					NativeQueryUtil.executeNonIdempotentQuery( db, propertyQuery );
 					if ( column.isUnique() ) {
 						// create unique index for the column
-						String uniqueIndexQuery = String.format( "create index %s.%s UNIQUE_HASH_INDEX ",
+						String uniqueIndexQuery = String.format( "CREATE INDEX %s_%s_un ON %s (%s) UNIQUE",
+								tableName,
+								column.getName(),
 								tableName,
 								column.getName() );
 						NativeQueryUtil.executeNonIdempotentQuery( db, uniqueIndexQuery );
@@ -436,7 +438,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		return table.getPrimaryKey().getTable().getName();
 	}
 
-	private void createPrimaryKey(ODatabaseDocumentTx db, PrimaryKey primaryKey) {
+	private void createPrimaryKey(ODatabaseDocument db, PrimaryKey primaryKey) {
 		StringBuilder uniqueIndexQuery = new StringBuilder( 100 );
 		uniqueIndexQuery.append( "CREATE INDEX " )
 				.append( primaryKey.getName() != null
@@ -616,7 +618,7 @@ public class OrientDBDocumentSchemaDefiner extends BaseSchemaDefiner {
 		SessionFactoryImplementor sessionFactoryImplementor = context.getSessionFactory();
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
 		provider = (OrientDBDatastoreProvider) registry.getService( DatastoreProvider.class );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 
 		log.debugf( "context.getAllEntityKeyMetadata(): %s", context.getAllEntityKeyMetadata() );
 		log.debugf( "context.getAllAssociationKeyMetadata(): %s", context.getAllAssociationKeyMetadata() );
