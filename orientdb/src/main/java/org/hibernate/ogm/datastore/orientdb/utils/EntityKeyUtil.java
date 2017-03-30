@@ -74,6 +74,7 @@ public class EntityKeyUtil {
 		return buffer.toString();
 	}
 
+	@Deprecated
 	public static boolean existsPrimaryKeyInDB(ODatabaseDocument db, EntityKey key) {
 
 		StringBuilder buffer = new StringBuilder( 100 );
@@ -82,7 +83,17 @@ public class EntityKeyUtil {
 		buffer.append( generatePrimaryKeyPredicate( key ) );
 		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, buffer );
 		Long count = (Long) ( documents.isEmpty() ? 0L : documents.get( 0 ).field( "c", Long.class ) );
+		log.debugf( "existsPrimaryKeyInDB: count %d of query %s",count,buffer.toString() );
 
 		return ( count > 0 );
+	}
+	public static boolean existsPrimaryKeyInDbOrCache(ODatabaseDocument db, EntityKey key) {
+
+		StringBuilder buffer = new StringBuilder( 100 );
+		buffer.append( "select from " ).append( key.getTable() ).append( " where " );
+		buffer.append( generatePrimaryKeyPredicate( key ) );
+		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, buffer );
+		log.debugf( "existsPrimaryKeyInDbOrCache: count %d of query %s",documents.size(),buffer.toString() );
+		return !documents.isEmpty();
 	}
 }

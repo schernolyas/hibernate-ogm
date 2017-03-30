@@ -163,7 +163,6 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		log.debugf( "findRelationship: queryBuilder: %s", queryBuilder );
 		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, queryBuilder );
 		for ( ODocument doc : documents ) {
-
 			dbValues.add( doc.toMap() );
 		}
 		log.debugf( "findRelationship: found: %d", dbValues.size() );

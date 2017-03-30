@@ -9,6 +9,7 @@ package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 import java.util.List;
 import java.util.Arrays;
 
+import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
@@ -61,19 +62,17 @@ public class OrientDBEntityQueries extends QueriesBase {
 		// search by business key
 		log.debugf( "column names: %s", Arrays.asList( entityKey.getColumnNames() ) );
 		query.append( entityKey.getTable() ).append( " WHERE " ).append( EntityKeyUtil.generatePrimaryKeyPredicate( entityKey ) );
-		log.debugf( "find entiry query: %s", query.toString() );
+		log.debugf( "find entity query: %s", query.toString() );
 		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, query );
 		if ( documents.isEmpty() ) {
 			log.debugf( " entity by primary key %s not found!", entityKey );
 			return null;
-		} /*else if ( documents.size() ==1 ) {
+		} else if ( documents.size() ==1 ) {
 			ODocument document = documents.get( 0 );
-			ORecordId rid =  document.getProperty( "@rid" );
+			ORecordId rid =  document.getProperty( OrientDBConstant.SYSTEM_RID );
 			log.debugf( " entity by primary key %s found! Is it temporary entity? %b", entityKey, rid.isTemporary()  );
-
-			return null;
-
-		} */
+			return document;
+		}
 		return documents.isEmpty() ? null : documents.get( 0 );
 	}
 

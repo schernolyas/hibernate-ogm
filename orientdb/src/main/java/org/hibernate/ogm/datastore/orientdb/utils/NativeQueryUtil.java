@@ -59,15 +59,16 @@ public class NativeQueryUtil {
 		return resultElements;
 	}
 
-	public static Object executeNonIdempotentQuery(ODatabaseDocument db, StringBuilder query) {
+	public static ODocument executeNonIdempotentQuery(ODatabaseDocument db, StringBuilder query) {
 		return executeNonIdempotentQuery( db, query.toString() );
 	}
 
-	public static Object executeNonIdempotentQuery(ODatabaseDocument db, String query) {
-		log.debugf( "NonIdempotentQuery: %s", query );
+	public static ODocument executeNonIdempotentQuery(ODatabaseDocument db, String query) {
+		log.debugf( "executeNonIdempotentQuery: NonIdempotentQuery: %s", query );
 		ODocument result  = null;
 		try ( OResultSet resultSet = db.command( query ) ) {
 			result  = (ODocument) resultSet.next().toElement();
+			log.debugf( "executeNonIdempotentQuery: result: %s", result.toJSON() );
 		}
 		catch (OCommandSQLParsingException e1) {
 			throw log.cannotParseQuery( query, e1 );

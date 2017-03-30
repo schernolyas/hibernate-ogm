@@ -139,8 +139,17 @@ public class OrientDBDialect extends BaseGridDialect
 	@Override
 	public Tuple createTuple(EntityKey key, OperationContext operationContext) {
 		TupleTypeContext tupleContext = operationContext.getTupleTypeContext();
+		Tuple resultTuple = null;
 		log.debugf( "createTuple:EntityKey: %s ; tupleContext: %s ", key, tupleContext );
-		return new Tuple( new OrientDBTupleSnapshot( key.getTable() ), SnapshotType.INSERT );
+		ODocument document = entityQueries.get( key.getMetadata() ).findEntity( provider.getCurrentDatabase(), key );
+		if (document !=null && document.containsField( OrientDBConstant.SYSTEM_RID )
+				&&  ((ORecordId)document.getProperty( OrientDBConstant.SYSTEM_RID )).isTemporary() ) {
+			//it is document from cache and not saved yet.
+			resultTuple = new Tuple( new OrientDBTupleSnapshot( document ), SnapshotType.UPDATE );
+		} else {
+			resultTuple = new Tuple( new OrientDBTupleSnapshot( key.getTable() ), SnapshotType.INSERT );
+		}
+		return resultTuple;
 	}
 
 	@Override
@@ -163,17 +172,14 @@ public class OrientDBDialect extends BaseGridDialect
 				key, tupleContext, tuple, Thread.currentThread().getName() );
 		ODatabaseDocument db = provider.getCurrentDatabase();
 		OLocalRecordCache recordCache = db.getLocalCache();
-		recordCache.setEnable( false );
-		log.debugf( "insertOrUpdateTuple: records in local cache: %d ",
-					recordCache.getSize() );
-		if (recordCache.getSize() >0) {
-			recordCache.invalidate();
-		}
+		log.debugf( "insertOrUpdateTuple: local cache state: %s ",
+					recordCache.toString() );
+
 		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
-		boolean existsInDB = EntityKeyUtil.existsPrimaryKeyInDB( db, key );
-		QueryType queryType = QueryTypeDefiner.define( existsInDB, snapshot.isNew() );
-		log.debugf( "insertOrUpdateTuple: snapshot.isNew(): %b ,snapshot.isEmpty(): %b; exists in DB: %b; query type: %s ",
-				snapshot.isNew(), snapshot.isEmpty(), existsInDB, queryType );
+		boolean existsInDbOrCache = EntityKeyUtil.existsPrimaryKeyInDbOrCache( db, key );
+		QueryType queryType = QueryTypeDefiner.define( existsInDbOrCache, snapshot.isNew() );
+		log.debugf( "insertOrUpdateTuple: snapshot.isNew(): %b ,snapshot.isEmpty(): %b; exists in Db or Cache: %b; query type: %s ",
+				snapshot.isNew(), snapshot.isEmpty(), existsInDbOrCache, queryType );
 
 		StringBuilder queryBuffer = new StringBuilder( 100 );
 		switch ( queryType ) {
@@ -198,7 +204,12 @@ public class OrientDBDialect extends BaseGridDialect
 				log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Inserted rows: %d ", key, queryBuffer, 1 );
 				break;
 			case UPDATE:
-				log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %d ", key, queryBuffer, (Number) result );
+				log.debugf( "insertOrUpdateTuple:Key: %s; Result class: %s ", key, result.getClass() );
+				if (result instanceof ODocument) {
+					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %s ", key, queryBuffer, ((ODocument) result).toJSON() );
+				} else if (result instanceof Number) {
+					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %d ", key, queryBuffer, (Number) result );
+				}
 				break;
 		}
 
@@ -254,7 +265,7 @@ public class OrientDBDialect extends BaseGridDialect
 		log.debugf( "getAssociation:AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
 		EntityKey entityKey = associationKey.getEntityKey();
 		ODatabaseDocument db = provider.getCurrentDatabase();
-		boolean existsPrimaryKey = EntityKeyUtil.existsPrimaryKeyInDB( db, entityKey );
+		boolean existsPrimaryKey = EntityKeyUtil.existsPrimaryKeyInDbOrCache( db, entityKey );
 		if ( !existsPrimaryKey ) {
 			return ASSOCIATION_NOT_FOUND;
 		}
@@ -390,8 +401,8 @@ public class OrientDBDialect extends BaseGridDialect
 		if ( AssociationKind.EMBEDDED_COLLECTION.equals( associationKey.getMetadata().getAssociationKind() ) ) {
 			GenerationResult result = UPDATE_QUERY_GENERATOR.generate( associationKey, associationRow );
 			log.debugf( "updateRelationshipWithNode: query: %s", result.getExecutionQuery() );
-			Number count = (Number) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
-			log.debugf( "updateRelationshipWithNode: execute update query: %d", count );
+			ODocument countDoc =  NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
+			log.debugf( "updateRelationshipWithNode: execute update query: %d", countDoc.toJSON() );
 		}
 		else {
 			log.debugf( "updateRelationshipWithNode: update  association  not needs!" );
@@ -593,6 +604,6 @@ public class OrientDBDialect extends BaseGridDialect
 
 	@Override
 	public DuplicateInsertPreventionStrategy getDuplicateInsertPreventionStrategy(EntityKeyMetadata entityKeyMetadata) {
-		return DuplicateInsertPreventionStrategy.LOOK_UP;
+		return DuplicateInsertPreventionStrategy.NATIVE;
 	}
 }

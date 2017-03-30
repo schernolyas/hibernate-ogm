@@ -48,7 +48,6 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocument> {
 		this.password = password;
 		this.orientDBConfig = OrientDBConfig.builder()
 				.addConfig( OGlobalConfiguration.DB_POOL_MAX, poolSize )
-				.addConfig( OGlobalConfiguration.DB_POOL_MAX, poolSize )
 				.build();
 		this.orientDBEnv = new OrientDB( "embedded:./databases/", orientDBConfig );
 		if (!orientDBEnv.exists( "ogm_test_database"  ) ) {
@@ -62,8 +61,8 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocument> {
 	protected ODatabaseDocument initialValue() {
 		log.debugf( "create database %s for thread %s", orientDbUrl, Thread.currentThread().getName() );
 		ODatabaseDocument db = orientDBPool.acquire();
-		OLocalRecordCache recordCache = db.getLocalCache();
-		recordCache.setEnable( false );
+		//OLocalRecordCache recordCache = db.getLocalCache();
+		//recordCache.setEnable( false );
 		return db;
 	}
 
