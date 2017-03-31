@@ -164,7 +164,6 @@ public class OrientDBDialect extends BaseGridDialect
 		throw new UnsupportedOperationException( "Not supported yet." );
 	}
 
-	@SuppressWarnings("incomplete-switch")
 	@Override
 	public void insertOrUpdateTuple(EntityKey key, TuplePointer tuplePointer, TupleContext tupleContext) throws TupleAlreadyExistsException {
 		Tuple tuple = tuplePointer.getTuple();
@@ -197,21 +196,8 @@ public class OrientDBDialect extends BaseGridDialect
 				throw new StaleObjectStateException( key.getTable(), (Serializable) EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
 		}
 
-		Object result = NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
-		log.debugf( "insertOrUpdateTuple:executeNonIdempotentQuery: queryType: %s; class: %s ", queryType, result.getClass().getName() );
-		switch ( queryType ) {
-			case INSERT:
-				log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Inserted rows: %d ", key, queryBuffer, 1 );
-				break;
-			case UPDATE:
-				log.debugf( "insertOrUpdateTuple:Key: %s; Result class: %s ", key, result.getClass() );
-				if (result instanceof ODocument) {
-					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %s ", key, queryBuffer, ((ODocument) result).toJSON() );
-				} else if (result instanceof Number) {
-					log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Updated rows: %d ", key, queryBuffer, (Number) result );
-				}
-				break;
-		}
+		ODocument result = NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
+		log.debugf( "insertOrUpdateTuple:Key: %s; Query: %s; Affected rows: %s ", key, queryBuffer, result.toJSON() );
 
 	}
 
@@ -232,7 +218,7 @@ public class OrientDBDialect extends BaseGridDialect
 		else {
 			// use business key. get new id from sequence
 			String seqName = OrientDBDocumentSchemaDefiner.generateSeqName( entityKeyMetadata.getTable(), dbKeyName );
-			dbKeyValue = (Long) SequenceUtil.getNextSequenceValue( provider.getCurrentDatabase(), seqName );
+			dbKeyValue = SequenceUtil.getNextSequenceValue( provider.getCurrentDatabase(), seqName );
 			tuple.put( dbKeyName, dbKeyValue );
 		}
 		GenerationResult result = INSERT_QUERY_GENERATOR.generate( entityKeyMetadata.getTable(), tuple, true,
@@ -240,9 +226,9 @@ public class OrientDBDialect extends BaseGridDialect
 		query = result.getExecutionQuery();
 
 		log.debugf( "insertTuple: insertQuery: %s ", result.getExecutionQuery() );
-		ODocument insertedRow = (ODocument) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
+		ODocument insertedRow = NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
 
-		log.debugf( "insertTuple: Query: %s; inserted rows: %d ", query, insertedRow );
+		log.debugf( "insertTuple: Query: %s; inserted rows: %s ", query, insertedRow.toJSON() );
 	}
 
 	@Override
@@ -251,13 +237,10 @@ public class OrientDBDialect extends BaseGridDialect
 				key, tupleContext, Thread.currentThread().getName() );
 		ODatabaseDocument db = provider.getCurrentDatabase();
 		StringBuilder queryBuffer = new StringBuilder( 100 );
-		queryBuffer.append( "select from " ).append( key.getTable() ).append( " where " ).append( EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
+		queryBuffer.append( "DELETE FROM " ).append( key.getTable() ).append( " WHERE " ).append( EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
 		log.debugf( "removeTuple:Key: %s. query: %s ", key, queryBuffer );
-		List<ODocument> removeDocs = NativeQueryUtil.executeIdempotentQuery( db, queryBuffer );
-		for ( ODocument removeDoc : removeDocs ) {
-			removeDoc.delete();
-		}
-		log.debugf( "removeTuple: removed entities: %d ", removeDocs.size() );
+		ODocument removeDocs = NativeQueryUtil.executeNonIdempotentQuery( db, queryBuffer );
+		log.debugf( "removeTuple: removed entities: %s ", removeDocs.toJSON() );
 	}
 
 	@Override
@@ -280,7 +263,7 @@ public class OrientDBDialect extends BaseGridDialect
 		List<ODocument> relationships = entityQueries.get( associationKey.getEntityKey().getMetadata() )
 				.findAssociation( db, associationKey, associationContext );
 
-		Map<RowKey, Tuple> tuples = new LinkedHashMap<>();
+		Map<RowKey, Tuple> tuples = new LinkedHashMap<>( relationships.size() );
 
 		for ( ODocument relationship : relationships ) {
 			OrientDBTupleAssociationSnapshot snapshot = new OrientDBTupleAssociationSnapshot( relationship, associationKey, associationContext );
@@ -390,8 +373,8 @@ public class OrientDBDialect extends BaseGridDialect
 				associationKey.getMetadata(), associationRow, associatedEntityKeyMetadata );
 		GenerationResult result = INSERT_QUERY_GENERATOR.generate( associationKey.getTable(), associationRow, false, Collections.<String>emptySet() );
 		log.debugf( "createRelationshipWithNode: query: %s", result.getExecutionQuery() );
-		ODocument insertedRow = (ODocument) NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
-		log.debugf( "createRelationshipWithNode: created rows: %d", ( insertedRow != null ? 1 : 0 ) );
+		ODocument insertedRow = NativeQueryUtil.executeNonIdempotentQuery( provider.getCurrentDatabase(), result.getExecutionQuery() );
+		log.debugf( "createRelationshipWithNode: created rows: %s", insertedRow.toJSON() );
 	}
 
 	private void updateRelationshipWithNode(AssociationKey associationKey, Tuple associationRow,
@@ -429,7 +412,7 @@ public class OrientDBDialect extends BaseGridDialect
 				String seqTableName = request.getKey().getTable();
 				String pkColumnName = request.getKey().getColumnName();
 				String valueColumnName = request.getKey().getColumnValue();
-				String pkColumnValue = (String) request.getKey().getColumnValue();
+				String pkColumnValue = request.getKey().getColumnValue();
 				log.debugf( "seqTableName:%s, pkColumnName:%s, pkColumnValue:%s, valueColumnName:%s",
 						seqTableName, pkColumnName, pkColumnValue, valueColumnName );
 				nextValue = SequenceUtil.getNextTableValue( db, seqTableName, pkColumnName, pkColumnValue, valueColumnName,

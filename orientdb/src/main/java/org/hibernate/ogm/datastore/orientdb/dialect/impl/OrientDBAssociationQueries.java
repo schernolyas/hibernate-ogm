@@ -11,6 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.hibernate.AssertionFailure;
 
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
@@ -48,7 +50,7 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		log.debugf( "removeAssociation: %s ;associationKey: %s;", associationKey );
 		log.debugf( "removeAssociation: AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
 		log.debugf( "removeAssociation: getAssociationKind: %s", associationKey.getMetadata().getAssociationKind() );
-		StringBuilder deleteQuery = new StringBuilder( "SELECT FROM " );
+		StringBuilder deleteQuery = new StringBuilder( "DELETE FROM " );
 		String columnName = null;
 		log.debugf( "removeAssociation:%s", associationKey.getMetadata().getAssociationKind() );
 		log.debugf( "removeAssociation:getRoleOnMainSide:%s", associationContext.getAssociationTypeContext().getRoleOnMainSide() );
@@ -74,17 +76,14 @@ public class OrientDBAssociationQueries extends QueriesBase {
 		}
 
 		log.debugf( "removeAssociation: query for loading document for remove: %s ", deleteQuery );
-		List<ODocument> removeDocs = NativeQueryUtil.executeIdempotentQuery( db, deleteQuery );
-		for ( ODocument removeDoc : removeDocs ) {
-			removeDoc.delete();
-		}
-		log.debugf( "removeAssociation: removed ssociations: %d ", removeDocs.size() );
+		ODocument removeDocs = NativeQueryUtil.executeNonIdempotentQuery( db, deleteQuery );
+		log.debugf( "removeAssociation: removed associations: %s ", removeDocs.toJSON() );
 	}
 
 	public void removeAssociationRow(ODatabaseDocument db, AssociationKey associationKey, RowKey rowKey) {
 		log.debugf( "removeAssociationRow: associationKey: %s; RowKey:%s ", associationKey, rowKey );
 		StringBuilder loadingDocsForDelete = new StringBuilder( 100 );
-		loadingDocsForDelete.append( "SELECT FROM " ).append( associationKey.getTable() ).append( " WHERE " );
+		loadingDocsForDelete.append( "DELETE FROM " ).append( associationKey.getTable() ).append( " WHERE " );
 		for ( int i = 0; i < rowKey.getColumnNames().length; i++ ) {
 			String columnName = rowKey.getColumnNames()[i];
 			Object columnValue = rowKey.getColumnValues()[i];
@@ -95,11 +94,8 @@ public class OrientDBAssociationQueries extends QueriesBase {
 			}
 		}
 		log.debugf( "removeAssociationRow: delete query: %s; ", loadingDocsForDelete );
-		List<ODocument> removeDocs = NativeQueryUtil.executeIdempotentQuery( db, loadingDocsForDelete );
-		for ( ODocument removeDoc : removeDocs ) {
-			removeDoc.delete();
-		}
-		log.debugf( "removeAssociation: removed rows: %d ", removeDocs.size() );
+		ODocument removeDocs = NativeQueryUtil.executeNonIdempotentQuery( db, loadingDocsForDelete );
+		log.debugf( "removeAssociation: removed rows: %s ", removeDocs.toJSON() );
 
 	}
 
@@ -146,7 +142,6 @@ public class OrientDBAssociationQueries extends QueriesBase {
 			Object value = entry.getValue();
 			log.debugf( "findRelationship: key %s; value: %s", key, value );
 		}
-		List<Map<String, Object>> dbValues = new LinkedList<>();
 		StringBuilder queryBuilder = new StringBuilder( 100 );
 		queryBuilder.append( "SELECT FROM " ).append( associationKey.getTable() ).append( " WHERE " );
 		int index = 0;
@@ -161,10 +156,9 @@ public class OrientDBAssociationQueries extends QueriesBase {
 			index++;
 		}
 		log.debugf( "findRelationship: queryBuilder: %s", queryBuilder );
-		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, queryBuilder );
-		for ( ODocument doc : documents ) {
-			dbValues.add( doc.toMap() );
-		}
+		List<Map<String, Object>> dbValues= NativeQueryUtil.executeIdempotentQuery( db, queryBuilder )
+				.stream().map( (ODocument doc) -> { return doc.toMap(); } )
+				.collect( Collectors.toList());
 		log.debugf( "findRelationship: found: %d", dbValues.size() );
 		return dbValues;
 	}
