@@ -6,7 +6,6 @@
  */
 package org.hibernate.ogm.datastore.orientdb.connection;
 
-import com.orientechnologies.orient.core.cache.OLocalRecordCache;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.orientechnologies.orient.core.db.ODatabasePool;
 import com.orientechnologies.orient.core.db.ODatabaseType;
@@ -50,9 +49,8 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocument> {
 				.addConfig( OGlobalConfiguration.DB_POOL_MAX, poolSize )
 				.build();
 		this.orientDBEnv = new OrientDB( "embedded:./databases/", orientDBConfig );
-		if (!orientDBEnv.exists( "ogm_test_database"  ) ) {
+		if ( !orientDBEnv.exists( "ogm_test_database"  ) ) {
 			orientDBEnv.create( "ogm_test_database" , ODatabaseType.MEMORY );
-
 		}
 		this.orientDBPool = new ODatabasePool( orientDBEnv, "ogm_test_database", this.user, this.password );
 	}
@@ -60,10 +58,7 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocument> {
 	@Override
 	protected ODatabaseDocument initialValue() {
 		log.debugf( "create database %s for thread %s", orientDbUrl, Thread.currentThread().getName() );
-		ODatabaseDocument db = orientDBPool.acquire();
-		//OLocalRecordCache recordCache = db.getLocalCache();
-		//recordCache.setEnable( false );
-		return db;
+		return orientDBPool.acquire();
 	}
 
 	@Override

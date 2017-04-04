@@ -18,9 +18,7 @@ import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 
-import com.orientechnologies.orient.core.cache.OLocalRecordCache;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
-import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
@@ -67,7 +65,8 @@ public class OrientDBEntityQueries extends QueriesBase {
 		if ( documents.isEmpty() ) {
 			log.debugf( " entity by primary key %s not found!", entityKey );
 			return null;
-		} else if ( documents.size() ==1 ) {
+		}
+		else if ( documents.size() == 1 ) {
 			ODocument document = documents.get( 0 );
 			ORecordId rid =  document.getProperty( OrientDBConstant.SYSTEM_RID );
 			log.debugf( " entity by primary key %s found! Is it temporary entity? %b", entityKey, rid.isTemporary()  );

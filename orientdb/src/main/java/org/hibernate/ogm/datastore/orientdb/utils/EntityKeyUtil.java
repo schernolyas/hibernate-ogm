@@ -82,7 +82,7 @@ public class EntityKeyUtil {
 		buffer.append( key.getTable() ).append( " where " );
 		buffer.append( generatePrimaryKeyPredicate( key ) );
 		List<ODocument> documents = NativeQueryUtil.executeIdempotentQuery( db, buffer );
-		if (!documents.isEmpty()) {
+		if ( !documents.isEmpty() ) {
 			log.debugf( "existsPrimaryKeyInDB: count document: %s", documents.get( 0 ).toJSON() );
 		}
 		Long count = (Long) ( documents.isEmpty() ? 0L : documents.get( 0 ).field( "c", Long.class ) );

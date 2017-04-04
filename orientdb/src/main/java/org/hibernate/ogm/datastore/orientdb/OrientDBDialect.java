@@ -142,11 +142,12 @@ public class OrientDBDialect extends BaseGridDialect
 		Tuple resultTuple = null;
 		log.debugf( "createTuple:EntityKey: %s ; tupleContext: %s ", key, tupleContext );
 		ODocument document = entityQueries.get( key.getMetadata() ).findEntity( provider.getCurrentDatabase(), key );
-		if (document !=null && document.containsField( OrientDBConstant.SYSTEM_RID )
-				&&  ((ORecordId)document.getProperty( OrientDBConstant.SYSTEM_RID )).isTemporary() ) {
+		if ( document != null && document.containsField( OrientDBConstant.SYSTEM_RID )
+				&&  ( (ORecordId) document.getProperty( OrientDBConstant.SYSTEM_RID ) ).isTemporary() ) {
 			//it is document from cache and not saved yet.
 			resultTuple = new Tuple( new OrientDBTupleSnapshot( document ), SnapshotType.UPDATE );
-		} else {
+		}
+		else {
 			resultTuple = new Tuple( new OrientDBTupleSnapshot( key.getTable() ), SnapshotType.INSERT );
 		}
 		return resultTuple;
@@ -179,7 +180,7 @@ public class OrientDBDialect extends BaseGridDialect
 		QueryType queryType = QueryTypeDefiner.define( existsInDbOrCache, snapshot.isNew() );
 		log.debugf( "insertOrUpdateTuple: snapshot.isNew(): %b ,snapshot.isEmpty(): %b; exists in Db or Cache: %b; query type: %s ",
 				snapshot.isNew(), snapshot.isEmpty(), existsInDbOrCache, queryType );
-		log.debugf( "insertOrUpdateTuple: count: %b;", EntityKeyUtil.existsPrimaryKeyInDB(db, key) );
+		log.debugf( "insertOrUpdateTuple: count: %b;", EntityKeyUtil.existsPrimaryKeyInDB( db, key ) );
 
 
 		StringBuilder queryBuffer = new StringBuilder( 100 );

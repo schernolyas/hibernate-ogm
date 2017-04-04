@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.HibernateException;
-import org.hibernate.ogm.datastore.orientdb.OrientDB;
 import org.hibernate.ogm.datastore.orientdb.OrientDBDialect;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties;
 import org.hibernate.ogm.datastore.orientdb.OrientDBProperties.DatabaseTypeEnum;
@@ -38,8 +37,6 @@ import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
 
 import com.orientechnologies.orient.core.db.ODatabaseType;
-import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
-import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
 import com.orientechnologies.orient.core.db.OrientDBConfig;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 
@@ -142,11 +139,12 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		if ( StorageModeEnum.MEMORY.equals( storage ) ||
 				StorageModeEnum.PLOCAL.equals( storage ) ) {
 			try {
-				try (com.orientechnologies.orient.core.db.OrientDB orientDB = new com.orientechnologies.orient.core.db.OrientDB( "embedded:./databases/", OrientDBConfig.defaultConfig())) {
+				try ( com.orientechnologies.orient.core.db.OrientDB orientDB = new com.orientechnologies.orient.core.db.OrientDB( "embedded:./databases/", OrientDBConfig.defaultConfig() ) ) {
 					String databaseName = PropertyReaderUtil.readDatabaseProperty( propertyReader );
 					if ( StorageModeEnum.MEMORY.equals( storage ) ) {
 						orientDB.createIfNotExists( databaseName, ODatabaseType.MEMORY );
-					} else if ( StorageModeEnum.PLOCAL.equals( storage ) ) {
+					}
+					else if ( StorageModeEnum.PLOCAL.equals( storage ) ) {
 						orientDB.createIfNotExists( databaseName, ODatabaseType.PLOCAL );
 					}
 					log.debugf( "database %s created?  %b", databaseName, orientDB.exists( databaseName  ) );

@@ -8,7 +8,6 @@ package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -156,9 +155,11 @@ public class OrientDBAssociationQueries extends QueriesBase {
 			index++;
 		}
 		log.debugf( "findRelationship: queryBuilder: %s", queryBuilder );
-		List<Map<String, Object>> dbValues= NativeQueryUtil.executeIdempotentQuery( db, queryBuilder )
-				.stream().map( (ODocument doc) -> { return doc.toMap(); } )
-				.collect( Collectors.toList());
+		List<Map<String, Object>> dbValues = NativeQueryUtil.executeIdempotentQuery( db, queryBuilder )
+				.stream().map( ( ODocument doc ) -> {
+					return doc.toMap();
+				} )
+				.collect( Collectors.toList() );
 		log.debugf( "findRelationship: found: %d", dbValues.size() );
 		return dbValues;
 	}
