@@ -167,8 +167,8 @@ public class OrientDBDialect extends BaseGridDialect
 	@Override
 	public void insertOrUpdateTuple(EntityKey key, TuplePointer tuplePointer, TupleContext tupleContext) throws TupleAlreadyExistsException {
 		Tuple tuple = tuplePointer.getTuple();
-		log.debugf( "insertOrUpdateTuple:EntityKey: %s ; tupleContext: %s ; tuple: %s ; thread: %s",
-				key, tupleContext, tuple, Thread.currentThread().getName() );
+		log.debugf( "insertOrUpdateTuple:EntityKey: %s ; tupleContext: %s ; tuple: %s ; SnapshotType: %s",
+				key, tupleContext, tuple, tuple.getSnapshotType() );
 		ODatabaseDocument db = provider.getCurrentDatabase();
 		OLocalRecordCache recordCache = db.getLocalCache();
 		log.debugf( "insertOrUpdateTuple: local cache state: %s ",
@@ -179,9 +179,11 @@ public class OrientDBDialect extends BaseGridDialect
 		QueryType queryType = QueryTypeDefiner.define( existsInDbOrCache, snapshot.isNew() );
 		log.debugf( "insertOrUpdateTuple: snapshot.isNew(): %b ,snapshot.isEmpty(): %b; exists in Db or Cache: %b; query type: %s ",
 				snapshot.isNew(), snapshot.isEmpty(), existsInDbOrCache, queryType );
+		log.debugf( "insertOrUpdateTuple: count: %b;", EntityKeyUtil.existsPrimaryKeyInDB(db, key) );
+
 
 		StringBuilder queryBuffer = new StringBuilder( 100 );
-		switch ( queryType ) {
+		switch ( tuple.getSnapshotType() ) {
 			case INSERT:
 				log.debugf( "insertOrUpdateTuple:Key: %s is new! Insert new record!", key );
 				GenerationResult insertResult = INSERT_QUERY_GENERATOR.generate( key.getTable(), tuple, true,
@@ -192,7 +194,7 @@ public class OrientDBDialect extends BaseGridDialect
 				GenerationResult updateResult = UPDATE_QUERY_GENERATOR.generate( key.getTable(), tuple, key );
 				queryBuffer.append( updateResult.getExecutionQuery() );
 				break;
-			case ERROR:
+			case UNKNOWN:
 				throw new StaleObjectStateException( key.getTable(), (Serializable) EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
 		}
 
@@ -587,6 +589,6 @@ public class OrientDBDialect extends BaseGridDialect
 
 	@Override
 	public DuplicateInsertPreventionStrategy getDuplicateInsertPreventionStrategy(EntityKeyMetadata entityKeyMetadata) {
-		return DuplicateInsertPreventionStrategy.NATIVE;
+		return DuplicateInsertPreventionStrategy.LOOK_UP;
 	}
 }
