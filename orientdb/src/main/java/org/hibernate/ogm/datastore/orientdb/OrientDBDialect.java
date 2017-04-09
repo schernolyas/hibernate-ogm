@@ -139,18 +139,8 @@ public class OrientDBDialect extends BaseGridDialect
 	@Override
 	public Tuple createTuple(EntityKey key, OperationContext operationContext) {
 		TupleTypeContext tupleContext = operationContext.getTupleTypeContext();
-		Tuple resultTuple = null;
 		log.debugf( "createTuple:EntityKey: %s ; tupleContext: %s ", key, tupleContext );
-		ODocument document = entityQueries.get( key.getMetadata() ).findEntity( provider.getCurrentDatabase(), key );
-		if ( document != null && document.containsField( OrientDBConstant.SYSTEM_RID )
-				&&  ( (ORecordId) document.getProperty( OrientDBConstant.SYSTEM_RID ) ).isTemporary() ) {
-			//it is document from cache and not saved yet.
-			resultTuple = new Tuple( new OrientDBTupleSnapshot( document ), SnapshotType.UPDATE );
-		}
-		else {
-			resultTuple = new Tuple( new OrientDBTupleSnapshot( key.getTable() ), SnapshotType.INSERT );
-		}
-		return resultTuple;
+		return new Tuple( new OrientDBTupleSnapshot( key.getTable() ), SnapshotType.INSERT );
 	}
 
 	@Override
@@ -172,8 +162,7 @@ public class OrientDBDialect extends BaseGridDialect
 				key, tupleContext, tuple, tuple.getSnapshotType() );
 		ODatabaseDocument db = provider.getCurrentDatabase();
 		OLocalRecordCache recordCache = db.getLocalCache();
-		log.debugf( "insertOrUpdateTuple: local cache state: %s ",
-					recordCache.toString() );
+		log.debugf( "insertOrUpdateTuple: local cache state: %s ", recordCache.toString() );
 
 		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
 		boolean existsInDbOrCache = EntityKeyUtil.existsPrimaryKeyInDbOrCache( db, key );
