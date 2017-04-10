@@ -7,6 +7,7 @@
 package org.hibernate.ogm.datastore.orientdb.test.jpa.entity;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -42,4 +43,20 @@ public class ProductType implements Serializable {
 		this.description = description;
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if ( this == o ) {
+			return true;
+		}
+		if ( o == null || getClass() != o.getClass() ) {
+			return false;
+		}
+		ProductType that = (ProductType) o;
+		return Objects.equals( id, that.id );
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash( id );
+	}
 }
