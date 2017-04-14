@@ -71,8 +71,11 @@ public class OrientDBEntityQueries extends QueriesBase {
 			ORecordId rid =  document.getProperty( OrientDBConstant.SYSTEM_RID );
 			log.debugf( " entity by primary key %s found! Is it temporary entity? %b ; Is it new entity? %b ; document :%s",
 						entityKey, rid.isTemporary(), rid.isNew(), document.toJSON()  );
+			ODocument expDocument = NativeQueryUtil.executeNonIdempotentQuery( db, "explain "+query );
+			log.debugf( " explain document :%s", expDocument.toJSON()  );
 			return document;
 		}
+
 		return documents.isEmpty() ? null : documents.get( 0 );
 	}
 
