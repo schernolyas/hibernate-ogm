@@ -27,7 +27,6 @@ import org.junit.Test;
 /**
  * @author Emmanuel Bernard
  */
-//@SkipByGridDialect( value = {IGNITE}, comment = "Not implemented in dialect yet!")
 public class ManyToOneTest extends OgmTestCase {
 
 	@Test
