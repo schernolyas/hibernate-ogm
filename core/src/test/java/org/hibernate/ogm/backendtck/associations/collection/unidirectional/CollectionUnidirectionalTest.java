@@ -6,7 +6,6 @@
  */
 package org.hibernate.ogm.backendtck.associations.collection.unidirectional;
 import static org.fest.assertions.Assertions.assertThat;
-import static org.hibernate.ogm.utils.GridDialectType.IGNITE;
 import static org.hibernate.ogm.utils.TestHelper.getNumberOfAssociations;
 import static org.hibernate.ogm.utils.TestHelper.getNumberOfEntities;
 import static org.junit.Assert.assertEquals;
@@ -16,7 +15,6 @@ import static org.junit.Assert.assertNotNull;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.ogm.utils.OgmTestCase;
-import org.hibernate.ogm.utils.SkipByGridDialect;
 
 import org.junit.Test;
 
@@ -24,7 +22,6 @@ import org.junit.Test;
  * @author Emmanuel Bernard
  */
 
-@SkipByGridDialect( value = {IGNITE}, comment = "Not implemented in dialect yet!")
 public class CollectionUnidirectionalTest extends OgmTestCase {
 
 	@Test
