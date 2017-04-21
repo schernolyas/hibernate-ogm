@@ -157,6 +157,9 @@ public class TestHelper {
 		return HELPER.extractEntityTuple( session, key );
 	}
 
+	public static long getNumberOfAssociations(EntityManager em) {
+		return getNumberOfAssociations( em.unwrap( Session.class ) );
+	}
 	public static long getNumberOfAssociations(Session session) {
 		return HELPER.getNumberOfAssociations( session );
 	}
