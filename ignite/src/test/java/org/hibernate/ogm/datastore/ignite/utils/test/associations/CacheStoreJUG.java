@@ -6,9 +6,13 @@
  */
 package org.hibernate.ogm.datastore.ignite.utils.test.associations;
 
+import java.io.Serializable;
+import java.util.LinkedList;
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 
 import org.hibernate.ogm.datastore.ignite.options.CacheStoreFactory;
 import org.hibernate.ogm.datastore.ignite.options.ReadThrough;
@@ -23,9 +27,10 @@ import org.hibernate.ogm.datastore.ignite.options.WriteThrough;
 @WriteThrough
 @StoreKeepBinary
 @CacheStoreFactory(JUGBinaryStore.class)
-public class CacheStoreJUG {
+public class CacheStoreJUG implements Serializable {
 	private String id;
 	private String name;
+	private List<CacheStoreMember> members = new LinkedList<>();
 
 	public CacheStoreJUG() {
 	}
@@ -50,5 +55,13 @@ public class CacheStoreJUG {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+	@OneToMany(mappedBy = "memberOf")
+	public List<CacheStoreMember> getMembers() {
+		return members;
+	}
+
+	public void setMembers(List<CacheStoreMember> members) {
+		this.members = members;
 	}
 }

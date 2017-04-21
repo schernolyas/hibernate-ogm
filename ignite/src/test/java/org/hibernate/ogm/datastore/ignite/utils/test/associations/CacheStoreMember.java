@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.ignite.utils.test.associations;
 
+import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -25,7 +26,7 @@ import org.hibernate.ogm.datastore.ignite.options.WriteThrough;
 @WriteThrough
 @StoreKeepBinary
 @CacheStoreFactory(MemberBinaryStore.class)
-public class CacheStoreMember {
+public class CacheStoreMember implements Serializable {
 	private String id;
 	private String name;
 	private CacheStoreJUG memberOf;

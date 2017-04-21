@@ -59,6 +59,7 @@ import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.IdSourceKeyMetadata;
 import org.hibernate.ogm.model.key.spi.RowKey;
 import org.hibernate.ogm.query.spi.QueryParserService;
+import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 import org.hibernate.service.spi.Configurable;
 import org.hibernate.service.spi.ServiceException;
 import org.hibernate.service.spi.ServiceRegistryAwareService;
@@ -81,6 +82,7 @@ public class IgniteDatastoreProvider extends BaseDatastoreProvider
 	private JdbcServices jdbcServices;
 	private IgniteEx cacheManager;
 	private IgniteProviderConfiguration config;
+	private ConfigurationPropertyReader propertyReader;
 
 	private String gridName;
 	/** true - if we run inside the server node (for distributed tasks) */
@@ -158,9 +160,13 @@ public class IgniteDatastoreProvider extends BaseDatastoreProvider
 	}
 
 	@Override
-	public void configure(Map map) {
+	public void configure(Map configurationMap) {
 		config = new IgniteProviderConfiguration();
-		config.initialize( map );
+		propertyReader = new ConfigurationPropertyReader( configurationMap );
+		config.initialize( propertyReader );
+	}
+	public ConfigurationPropertyReader getPropertyReader() {
+		return propertyReader;
 	}
 
 	@Override
@@ -291,6 +297,10 @@ public class IgniteDatastoreProvider extends BaseDatastoreProvider
 	public <T> List<T> affinityCall(String cacheName, Object affinityKey, SqlFieldsQuery query) {
 		ComputeForLocalQueries<T> call = new ComputeForLocalQueries<>( cacheName, query );
 		return cacheManager.compute().affinityCall( cacheName, affinityKey, call );
+	}
+
+	public void clearCache(String cacheName) {
+		cacheManager.getOrCreateCache( cacheName ).clear();
 	}
 
 	/**

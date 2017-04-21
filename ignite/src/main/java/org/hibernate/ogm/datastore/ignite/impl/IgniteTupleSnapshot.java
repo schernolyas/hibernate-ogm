@@ -10,6 +10,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.ignite.binary.BinaryObject;
+
+import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
+import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.ignite.util.StringHelper;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
@@ -19,7 +22,7 @@ import org.hibernate.ogm.util.impl.CollectionHelper;
  * @author Victor Kadachigov
  */
 public class IgniteTupleSnapshot implements TupleSnapshot {
-
+	private static final Log log = LoggerFactory.getLogger();
 	private final EntityKeyMetadata keyMetadata;
 	private final Object id;
 	private final BinaryObject binaryObject;
@@ -88,6 +91,9 @@ public class IgniteTupleSnapshot implements TupleSnapshot {
 		return binaryObject;
 	}
 
+	public EntityKeyMetadata getEntityKeyMetadata() {
+		return keyMetadata;
+	}
 //	public void addEmbeddedCollectionColumn(String columnName) {
 //		if ( embeddedCollectionsColumns == null ) {
 //			embeddedCollectionsColumns = new HashSet<>();
