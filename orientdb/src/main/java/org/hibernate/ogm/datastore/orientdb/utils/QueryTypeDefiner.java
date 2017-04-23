@@ -30,12 +30,12 @@ public class QueryTypeDefiner {
 	 */
 	public static QueryType define(boolean existsInDB, boolean isNewSnapshot) {
 		QueryType type = QueryType.ERROR;
-
+		if ( existsInDB ) {
+			type = QueryType.UPDATE;
+		}
+		else
 		if ( isNewSnapshot && !existsInDB ) {
 			type = QueryType.INSERT;
-		}
-		else if ( existsInDB ) {
-			type = QueryType.UPDATE;
 		}
 		return type;
 	}

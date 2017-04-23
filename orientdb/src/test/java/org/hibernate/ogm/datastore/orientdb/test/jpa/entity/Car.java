@@ -18,13 +18,10 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
-import org.hibernate.search.annotations.Indexed;
-
 /**
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @Entity
-@Indexed(index = "Car")
 public class Car implements Serializable {
 
 	@Id

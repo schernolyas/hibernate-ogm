@@ -20,12 +20,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Version;
 
-import org.hibernate.search.annotations.Analyze;
-import org.hibernate.search.annotations.Field;
-import org.hibernate.search.annotations.Index;
-import org.hibernate.search.annotations.Indexed;
-import org.hibernate.search.annotations.Store;
-
 import com.orientechnologies.orient.core.id.ORecordId;
 
 /**
@@ -33,7 +27,6 @@ import com.orientechnologies.orient.core.id.ORecordId;
  */
 
 @Entity
-@Indexed(index = "BuyingOrder")
 public class BuyingOrder implements Serializable {
 
 	@Id
@@ -44,7 +37,6 @@ public class BuyingOrder implements Serializable {
 	private int version;
 	@Column(name = "@rid")
 	private ORecordId rid;
-	@Field(index = Index.YES, analyze = Analyze.YES, store = Store.YES)
 	private String orderKey;
 	@ManyToOne
 	private Customer owner;

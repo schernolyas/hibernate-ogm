@@ -9,7 +9,6 @@ package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 import java.util.List;
 import java.util.Arrays;
 
-import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
@@ -19,7 +18,6 @@ import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
-import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
 
@@ -66,16 +64,6 @@ public class OrientDBEntityQueries extends QueriesBase {
 			log.debugf( " entity by primary key %s not found!", entityKey );
 			return null;
 		}
-		else if ( documents.size() == 1 ) {
-			ODocument document = documents.get( 0 );
-			ORecordId rid =  document.getProperty( OrientDBConstant.SYSTEM_RID );
-			log.debugf( " entity by primary key %s found! Is it temporary entity? %b ; Is it new entity? %b ; document :%s",
-						entityKey, rid.isTemporary(), rid.isNew(), document.toJSON()  );
-			ODocument expDocument = NativeQueryUtil.executeNonIdempotentQuery( db, "explain "+query );
-			log.debugf( " explain document :%s", expDocument.toJSON()  );
-			return document;
-		}
-
 		return documents.isEmpty() ? null : documents.get( 0 );
 	}
 

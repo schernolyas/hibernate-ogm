@@ -77,7 +77,6 @@ import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.type.Type;
 
-import com.orientechnologies.orient.core.cache.OLocalRecordCache;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.id.ORecordId;
@@ -161,8 +160,6 @@ public class OrientDBDialect extends BaseGridDialect
 		log.debugf( "insertOrUpdateTuple:EntityKey: %s ; tupleContext: %s ; tuple: %s ; SnapshotType: %s",
 				key, tupleContext, tuple, tuple.getSnapshotType() );
 		ODatabaseDocument db = provider.getCurrentDatabase();
-		OLocalRecordCache recordCache = db.getLocalCache();
-		log.debugf( "insertOrUpdateTuple: local cache state: %s ", recordCache.toString() );
 
 		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
 		boolean existsInDbOrCache = EntityKeyUtil.existsPrimaryKeyInDbOrCache( db, key );
@@ -173,7 +170,7 @@ public class OrientDBDialect extends BaseGridDialect
 
 
 		StringBuilder queryBuffer = new StringBuilder( 100 );
-		switch ( tuple.getSnapshotType() ) {
+		switch ( queryType ) {
 			case INSERT:
 				log.debugf( "insertOrUpdateTuple:Key: %s is new! Insert new record!", key );
 				GenerationResult insertResult = INSERT_QUERY_GENERATOR.generate( key.getTable(), tuple, true,
@@ -184,7 +181,7 @@ public class OrientDBDialect extends BaseGridDialect
 				GenerationResult updateResult = UPDATE_QUERY_GENERATOR.generate( key.getTable(), tuple, key );
 				queryBuffer.append( updateResult.getExecutionQuery() );
 				break;
-			case UNKNOWN:
+			case ERROR:
 				throw new StaleObjectStateException( key.getTable(), (Serializable) EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
 		}
 
