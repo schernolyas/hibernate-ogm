@@ -41,7 +41,7 @@ public enum GridDialectType {
 
 	IGNITE( "org.hibernate.ogm.datastore.ignite.IgniteDialect", false, false ),
 
-	ORIENTDB( "org.hibernate.datastore.ogm.orientdb.OrientDBDialect", false, false );
+	ORIENTDB( "org.hibernate.ogm.datastore.orientdb.OrientDBDialect", false, false );
 
 	private final String dialectClassName;
 	private final boolean isDocumentStore;

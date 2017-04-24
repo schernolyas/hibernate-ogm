@@ -218,11 +218,7 @@ public class RedisJsonDialect extends AbstractRedisDialect implements MultigetGr
 
 		AssociationStorageType associationStorage = getAssociationStorageType( associationTypeContext );
 
-		if ( keyMetadata.getAssociationType() == AssociationType.ONE_TO_ONE || keyMetadata.getAssociationKind() == AssociationKind.EMBEDDED_COLLECTION || associationStorage == AssociationStorageType.IN_ENTITY ) {
-			return true;
-		}
-
-		return false;
+		return ( keyMetadata.getAssociationType() == AssociationType.ONE_TO_ONE || keyMetadata.getAssociationKind() == AssociationKind.EMBEDDED_COLLECTION || associationStorage == AssociationStorageType.IN_ENTITY );
 	}
 
 	private AssociationStorageType getAssociationStorageType(AssociationTypeContext associationTypeContext) {

@@ -32,7 +32,7 @@ public enum GridDialectTestHelperType {
 	COUCHDB( "org.hibernate.ogm.datastore.couchdb.utils.CouchDBTestHelper" ),
 	CASSANDRA( "org.hibernate.ogm.datastore.cassandra.utils.CassandraTestHelper" ),
 	REDIS( "org.hibernate.ogm.datastore.redis.utils.RedisTestHelper" ),
-	ORIENTDB( "org.hibernate.datastore.ogm.orientdb.util.OrientDBTestHelper" ),
+	ORIENTDB( "org.hibernate.ogm.datastore.orientdb.util.OrientDBTestHelper" ),
 	IGNITE( "org.hibernate.ogm.datastore.ignite.utils.IgniteTestHelper" );
 
 	private final String testHelperClassName;

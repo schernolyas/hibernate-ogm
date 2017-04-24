@@ -66,7 +66,7 @@ public class ReadWriteThroughOneToManyTest extends OgmTestCase {
 		BinaryObject jugBinaryObject = JUGBinaryStore.store.get( sourceJUG.getId() );
 
 		assertThat( jugBinaryObject.hasField( "members" ) ).isEqualTo( true );
-		Collection<?> membersCollection =  jugBinaryObject.field( "members" );
+		Collection<?> membersCollection = jugBinaryObject.field( "members" );
 		assertThat( membersCollection.size() ).isEqualTo( 2 );
 		assertThat( membersCollection.contains( sourceEmmanuel.getId() ) ).isEqualTo( true );
 		assertThat( membersCollection.contains( sourceJerome.getId() ) ).isEqualTo( true );
@@ -75,7 +75,7 @@ public class ReadWriteThroughOneToManyTest extends OgmTestCase {
 		logger.debugf( "Member keys: %s", MemberBinaryStore.store.keySet() );
 
 		//need remove objects from memory
-		IgniteDatastoreProvider igniteDatastoreProvider = IgniteTestHelper.getProvider( sessionFactory);
+		IgniteDatastoreProvider igniteDatastoreProvider = IgniteTestHelper.getProvider( sessionFactory );
 		igniteDatastoreProvider.clearCache( "CacheStoreJUG" );
 		igniteDatastoreProvider.clearCache( "CacheStoreMember" );
 		logger.info( "===================remove objects from memory=============================" );
@@ -85,7 +85,7 @@ public class ReadWriteThroughOneToManyTest extends OgmTestCase {
 		//load link owners
 
 		CacheStoreJUG jugFromCache = session.get( CacheStoreJUG.class, sourceJUG.getId() );
-		assertNotNull(jugFromCache);
+		assertNotNull( jugFromCache );
 		assertThat( jugFromCache.getMembers().size() ).isEqualTo( 2 );
 		assertThat( jugFromCache.getMembers().get( 0 ).getId() ).isEqualTo( sourceJerome.getId() );
 		assertThat( jugFromCache.getMembers().get( 1 ).getId() ).isEqualTo( sourceEmmanuel.getId() );

@@ -155,7 +155,7 @@ public class IgniteTestHelper implements GridDialectTestHelper {
 		return castProvider.getAssociationCache( associationKeyMetadata );
 	}
 
-	private static IgniteDatastoreProvider getProvider(SessionFactory sessionFactory) {
+	public static IgniteDatastoreProvider getProvider(SessionFactory sessionFactory) {
 		DatastoreProvider provider = ( (SessionFactoryImplementor) sessionFactory ).getServiceRegistry().getService( DatastoreProvider.class );
 		if ( !( provider instanceof IgniteDatastoreProvider ) ) {
 			throw new RuntimeException( "Not testing with Ignite, cannot extract underlying cache" );
