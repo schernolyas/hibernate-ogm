@@ -6,7 +6,11 @@
  */
 package org.hibernate.ogm.datastore.ignite.impl;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import javax.cache.configuration.FactoryBuilder;
@@ -19,10 +23,12 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.hibernate.HibernateException;
 import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
 import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
+import org.hibernate.ogm.datastore.ignite.options.Index;
 import org.hibernate.ogm.datastore.ignite.options.impl.CacheStoreFactoryOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.ReadThroughOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.StoreKeepBinaryOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.WriteThroughOption;
+import org.hibernate.ogm.datastore.ignite.util.ClassUtil;
 import org.hibernate.ogm.datastore.ignite.util.StringHelper;
 import org.hibernate.ogm.datastore.spi.BaseSchemaDefiner;
 import org.hibernate.ogm.datastore.spi.DatastoreProvider;
@@ -42,9 +48,15 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 
 	private static final long serialVersionUID = -8564869898957031491L;
 	private static final Log log = LoggerFactory.getLogger();
+	private static Map<String, Class<?>> tableEntityTypeMapping;
+
+	public static Map<String, Class<?>> getTableEntityTypeMapping() {
+		return Collections.unmodifiableMap( tableEntityTypeMapping );
+	}
 
 	@Override
 	public void initializeSchema(SchemaDefinitionContext context) {
+		tableEntityTypeMapping = context.getTableEntityTypeMapping();
 
 		DatastoreProvider provider = context.getSessionFactory().getServiceRegistry().getService( DatastoreProvider.class );
 		if ( provider instanceof IgniteDatastoreProvider ) {
@@ -58,7 +70,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		}
 	}
 
-	private void initializeEntities(SchemaDefinitionContext context, IgniteDatastoreProvider igniteDatastoreProvider) {
+	private void initializeEntities(SchemaDefinitionContext context, final IgniteDatastoreProvider igniteDatastoreProvider) {
 		ConfigurationPropertyReader propertyReader = igniteDatastoreProvider.getPropertyReader();
 
 
@@ -71,8 +83,11 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 				}
 				catch (HibernateException ex) {
 
-					CacheConfiguration config = createCacheConfiguration( entityKeyMetadata, context, propertyReader );
+					CacheConfiguration config = createEntityCacheConfiguration( entityKeyMetadata, context, propertyReader );
 					igniteDatastoreProvider.initializeCache( config );
+					createReadThroughIndexConfiguration( entityKeyMetadata, context ).forEach( cacheConfiguration -> {
+						igniteDatastoreProvider.initializeCache( cacheConfiguration );
+					} );
 				}
 			}
 			catch (Exception ex) {
@@ -192,10 +207,10 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		return idClass.getName();
 	}
 
-	private CacheConfiguration createCacheConfiguration(EntityKeyMetadata entityKeyMetadata, SchemaDefinitionContext context,ConfigurationPropertyReader propertyReader) {
+	private CacheConfiguration createEntityCacheConfiguration(EntityKeyMetadata entityKeyMetadata, SchemaDefinitionContext context, ConfigurationPropertyReader propertyReader) {
 		log.debugf( "entityKeyMetadata: %s", entityKeyMetadata );
 		OptionsService optionsService = context.getSessionFactory().getServiceRegistry().getService( OptionsService.class );
-		Map<String, Class<?>> tableEntityTypeMapping = context.getTableEntityTypeMapping();
+		//@todo refactor it!
 		Class<?> entityType = tableEntityTypeMapping.get( entityKeyMetadata.getTable() );
 		log.debugf( "initialize cache for entity class %s",entityType.getName() );
 
@@ -229,5 +244,40 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		}
 		cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
 		return cacheConfiguration;
+	}
+
+	private List<CacheConfiguration> createReadThroughIndexConfiguration(EntityKeyMetadata entityKeyMetadata, SchemaDefinitionContext context) {
+		OptionsService optionsService = context.getSessionFactory().getServiceRegistry().getService( OptionsService.class );
+		Map<String, Class<?>> tableEntityTypeMapping = context.getTableEntityTypeMapping();
+		Class<?> entityType = tableEntityTypeMapping.get( entityKeyMetadata.getTable() );
+		log.debugf( "initialize read-through cache for index class %s", entityType.getName() );
+
+		Boolean readThroughValue = getReadThroughOptionValue( optionsService, entityType );
+		if ( !readThroughValue ) {
+			return Collections.emptyList();
+		}
+		//it is read-through entity. search fields with annotation 'searchable'
+		Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Index.class, false );
+		List<CacheConfiguration> cacheConfigurations = new ArrayList<>( searchableFields.length );
+		for ( int i = 0; i < searchableFields.length; i++ ) {
+			log.debugf( "index: %d ; fieldName: %s", i, searchableFields[i].getName() );
+			CacheConfiguration cacheConfiguration = new CacheConfiguration();
+			//cacheConfiguration.setWriteThrough( true );
+			//cacheConfiguration.setReadThrough( true );
+			cacheConfiguration.setStoreKeepBinary( true );
+			//cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( cacheStoreFactoryValue ) );
+
+			cacheConfiguration.setName( generateIndexName(
+					entityType.getSimpleName(),
+					searchableFields[i].getName()
+			) );
+			cacheConfiguration.setAtomicityMode( CacheAtomicityMode.TRANSACTIONAL );
+			cacheConfigurations.add( cacheConfiguration );
+		}
+		return cacheConfigurations;
+	}
+
+	public static String generateIndexName(String entityName, String fieldName) {
+		return entityName + "_" + fieldName + "_inx";
 	}
 }

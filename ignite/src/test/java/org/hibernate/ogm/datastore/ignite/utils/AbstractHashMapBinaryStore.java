@@ -4,7 +4,7 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.ogm.datastore.ignite.utils.test.associations;
+package org.hibernate.ogm.datastore.ignite.utils;
 
 import java.util.Map;
 import javax.cache.Cache;
@@ -47,7 +47,6 @@ public abstract class AbstractHashMapBinaryStore extends CacheStoreAdapter<Strin
 		BinaryType type = obj.type();
 
 		logger.infof( "fields of type %s is %s", type.typeName(), type.fieldNames() );
-
 		getStore().put( entry.getKey(), obj );
 	}
 

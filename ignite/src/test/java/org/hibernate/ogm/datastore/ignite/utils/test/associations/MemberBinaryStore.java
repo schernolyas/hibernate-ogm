@@ -10,6 +10,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.hibernate.ogm.datastore.ignite.utils.AbstractHashMapBinaryStore;
+
 import org.apache.ignite.binary.BinaryObject;
 
 /**

@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.ignite;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -17,12 +18,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+
 import org.hibernate.HibernateException;
 import org.hibernate.LockMode;
 import org.hibernate.cfg.NotYetImplementedException;
@@ -34,11 +38,13 @@ import org.hibernate.loader.custom.Return;
 import org.hibernate.loader.custom.ScalarReturn;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteAssociationRowSnapshot;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteAssociationSnapshot;
+import org.hibernate.ogm.datastore.ignite.impl.IgniteCacheInitializer;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteDatastoreProvider;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteEmbeddedAssociationSnapshot;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteTupleSnapshot;
 import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
 import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
+import org.hibernate.ogm.datastore.ignite.options.Index;
 import org.hibernate.ogm.datastore.ignite.options.impl.CollocatedAssociationOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.ReadThroughOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.StoreKeepBinaryOption;
@@ -47,8 +53,10 @@ import org.hibernate.ogm.datastore.ignite.query.impl.IgniteQueryDescriptor;
 import org.hibernate.ogm.datastore.ignite.query.impl.IgniteSqlQueryParser;
 import org.hibernate.ogm.datastore.ignite.query.impl.QueryHints;
 import org.hibernate.ogm.datastore.ignite.type.impl.IgniteGridTypeMapper;
+import org.hibernate.ogm.datastore.ignite.util.ClassUtil;
 import org.hibernate.ogm.datastore.ignite.util.StringHelper;
 import org.hibernate.ogm.datastore.map.impl.MapTupleSnapshot;
+import org.hibernate.ogm.dialect.multiget.spi.MultigetGridDialect;
 import org.hibernate.ogm.dialect.query.spi.BackendQuery;
 import org.hibernate.ogm.dialect.query.spi.ClosableIterator;
 import org.hibernate.ogm.dialect.query.spi.ParameterMetadataBuilder;
@@ -85,8 +93,9 @@ import org.hibernate.ogm.util.impl.Contracts;
 import org.hibernate.persister.entity.Lockable;
 import org.hibernate.type.Type;
 
-public class IgniteDialect extends BaseGridDialect implements GridDialect, QueryableGridDialect<IgniteQueryDescriptor> {
+public class IgniteDialect extends BaseGridDialect implements GridDialect, QueryableGridDialect<IgniteQueryDescriptor>,MultigetGridDialect {
 
+	public static final String INDEX_FIELD = "indexField";
 	private static final long serialVersionUID = -4347702430400562694L;
 	private static final Log log = LoggerFactory.getLogger();
 
@@ -135,6 +144,29 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	}
 
 	@Override
+	public List<Tuple> getTuples(EntityKey[] keys, TupleContext tupleContext) {
+		Map<Object, EntityKey> idKeyMap = Stream.of( keys ).collect(
+				Collectors.toMap( ( EntityKey key ) -> {
+					return provider.createKeyObject( key );
+				}, ( EntityKey key ) -> {
+					return key;
+				} ) );
+
+		//all keys from one cache
+		IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( keys[0].getMetadata() );
+		return entityCache.getAll( idKeyMap.keySet() ).entrySet().stream()
+				.map( ( Map.Entry<Object, BinaryObject> entry ) -> {
+					return new Tuple(
+							new IgniteTupleSnapshot(
+									entry.getKey(),
+									entry.getValue(),
+									idKeyMap.get( entry.getKey() ).getMetadata()
+							), SnapshotType.UPDATE );
+				} ).collect(
+						Collectors.toList() );
+	}
+
+	@Override
 	public Tuple createTuple(EntityKey key, OperationContext operationContext) {
 		IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( key.getMetadata() );
 		if ( entityCache == null ) {
@@ -144,11 +176,22 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		return new Tuple( new IgniteTupleSnapshot( id, null, key.getMetadata() ), SnapshotType.INSERT );
 	}
 
+	private boolean isIndexField(Field[] searchableFields, String fieldName) {
+		for ( int i = 0; i < searchableFields.length; i++ ) {
+			if ( searchableFields[i].getName().equals( fieldName ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	@Override
 	public void insertOrUpdateTuple(EntityKey key, TuplePointer tuplePointer, TupleContext tupleContext) throws TupleAlreadyExistsException {
 		IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( key.getMetadata() );
+
 		Tuple tuple = tuplePointer.getTuple();
 
+		Boolean isReadThrough = tupleContext.getTupleTypeContext().getOptionsContext().getUnique( ReadThroughOption.class );
 		Object keyObject = null;
 		BinaryObjectBuilder builder = null;
 		if ( tuple.getSnapshotType() == SnapshotType.UPDATE ) {
@@ -161,11 +204,46 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			log.debugf( "key.getMetadata() : %s", key.getMetadata() );
 			builder = provider.createBinaryObjectBuilder( provider.getEntityTypeName( key.getMetadata().getTable() ) );
 		}
+		//@todo refactor it!
+		Class<?> entityType = IgniteCacheInitializer.getTableEntityTypeMapping().get( key.getTable() );
+		Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Index.class, false );
+
+
 		for ( String columnName : tuple.getColumnNames() ) {
 			if ( key.getMetadata().isKeyColumn( columnName ) ) {
 				continue;
 			}
 			Object value = tuple.get( columnName );
+
+			if ( isReadThrough ) {
+				if ( isIndexField( searchableFields, columnName ) ) {
+					//@todo correct index
+					log.debugf( "insertOrUpdateTuple: index cache name: %s", IgniteCacheInitializer.generateIndexName( key.getTable(), columnName ) );
+					IgniteCache<Object, BinaryObject> indexEntityCache = provider.getEntityCache( IgniteCacheInitializer.generateIndexName( key.getTable(), columnName ) );
+					if ( value != null ) {
+						//add value to index
+						BinaryObject currentBinaryObject = indexEntityCache.get( value );
+						BinaryObjectBuilder indexBuilder = currentBinaryObject != null ? currentBinaryObject.toBuilder() : provider.createBinaryObjectBuilder( "Index" );
+						if ( indexBuilder.getField( INDEX_FIELD ) == null ) {
+							HashSet idSet = new HashSet();
+							idSet.add( key.getColumnValues()[0] );
+							indexBuilder.setField( INDEX_FIELD, idSet );
+						}
+						else {
+							Set idSet = indexBuilder.getField( INDEX_FIELD );
+							idSet.add( key.getColumnValues()[0] ); //@todo think about composite keys
+						}
+						BinaryObject indexObject = indexBuilder.build();
+						indexEntityCache.put( value, indexObject );
+					}
+					else {
+						Object previusValue = tuple.getSnapshot().get( columnName );
+						//remove value from index
+					}
+
+				}
+			}
+
 			if ( value != null ) {
 				builder.setField( StringHelper.realColumnName( columnName ), value );
 			}
@@ -181,7 +259,25 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	@Override
 	public void removeTuple(EntityKey key, TupleContext tupleContext) {
 		IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( key.getMetadata() );
+		BinaryObject removedObject = entityCache.get( provider.createKeyObject( key ) );
+		Boolean isReadThrough = tupleContext.getTupleTypeContext().getOptionsContext().getUnique( ReadThroughOption.class );
+		if ( isReadThrough ) {
+			Class<?> entityType = IgniteCacheInitializer.getTableEntityTypeMapping().get( key.getTable() );
+			Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Index.class, false );
+			for ( Field searchableField : searchableFields ) {
+				log.debugf( "removeTuple: index cache name: %s" , IgniteCacheInitializer.generateIndexName( key.getTable() ,searchableField.getName() ) );
+				IgniteCache<Object, BinaryObject> indexEntityCache = provider.getEntityCache( IgniteCacheInitializer.generateIndexName( key.getTable() ,searchableField.getName() ) );
+				Object value = removedObject.field( searchableField.getName() );
+				BinaryObjectBuilder builder = indexEntityCache.get( value ).toBuilder();
+
+				Set idSet = builder.getField( INDEX_FIELD );
+				idSet.remove( key.getColumnValues()[0] );
+				builder.setField( INDEX_FIELD, idSet );
+				indexEntityCache.put( value,builder.build() );
+			}
+		}
 		entityCache.remove( provider.createKeyObject( key ) );
+
 	}
 
 	@Override
@@ -750,12 +846,16 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			throw new UnsupportedOperationException( "Not implemented. Can't find cache name" );
 		}
 
+		log.debugf( "executeBackendQuery: query : %s",backendQuery.getQuery().getSql() );
+		log.debugf( "executeBackendQuery: table : %s",backendQuery.getQuery().getTable() );
+
 		QueryHints hints = ( new QueryHints.Builder( queryParameters.getQueryHints() ) ).build();
 		SqlFieldsQuery sqlQuery = provider.createSqlFieldsQueryWithLog(
 				backendQuery.getQuery().getSql(),
 				hints,
 				backendQuery.getQuery().getIndexedParameters() != null ? backendQuery.getQuery().getIndexedParameters().toArray() : null
 		);
+		//@todo incorrect query: "SELECT _KEY, _VAL  FROM Hypothesis _gen_0_". This is invalid convertation from JPA to Native query
 		Iterable<List<?>> result = executeWithHints( cache, sqlQuery, hints );
 
 		if ( backendQuery.getSingleEntityMetadataInformationOrNull() != null ) {
