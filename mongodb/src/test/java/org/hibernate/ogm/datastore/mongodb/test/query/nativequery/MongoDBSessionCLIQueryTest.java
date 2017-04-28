@@ -30,9 +30,9 @@ import com.mongodb.BasicDBList;
  */
 public class MongoDBSessionCLIQueryTest extends OgmTestCase {
 
-	private final OscarWildePoem portia = new OscarWildePoem( 1L, "Portia", "Oscar Wilde" );
-	private final OscarWildePoem athanasia = new OscarWildePoem( 2L, "Athanasia", "Oscar Wilde", "ebook" );
-	private final OscarWildePoem imperatrix = new OscarWildePoem( 3L, "Ave Imperatrix", "Oscar Wilde", "audible", "ebook", "paperback" );
+	private final OscarWildePoem portia = new OscarWildePoem( 1L, "Portia", "Oscar Wilde", 1881 );
+	private final OscarWildePoem athanasia = new OscarWildePoem( 2L, "Athanasia", "Oscar Wilde", 1879, "ebook" );
+	private final OscarWildePoem imperatrix = new OscarWildePoem( 3L, "Ave Imperatrix", "Oscar Wilde", 1882,"audible", "ebook", "paperback" );
 
 	@Before
 	public void init() {
@@ -106,7 +106,11 @@ public class MongoDBSessionCLIQueryTest extends OgmTestCase {
 			@SuppressWarnings("unchecked")
 			List<OscarWildePoem> result = query.list();
 
-			assertThat( result ).onProperty( "id" ).containsExactly( portia.getId(), imperatrix.getId(), athanasia.getId() );
+			assertThat( result ).onProperty( "id" ).containsExactly(
+					portia.getId(),
+					imperatrix.getId(),
+					athanasia.getId()
+			);
 
 			transaction.commit();
 		}
@@ -321,7 +325,11 @@ public class MongoDBSessionCLIQueryTest extends OgmTestCase {
 			@SuppressWarnings("unchecked")
 			List<OscarWildePoem> result = query.list();
 
-			assertThat( result ).onProperty( "id" ).containsExactly( portia.getId(), imperatrix.getId(), athanasia.getId() );
+			assertThat( result ).onProperty( "id" ).containsExactly(
+					portia.getId(),
+					imperatrix.getId(),
+					athanasia.getId()
+			);
 
 			transaction.commit();
 		}
@@ -338,7 +346,90 @@ public class MongoDBSessionCLIQueryTest extends OgmTestCase {
 			@SuppressWarnings("unchecked")
 			List<OscarWildePoem> result = query.list();
 
-			assertThat( result ).onProperty( "id" ).containsExactly( portia.getId(), imperatrix.getId(), athanasia.getId() );
+			assertThat( result ).onProperty( "id" ).containsExactly(
+					portia.getId(),
+					imperatrix.getId(),
+					athanasia.getId()
+			);
+
+			transaction.commit();
+		}
+	}
+
+	@Test
+	public void testFindWithMax() {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+			String queryJson = "'$query': { 'author': 'Oscar Wilde' } ";
+			String max = " '$max': { 'year' : 1881 } ";
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".find({" + queryJson + "," + max + "})";
+
+			Query query = session.createNativeQuery( nativeQuery ).addEntity( OscarWildePoem.class );
+			@SuppressWarnings("unchecked")
+			List<OscarWildePoem> result = query.list();
+			assertThat( result ).onProperty( "id" ).containsExactly( athanasia.getId() );
+
+			transaction.commit();
+		}
+	}
+
+	@Test
+	public void testFindWithMin() {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+			String queryJson = "'$query': { 'author': 'Oscar Wilde' } ";
+			String min = " '$min': { 'year' : 1882 } ";
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".find({" + queryJson + "," + min + "})";
+
+			Query query = session.createNativeQuery( nativeQuery ).addEntity( OscarWildePoem.class );
+			@SuppressWarnings("unchecked")
+			List<OscarWildePoem> result = query.list();
+			assertThat( result ).onProperty( "id" ).containsExactly( imperatrix.getId() );
+
+			transaction.commit();
+		}
+	}
+
+	@Test
+	public void testFindWithModifiersWithEntity() {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+			StringBuilder queryWithModifiers = new StringBuilder();
+			queryWithModifiers.append( "'$query': { } " );
+			queryWithModifiers.append( ", '$max': { 'year' : 1881 } " );
+			queryWithModifiers.append( ", '$explain': false " );
+			queryWithModifiers.append( ", '$snapshot': false " );
+			queryWithModifiers.append( ", 'hint': { 'year' : 1881 } " );
+			queryWithModifiers.append( ", 'maxScan': 11234" );
+
+			queryWithModifiers.append( ", '$comment': 'Testing comment' " );
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".find({" + queryWithModifiers.toString() + "})";
+
+			Query query = session.createNativeQuery( nativeQuery ).addEntity( OscarWildePoem.class );
+			@SuppressWarnings("unchecked")
+			List<OscarWildePoem> result = query.list();
+			assertThat( result ).onProperty( "id" ).containsExactly( athanasia.getId() );
+
+			transaction.commit();
+		}
+	}
+
+	@Test
+	public void testFindWithExplain() {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+			StringBuilder queryWithModifiers = new StringBuilder();
+			queryWithModifiers.append( "'$query': { 'author': 'Oscar Wilde' } " );
+			queryWithModifiers.append( ", '$max': { 'year' : 1881 } " );
+			queryWithModifiers.append( ", '$explain': true " );
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".find({" + queryWithModifiers.toString() + "})";
+
+			Query query = session.createNativeQuery( nativeQuery );
+			@SuppressWarnings("unchecked")
+			List<Object[]> result = query.list();
+			// I'm not sure we can test the content because this is the result of the explain command
+			// and I believe it might change among versions
+			assertThat( result.get( 0 ) ).isNotEmpty();
 
 			transaction.commit();
 		}
@@ -371,7 +462,7 @@ public class MongoDBSessionCLIQueryTest extends OgmTestCase {
 
 			BasicDBList expectedAthanasia = new BasicDBList();
 			expectedAthanasia.addAll( athanasia.getMediums() );
-			assertThat( result.get( 1 ) ).isEqualTo( new Object[]{ athanasia.getId(), expectedAthanasia } );
+			assertThat( result.get( 1 ) ).isEqualTo( new Object[] { athanasia.getId(), expectedAthanasia } );
 
 			transaction.commit();
 		}
@@ -597,5 +688,98 @@ public class MongoDBSessionCLIQueryTest extends OgmTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 		return new Class[] { OscarWildePoem.class };
+	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1247")
+	public void testDistinctQueryWithCriteriaAndCollation() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME
+					+ ".distinct('name',{'author':'Oscar Wilde'},{'collation': { 'locale' : 'en', 'caseLevel' : false, 'caseFirst' : 'upper'}})";
+
+			@SuppressWarnings("unchecked")
+			List<String> result = (List<String>) session.createNativeQuery( nativeQuery ).uniqueResult();
+
+			assertThat( result ).containsOnly( portia.getName(), imperatrix.getName(), athanasia.getName() );
+
+			transaction.commit();
+			session.clear();
+		}
+	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1247")
+	public void testDistinctQueryWithoutCriteriaAndWIthCollation() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME
+					+ ".distinct('name',{},{'collation': { 'locale' : 'en', 'caseLevel' : false, 'caseFirst' : 'upper'}})";
+
+			@SuppressWarnings("unchecked")
+			List<String> result = (List<String>) session.createNativeQuery( nativeQuery ).uniqueResult();
+
+			assertThat( result ).containsOnly( portia.getName(), imperatrix.getName(), athanasia.getName() );
+
+			transaction.commit();
+			session.clear();
+		}
+	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1247")
+	public void testDistinctQueryWithInCriteriaAndCollation() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME
+					+ ".distinct('name', { '_id': {'$in' : [ " + portia.getId() + ", " + imperatrix.getId() + "]} }, {'collation': { 'locale' : 'en', 'caseLevel' : false, 'caseFirst' : 'upper'}})";
+
+			@SuppressWarnings("unchecked")
+			List<String> result = (List<String>) session.createNativeQuery( nativeQuery ).uniqueResult();
+
+			assertThat( result ).containsOnly( portia.getName(), imperatrix.getName() );
+
+			transaction.commit();
+			session.clear();
+		}
+	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1247")
+	public void testSimpleDistinctQuery() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".distinct('author')";
+
+			@SuppressWarnings("unchecked")
+			List<String> result = (List<String>) session.createNativeQuery( nativeQuery ).uniqueResult();
+
+			assertThat( result ).containsOnly( "Oscar Wilde" );
+
+			transaction.commit();
+			session.clear();
+		}
+	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1247")
+	public void testDistinctQueryWithCriteria() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".distinct('name',{'author':'Oscar Wilde'})";
+
+			@SuppressWarnings("unchecked")
+			List<String> result = (List<String>) session.createNativeQuery( nativeQuery ).uniqueResult();
+
+			assertThat( result ).containsOnly( portia.getName(), athanasia.getName(), imperatrix.getName() );
+
+			transaction.commit();
+			session.clear();
+		}
 	}
 }

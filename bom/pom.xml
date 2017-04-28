@@ -27,6 +27,7 @@
             See http://search.maven.org/#search|gav|1|g%3A"org.wildfly"%20AND%20a%3A"wildfly-parent"
         -->
         <hibernateSearchVersion>5.6.1.Final</hibernateSearchVersion>
+        <hibernate-search.module.slot>${hibernateSearchVersion}-orm51</hibernate-search.module.slot>
         <hibernateCommonsAnnotationsVersion>5.0.1.Final</hibernateCommonsAnnotationsVersion>
         <jbossLoggingVersion>3.2.1.Final</jbossLoggingVersion>
         <jbossLoggingProcessorVersion>1.2.0.Final</jbossLoggingProcessorVersion>
@@ -39,27 +40,24 @@
         <narayanaVersion>5.4.0.Final</narayanaVersion>
 
         <!-- Hibernate ORM -->
-        <hibernateVersion>5.1.4.Final</hibernateVersion>
+        <hibernateVersion>5.1.5.Final</hibernateVersion>
 
         <!-- Careful: Lucene is shared across Neo4J dependencies, Infinispan and Hibernate Search -->
         <luceneVersion>5.5.4</luceneVersion>
 
         <!-- Various dependencies -->
         <hibernateHqlParserVersion>1.4.0.Final</hibernateHqlParserVersion>
+        <hibernate.hql.module.slot>${hibernateHqlParserVersion}</hibernate.hql.module.slot>
         <parboiledVersion>1.1.7</parboiledVersion> <!-- needs to be aligned with Neo4j version but is also used for MongoDB -->
         <asmVersion>5.0.3</asmVersion> <!-- used for Parboiled and Neo4j -->
 
         <!-- Infinispan -->
-        <infinispanVersion>8.2.5.Final</infinispanVersion>
+        <infinispanVersion>8.2.6.Final</infinispanVersion>
         <protostreamVersion>3.0.7.Final</protostreamVersion>
-
-        <!-- Ehcache -->
-        <ehcacheVersion>2.6.11</ehcacheVersion>
 
         <!-- MongoDB -->
         <mongodbDriverVersion>3.4.2</mongodbDriverVersion>
         <mongodbVersion>3.4.1</mongodbVersion>
-        <fongodbVersion>2.0.7</fongodbVersion>
 
         <!-- Neo4j -->
         <neo4jVersion>3.0.8</neo4jVersion>
@@ -73,25 +71,6 @@
         <neo4jConcurrentlinkedhashmapVersion>1.4.2</neo4jConcurrentlinkedhashmapVersion>
         <!-- See Parboiled dependency above -->
         <!-- See Lucene dependency above -->
-
-        <!-- Cassandra -->
-        <cassandraVersion>3.1.0</cassandraVersion>
-        <!-- Update dependency versions accordingly when updating C*  -->
-        <!--
-             The following versions are required for the Cassandra driver; We don't expose a managed versions
-             of these libraries through this BOM, these versions are for internal usage to make sure the right
-             JARs end up in the C* driver WildFly module
-        -->
-        <cassandraCodahaleMetricsVersion>3.1.2</cassandraCodahaleMetricsVersion>
-        <cassandraGuavaVersion>16.0.1</cassandraGuavaVersion>
-
-        <!-- Redis -->
-        <lettuceVersion>4.2.1.Final</lettuceVersion>
-        <!-- Update dependency versions accordingly when updating lettuce  -->
-        <lettuceRxjavaVersion>1.1.6</lettuceRxjavaVersion>
-        <lettuceCommonsPoolVersion>2.4.2</lettuceCommonsPoolVersion>
-        <lettuceGuavaVersion>18.0</lettuceGuavaVersion> <!-- Currently in sync with the version of Wildfly -->
-
     </properties>
 
     <inceptionYear>2010</inceptionYear>
@@ -384,12 +363,14 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
-                <artifactId>hibernate-ogm-jipijapa</artifactId>
+                <artifactId>hibernate-ogm-integrationtest</artifactId>
                 <version>${project.version}</version>
+                <type>test-jar</type>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
-                <artifactId>hibernate-ogm-ehcache</artifactId>
+                <artifactId>hibernate-ogm-jipijapa</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -417,21 +398,6 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>hibernate-ogm-neo4j</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>hibernate-ogm-couchdb</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>hibernate-ogm-cassandra</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>hibernate-ogm-redis</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -490,13 +456,6 @@
             </dependency>
 
             <!-- NoSQL databases -->
-
-            <!-- Ehcache -->
-            <dependency>
-                <groupId>net.sf.ehcache</groupId>
-                <artifactId>ehcache-core</artifactId>
-                <version>${ehcacheVersion}</version>
-            </dependency>
 
             <!-- Infinispan -->
             <dependency>
@@ -575,11 +534,6 @@
                 <artifactId>mongo-java-driver</artifactId>
                 <version>${mongodbDriverVersion}</version>
             </dependency>
-            <dependency>
-                <groupId>com.github.fakemongo</groupId>
-                <artifactId>fongo</artifactId>
-                <version>${fongodbVersion}</version>
-            </dependency>
 
             <!-- Neo4j -->
             <dependency>
@@ -620,33 +574,7 @@
                 <version>${neo4jScalaLibraryVersion}</version>
             </dependency>
 
-            <!-- Cassandra -->
-            <dependency>
-                <groupId>com.datastax.cassandra</groupId>
-                <artifactId>cassandra-driver-core</artifactId>
-                <version>${cassandraVersion}</version>
-            </dependency>
-
-            <!-- Redis -->
-            <dependency>
-                <groupId>biz.paluch.redis</groupId>
-                <artifactId>lettuce</artifactId>
-                <version>${lettuceVersion}</version>
-            </dependency>
-
-            <!-- OrientDB -->
-            <dependency>
-                <groupId>com.orientechnologies</groupId>
-                <artifactId>orientdb-core</artifactId>
-                <version>${orientdbVersion}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.orientechnologies</groupId>
-                <artifactId>orientdb-jdbc</artifactId>
-                <version>${orientdbVersion}</version>
-            </dependency>
-
-            <!-- RESTEasy for accessing CouchDB -->
+            <!-- RESTEasy -->
             <dependency>
                 <groupId>org.jboss.resteasy</groupId>
                 <artifactId>resteasy-client</artifactId>
