@@ -12,16 +12,14 @@ import org.hibernate.ogm.dialect.spi.GridDialect;
  * The test suite needs some knowledge on all NoSQL stores it is meant to support.
  * This is mainly used to disable some tests for a specific GridDialect.
  *
- * @author Sanne Grinovero &lt;sanne@hibernate.org&gt;
- * @author Gunnar Morling
- */
+* @author Sanne Grinovero &lt;sanne@hibernate.org&gt;
+* @author Gunnar Morling
+*/
 public enum GridDialectType {
 
-	HASHMAP("org.hibernate.ogm.datastore.map.impl.MapDialect", false, false),
+	HASHMAP( "org.hibernate.ogm.datastore.map.impl.MapDialect", false, false ),
 
-	INFINISPAN("org.hibernate.ogm.datastore.infinispan.InfinispanDialect", false, false),
-
-	EHCACHE("org.hibernate.ogm.datastore.ehcache.EhcacheDialect", false, false),
+	INFINISPAN( "org.hibernate.ogm.datastore.infinispan.InfinispanDialect", false, false),
 
 	INFINISPAN_REMOTE( "org.hibernate.ogm.datastore.infinispanremote.InfinispanRemoteDialect", true, false ),
 
@@ -47,7 +45,6 @@ public enum GridDialectType {
 
 	/**
 	 * Whether this store is a document store or not.
-	 * 
 	 * @return {@code true} if this is a document store, {@code false} otherwise.
 	 */
 	public boolean isDocumentStore() {
