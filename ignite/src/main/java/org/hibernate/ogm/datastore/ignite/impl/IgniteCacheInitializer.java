@@ -13,14 +13,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.hibernate.HibernateException;
+import org.hibernate.ogm.datastore.ignite.IgniteProperties;
 import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
 import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.ignite.options.Index;
@@ -92,7 +95,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 			}
 			catch (Exception ex) {
 				// just write error to log
-				log.warn( log.unableToInitializeCache( entityKeyMetadata.getTable() ), ex );
+				log.unableToInitializeCache( entityKeyMetadata.getTable(), ex );
 			}
 		}
 	}
@@ -116,7 +119,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 				}
 				catch (Exception ex) {
 					// just write error to log
-					log.warn( log.unableToInitializeCache( associationKeyMetadata.getTable() ), ex );
+					log.unableToInitializeCache( associationKeyMetadata.getTable(), ex );
 				}
 
 			}
@@ -154,7 +157,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 				}
 				catch (Exception ex) {
 					// just write error to log
-					log.warn( log.unableToInitializeCache( idSourceKeyMetadata.getName() ), ex );
+					throw log.unableToInitializeCache( idSourceKeyMetadata.getName(), ex );
 				}
 			}
 		}
@@ -225,9 +228,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		cacheConfiguration.setWriteThrough( writeThroughValue );
 		cacheConfiguration.setReadThrough( readThroughValue );
 		cacheConfiguration.setStoreKeepBinary( storeKeepBinaryValue );
-		if ( cacheStoreFactoryValue != null ) {
-			cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( cacheStoreFactoryValue ) );
-		}
+		setCacheStoreFactory( cacheConfiguration, cacheStoreFactoryValue, entityType.getName(), propertyReader);
 
 		cacheConfiguration.setName( StringHelper.stringBeforePoint( entityKeyMetadata.getTable() ) );
 		cacheConfiguration.setAtomicityMode( CacheAtomicityMode.TRANSACTIONAL );
@@ -245,6 +246,37 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
 		return cacheConfiguration;
 	}
+
+	private void setCacheStoreFactory( CacheConfiguration cacheConfiguration, Class cacheStoreFactoryValue, String entityName,
+			ConfigurationPropertyReader propertyReader) {
+		try {
+			String factoryName = propertyReader.property( String.format( IgniteProperties.IGNITE_CACHE_STORE_FACTORY_TEMPLATE,
+																		 entityName ), String.class ).getValue();
+			if ( factoryName != null ) {
+				//set factory class from properties file
+				Class factoryClass = Class.forName( factoryName );
+				cacheConfiguration.setCacheStoreFactory( (Factory<? extends CacheStore>) factoryClass.newInstance() );
+			}
+			else {
+				String adapterClassName = propertyReader.property( String.format( IgniteProperties.IGNITE_CACHE_STORE_CLASS_TEMPLATE,
+																				  entityName ), String.class )
+						.getValue();
+				if ( adapterClassName != null ) {
+					//set adapter class from properties file
+					cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( Class.forName( adapterClassName ) ) );
+				}
+				else if ( cacheStoreFactoryValue != null ) {
+					//set adapter class from annotation
+					cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( cacheStoreFactoryValue ) );
+				}
+			}
+		}
+		catch (Exception e) {
+			throw log.unableToInitializeCache( entityName, e );
+		}
+	}
+
+
 
 	private List<CacheConfiguration> createReadThroughIndexConfiguration(EntityKeyMetadata entityKeyMetadata, SchemaDefinitionContext context) {
 		OptionsService optionsService = context.getSessionFactory().getServiceRegistry().getService( OptionsService.class );

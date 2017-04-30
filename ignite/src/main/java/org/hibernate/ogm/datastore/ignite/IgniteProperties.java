@@ -31,13 +31,12 @@ public final class IgniteProperties implements KeyValueStoreProperties {
 
 	/**
 	 * Configuration property templates for manage read-through and write-through for each entity.
-	 * Example of full string "hibernate.ogm.ignite.cache_config.Person.read_through=true"
+	 * Example of full string "hibernate.ogm.ignite.persistent_store.Person.read_through=true"
 	 * @see <a href="https://apacheignite.readme.io/docs/persistent-store#read-through-and-write-through">Persistent Store</a>
 	 */
-	public static final String IGNITE_READ_THROUGH_TEMPLATE = "hibernate.ogm.ignite.cache_config.%s.read_through";
-	public static final String IGNITE_WRITE_THROUGH_TEMPLATE = "hibernate.ogm.ignite.cache_config.%s.write_through";
-	public static final String IGNITE_STORE_KEEP_BINARY_TEMPLATE = "hibernate.ogm.ignite.cache_config.%s.store_keep_binary";
-	public static final String IGNITE_CACHE_STORE_FACTORY_TEMPLATE = "hibernate.ogm.ignite.cache_config.%s.cache_store_factory";
+
+	public static final String IGNITE_CACHE_STORE_CLASS_TEMPLATE = "hibernate.ogm.ignite.persistent_store.%s.cache_store_class";
+	public static final String IGNITE_CACHE_STORE_FACTORY_TEMPLATE = "hibernate.ogm.ignite.persistent_store.%s.cache_store_factory";
 
 	private IgniteProperties() {
 
