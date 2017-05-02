@@ -228,7 +228,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		cacheConfiguration.setWriteThrough( writeThroughValue );
 		cacheConfiguration.setReadThrough( readThroughValue );
 		cacheConfiguration.setStoreKeepBinary( storeKeepBinaryValue );
-		setCacheStoreFactory( cacheConfiguration, cacheStoreFactoryValue, entityType.getName(), propertyReader);
+		setCacheStoreFactory( cacheConfiguration, cacheStoreFactoryValue, entityType.getName(), propertyReader );
 
 		cacheConfiguration.setName( StringHelper.stringBeforePoint( entityKeyMetadata.getTable() ) );
 		cacheConfiguration.setAtomicityMode( CacheAtomicityMode.TRANSACTIONAL );
@@ -247,26 +247,30 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		return cacheConfiguration;
 	}
 
+	@SuppressWarnings("unchecked")
 	private void setCacheStoreFactory( CacheConfiguration cacheConfiguration, Class cacheStoreFactoryValue, String entityName,
 			ConfigurationPropertyReader propertyReader) {
 		try {
 			String factoryName = propertyReader.property( String.format( IgniteProperties.IGNITE_CACHE_STORE_FACTORY_TEMPLATE,
-																		 entityName ), String.class ).getValue();
+					entityName ), String.class ).getValue();
 			if ( factoryName != null ) {
-				//set factory class from properties file
-				Class factoryClass = Class.forName( factoryName );
+				// set factory class from properties file
+				log.infof( "set CacheStoreFactory class %s for Entity %s", factoryName, entityName );
+				Class<?> factoryClass = Class.forName( factoryName );
 				cacheConfiguration.setCacheStoreFactory( (Factory<? extends CacheStore>) factoryClass.newInstance() );
 			}
 			else {
-				String adapterClassName = propertyReader.property( String.format( IgniteProperties.IGNITE_CACHE_STORE_CLASS_TEMPLATE,
-																				  entityName ), String.class )
+				String adapterClassName = propertyReader.property( String.format(
+						IgniteProperties.IGNITE_CACHE_STORE_CLASS_TEMPLATE, entityName ), String.class )
 						.getValue();
 				if ( adapterClassName != null ) {
-					//set adapter class from properties file
+					// set adapter class from properties file
+					log.infof( "set CacheStore class %s for Entity %s", factoryName, entityName );
 					cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( Class.forName( adapterClassName ) ) );
 				}
 				else if ( cacheStoreFactoryValue != null ) {
-					//set adapter class from annotation
+					// set adapter class from annotation
+					log.infof( "set CacheStoreFactory class %s from annotation for Entity %s", cacheStoreFactoryValue, entityName );
 					cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( cacheStoreFactoryValue ) );
 				}
 			}
@@ -278,6 +282,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 
 
 
+	@SuppressWarnings("rawtypes")
 	private List<CacheConfiguration> createReadThroughIndexConfiguration(EntityKeyMetadata entityKeyMetadata, SchemaDefinitionContext context) {
 		OptionsService optionsService = context.getSessionFactory().getServiceRegistry().getService( OptionsService.class );
 		Map<String, Class<?>> tableEntityTypeMapping = context.getTableEntityTypeMapping();
