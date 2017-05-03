@@ -21,7 +21,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.ignite.*;
+import org.apache.ignite.IgniteAtomicSequence;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -265,7 +266,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Index.class, false );
 			for ( Field searchableField : searchableFields ) {
 				log.debugf( "removeTuple: index cache name: %s" , IgniteCacheInitializer.generateIndexName( key.getTable() ,searchableField.getName() ) );
-				IgniteCache<Object, BinaryObject> indexEntityCache = provider.getEntityCache( IgniteCacheInitializer.generateIndexName( key.getTable() ,searchableField.getName() ) );
+				IgniteCache<Object, BinaryObject> indexEntityCache = provider.getEntityCache( IgniteCacheInitializer.generateIndexName( key.getTable() , searchableField.getName() ) );
 				Object value = removedObject.field( searchableField.getName() );
 				BinaryObjectBuilder builder = indexEntityCache.get( value ).toBuilder();
 
