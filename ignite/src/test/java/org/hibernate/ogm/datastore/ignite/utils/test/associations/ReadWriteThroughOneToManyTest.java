@@ -88,6 +88,7 @@ public class ReadWriteThroughOneToManyTest extends OgmTestCase {
 		assertNotNull( jugFromCache );
 		assertThat( jugFromCache.getMembers().size() ).isEqualTo( 2 );
 		assertThat( jugFromCache.getMembers().get( 0 ).getId() ).isEqualTo( sourceJerome.getId() );
+		assertThat( jugFromCache.getMembers().get( 0 ).getName() ).isEqualTo( sourceJerome.getName() );
 		assertThat( jugFromCache.getMembers().get( 1 ).getId() ).isEqualTo( sourceEmmanuel.getId() );
 
 		sourceEmmanuel = session.get( CacheStoreMember.class, sourceEmmanuel.getId() );
