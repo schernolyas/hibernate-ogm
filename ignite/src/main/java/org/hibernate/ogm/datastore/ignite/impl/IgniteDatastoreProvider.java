@@ -240,6 +240,10 @@ public class IgniteDatastoreProvider extends BaseDatastoreProvider
 		return conf;
 	}
 
+	public IgniteEx getCacheManager() {
+		return cacheManager;
+	}
+
 	private String createGridName(IgniteConfiguration conf) {
 		String name = null;
 		if ( StringUtils.isNotEmpty( config.getInstanceName() ) ) {

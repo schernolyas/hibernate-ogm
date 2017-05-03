@@ -21,8 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.ignite.IgniteAtomicSequence;
-import org.apache.ignite.IgniteCache;
+import org.apache.ignite.*;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -300,10 +299,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 						.getOptionsContext()
 						.getUnique( StoreKeepBinaryOption.class );
 				TuplePointer tuplePointer = getOwnerEntityTuplePointer( associationKey, associationContext );
-				log.debugf(
-						"getAssociation: tuplePointer: %s; ",
-						tuplePointer
-				);
+				log.debugf( "getAssociation: tuplePointer: %s; ", tuplePointer );
 				log.debugf(
 						"getAssociation: key.getMetadata().isInverse(): %b; ",
 						associationKey.getMetadata().isInverse()
@@ -426,6 +422,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		if ( associationKey.getMetadata().isInverse() ) {
 			if ( associationKey.getMetadata().getAssociationKind() == AssociationKind.ASSOCIATION ) {
 				insertInverseRelationship( associationKey, association, associationContext );
+				return;
 			}
 			else {
 				return;
@@ -906,6 +903,10 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	@Override
 	public GridType overrideType(Type type) {
 		return IgniteGridTypeMapper.INSTANCE.overrideType( type );
+	}
+
+	public org.apache.ignite.Ignite getIgnite() {
+		return provider.getCacheManager();
 	}
 
 	private abstract class BaseResultCursor<T> implements ClosableIterator<Tuple> {
