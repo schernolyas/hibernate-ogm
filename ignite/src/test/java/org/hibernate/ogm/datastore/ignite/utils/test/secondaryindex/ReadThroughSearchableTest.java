@@ -30,7 +30,7 @@ import static org.fest.assertions.Assertions.assertThat;
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
  */
 
-public class ReadThroughSecondaryIndexTest extends OgmTestCase {
+public class ReadThroughSearchableTest extends OgmTestCase {
 	private Log logger = LoggerFactory.getLogger();
 	private final ReadThroughFruit apple = new ReadThroughFruit( "1", "apple", "apple desc" );
 	private final ReadThroughFruit plum = new ReadThroughFruit( "2", "plum", "plum desc" );

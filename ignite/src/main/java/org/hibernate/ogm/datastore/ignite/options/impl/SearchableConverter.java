@@ -6,18 +6,18 @@
  */
 package org.hibernate.ogm.datastore.ignite.options.impl;
 
-import org.hibernate.ogm.datastore.ignite.options.Index;
+import org.hibernate.ogm.datastore.ignite.options.Searchable;
 import org.hibernate.ogm.options.spi.AnnotationConverter;
 import org.hibernate.ogm.options.spi.OptionValuePair;
 
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
  */
-public class IndexConverter implements AnnotationConverter<Index> {
+public class SearchableConverter implements AnnotationConverter<Searchable> {
 
 	@Override
-	public OptionValuePair<?> convert(Index annotation) {
+	public OptionValuePair<?> convert(Searchable annotation) {
 		Boolean value = annotation.value();
-		return OptionValuePair.getInstance( new IndexOption(), value );
+		return OptionValuePair.getInstance( new SearchableOption(), value );
 	}
 }

@@ -12,7 +12,7 @@ import javax.persistence.Id;
 
 import org.hibernate.ogm.datastore.ignite.options.CacheStoreFactory;
 import org.hibernate.ogm.datastore.ignite.options.ReadThrough;
-import org.hibernate.ogm.datastore.ignite.options.Index;
+import org.hibernate.ogm.datastore.ignite.options.Searchable;
 import org.hibernate.ogm.datastore.ignite.options.StoreKeepBinary;
 import org.hibernate.ogm.datastore.ignite.options.WriteThrough;
 
@@ -28,7 +28,7 @@ public class ReadThroughFruit {
 	public static final String TABLE_NAME = "ReadThroughFruit";
 	@Id
 	private String id;
-	@Index
+	@Searchable
 	private String title;
 
 	private String description;

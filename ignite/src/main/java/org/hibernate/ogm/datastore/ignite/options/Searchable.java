@@ -11,7 +11,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.hibernate.ogm.datastore.ignite.options.impl.IndexConverter;
+import org.hibernate.ogm.datastore.ignite.options.impl.SearchableConverter;
 import org.hibernate.ogm.options.spi.MappingOption;
 
 /**
@@ -20,8 +20,8 @@ import org.hibernate.ogm.options.spi.MappingOption;
  */
 @Target({ ElementType.METHOD, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
-@MappingOption(IndexConverter.class)
-public @interface Index {
+@MappingOption(SearchableConverter.class)
+public @interface Searchable {
 	//@todo set index name here
 	boolean value() default true;
 }

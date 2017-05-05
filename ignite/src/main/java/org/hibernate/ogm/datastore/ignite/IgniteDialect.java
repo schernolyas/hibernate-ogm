@@ -44,7 +44,7 @@ import org.hibernate.ogm.datastore.ignite.impl.IgniteEmbeddedAssociationSnapshot
 import org.hibernate.ogm.datastore.ignite.impl.IgniteTupleSnapshot;
 import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
 import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
-import org.hibernate.ogm.datastore.ignite.options.Index;
+import org.hibernate.ogm.datastore.ignite.options.Searchable;
 import org.hibernate.ogm.datastore.ignite.options.impl.CollocatedAssociationOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.ReadThroughOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.StoreKeepBinaryOption;
@@ -206,7 +206,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		}
 		//@todo refactor it!
 		Class<?> entityType = IgniteCacheInitializer.getTableEntityTypeMapping().get( key.getTable() );
-		Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Index.class, false );
+		Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Searchable.class, false );
 
 
 		for ( String columnName : tuple.getColumnNames() ) {
@@ -223,7 +223,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 					if ( value != null ) {
 						//add value to index
 						BinaryObject currentBinaryObject = indexEntityCache.get( value );
-						BinaryObjectBuilder indexBuilder = currentBinaryObject != null ? currentBinaryObject.toBuilder() : provider.createBinaryObjectBuilder( "Index" );
+						BinaryObjectBuilder indexBuilder = currentBinaryObject != null ? currentBinaryObject.toBuilder() : provider.createBinaryObjectBuilder( "Searchable" );
 						if ( indexBuilder.getField( INDEX_FIELD ) == null ) {
 							HashSet idSet = new HashSet();
 							idSet.add( key.getColumnValues()[0] );
@@ -263,7 +263,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		Boolean isReadThrough = tupleContext.getTupleTypeContext().getOptionsContext().getUnique( ReadThroughOption.class );
 		if ( isReadThrough ) {
 			Class<?> entityType = IgniteCacheInitializer.getTableEntityTypeMapping().get( key.getTable() );
-			Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Index.class, false );
+			Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Searchable.class, false );
 			for ( Field searchableField : searchableFields ) {
 				log.debugf( "removeTuple: index cache name: %s" , IgniteCacheInitializer.generateIndexName( key.getTable() ,searchableField.getName() ) );
 				IgniteCache<Object, BinaryObject> indexEntityCache = provider.getEntityCache( IgniteCacheInitializer.generateIndexName( key.getTable() , searchableField.getName() ) );

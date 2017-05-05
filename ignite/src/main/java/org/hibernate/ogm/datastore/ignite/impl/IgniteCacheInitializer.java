@@ -26,7 +26,7 @@ import org.hibernate.HibernateException;
 import org.hibernate.ogm.datastore.ignite.IgniteProperties;
 import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
 import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
-import org.hibernate.ogm.datastore.ignite.options.Index;
+import org.hibernate.ogm.datastore.ignite.options.Searchable;
 import org.hibernate.ogm.datastore.ignite.options.impl.CacheStoreFactoryOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.ReadThroughOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.StoreKeepBinaryOption;
@@ -294,7 +294,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 			return Collections.emptyList();
 		}
 		//it is read-through entity. search fields with annotation 'searchable'
-		Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Index.class, false );
+		Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Searchable.class, false );
 		List<CacheConfiguration> cacheConfigurations = new ArrayList<>( searchableFields.length );
 		for ( int i = 0; i < searchableFields.length; i++ ) {
 			log.debugf( "index: %d ; fieldName: %s", i, searchableFields[i].getName() );
