@@ -16,7 +16,7 @@ import org.hibernate.ogm.transaction.impl.ForwardingTransactionCoordinator;
 import org.hibernate.resource.transaction.TransactionCoordinator;
 import org.hibernate.resource.transaction.spi.TransactionStatus;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.tx.OTransaction;
 
 /**
@@ -54,7 +54,7 @@ public class OrientDBJtaTransactionCoordinator extends ForwardingTransactionCoor
 	}
 
 	private void join() {
-		ODatabaseDocumentTx database = datastoreProvider.getCurrentDatabase();
+		ODatabaseDocument database = datastoreProvider.getCurrentDatabase();
 
 		if ( currentOrientDBTransaction == null && delegate.isActive() ) {
 			log.debugf( "begin transaction for database %s", database.getName() );

@@ -6,20 +6,20 @@
  */
 package org.hibernate.ogm.datastore.orientdb.dialect.impl;
 
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
+import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
 
 /**
  * Container for the queries related to one entity type in OrientDB.
@@ -53,7 +53,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 	 * @return the corresponding node
 	 */
 
-	public ODocument findEntity(ODatabaseDocumentTx db, EntityKey entityKey) {
+	public ODocument findEntity(ODatabaseDocument db, EntityKey entityKey) {
 		StringBuilder query = new StringBuilder( "SELECT FROM " );
 		// search by business key
 		log.debugf( "column names: %s", Arrays.asList( entityKey.getColumnNames() ) );
@@ -76,7 +76,7 @@ public class OrientDBEntityQueries extends QueriesBase {
 	 * @return list of associations
 	 */
 
-	public List<ODocument> findAssociation(ODatabaseDocumentTx db, AssociationKey associationKey,
+	public List<ODocument> findAssociation(ODatabaseDocument db, AssociationKey associationKey,
 			AssociationContext associationContext) {
 		log.debugf( "findAssociation: associationKey: %s; associationContext: %s", associationKey, associationContext );
 		log.debugf( "findAssociation: associationKeyMetadata: %s", associationKey.getMetadata() );

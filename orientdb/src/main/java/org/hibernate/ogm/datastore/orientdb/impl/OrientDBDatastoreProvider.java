@@ -38,6 +38,7 @@ import org.hibernate.service.spi.Stoppable;
 
 import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
 import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
 
 /**
@@ -155,7 +156,7 @@ public class OrientDBDatastoreProvider extends BaseDatastoreProvider implements 
 		}
 	}
 
-	public ODatabaseDocumentTx getCurrentDatabase() {
+	public ODatabaseDocument getCurrentDatabase() {
 		return databaseHolder.get();
 	}
 

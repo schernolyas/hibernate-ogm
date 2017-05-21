@@ -12,12 +12,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.mapping.Column;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
-import org.hibernate.mapping.Column;
 import org.hibernate.ogm.model.key.spi.EntityKey;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 
 /**
@@ -74,7 +74,7 @@ public class EntityKeyUtil {
 		return buffer.toString();
 	}
 
-	public static boolean existsPrimaryKeyInDB(ODatabaseDocumentTx db, EntityKey key) {
+	public static boolean existsPrimaryKeyInDB(ODatabaseDocument db, EntityKey key) {
 
 		StringBuilder buffer = new StringBuilder( 100 );
 		buffer.append( "select count(@rid) as c from " );

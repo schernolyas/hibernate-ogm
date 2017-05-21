@@ -19,22 +19,23 @@ import java.util.Map;
 import org.hibernate.StaleObjectStateException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.ogm.datastore.orientdb.constant.OrientDBConstant;
+import org.hibernate.ogm.datastore.orientdb.dialect.impl.ODocumentListTupleIterator;
 import org.hibernate.ogm.datastore.orientdb.dialect.impl.OrientDBAssociationQueries;
 import org.hibernate.ogm.datastore.orientdb.dialect.impl.OrientDBAssociationSnapshot;
 import org.hibernate.ogm.datastore.orientdb.dialect.impl.OrientDBEntityQueries;
 import org.hibernate.ogm.datastore.orientdb.dialect.impl.OrientDBTupleAssociationSnapshot;
 import org.hibernate.ogm.datastore.orientdb.dialect.impl.OrientDBTupleSnapshot;
-import org.hibernate.ogm.datastore.orientdb.dialect.impl.ODocumentListTupleIterator;
 import org.hibernate.ogm.datastore.orientdb.dto.GenerationResult;
 import org.hibernate.ogm.datastore.orientdb.impl.OrientDBDatastoreProvider;
-import org.hibernate.ogm.datastore.orientdb.schema.OrientDBDocumentSchemaDefiner;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.orientdb.query.impl.OrientDBParameterMetadataBuilder;
+import org.hibernate.ogm.datastore.orientdb.schema.OrientDBDocumentSchemaDefiner;
 import org.hibernate.ogm.datastore.orientdb.type.spi.ORecordIdGridType;
 import org.hibernate.ogm.datastore.orientdb.type.spi.ORidBagGridType;
 import org.hibernate.ogm.datastore.orientdb.utils.EntityKeyUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.InsertQueryGenerator;
+import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
 import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner;
 import org.hibernate.ogm.datastore.orientdb.utils.QueryTypeDefiner.QueryType;
 import org.hibernate.ogm.datastore.orientdb.utils.SequenceUtil;
@@ -67,6 +68,7 @@ import org.hibernate.ogm.model.key.spi.IdSourceKeyMetadata.IdSourceType;
 import org.hibernate.ogm.model.key.spi.RowKey;
 import org.hibernate.ogm.model.spi.Association;
 import org.hibernate.ogm.model.spi.AssociationOperation;
+import org.hibernate.ogm.model.spi.EntityMetadataInformation;
 import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.model.spi.Tuple.SnapshotType;
 import org.hibernate.ogm.persister.impl.OgmCollectionPersister;
@@ -76,12 +78,10 @@ import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.type.Type;
 
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 import com.orientechnologies.orient.core.db.record.ridbag.ORidBag;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
-import org.hibernate.ogm.datastore.orientdb.utils.NativeQueryUtil;
-import org.hibernate.ogm.model.spi.EntityMetadataInformation;
 
 /**
  * Implementation of dialect for OrientDB
@@ -159,7 +159,7 @@ public class OrientDBDialect extends BaseGridDialect
 		Tuple tuple = tuplePointer.getTuple();
 		log.debugf( "insertOrUpdateTuple:EntityKey: %s ; tupleContext: %s ; tuple: %s ; thread: %s",
 				key, tupleContext, tuple, Thread.currentThread().getName() );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 		OrientDBTupleSnapshot snapshot = (OrientDBTupleSnapshot) tuple.getSnapshot();
 		boolean existsInDB = EntityKeyUtil.existsPrimaryKeyInDB( db, key );
 		QueryType queryType = QueryTypeDefiner.define( existsInDB, snapshot.isNew() );
@@ -229,7 +229,7 @@ public class OrientDBDialect extends BaseGridDialect
 	public void removeTuple(EntityKey key, TupleContext tupleContext) {
 		log.debugf( "removeTuple:EntityKey: %s ; tupleContext %s ; current thread: %s",
 				key, tupleContext, Thread.currentThread().getName() );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 		StringBuilder queryBuffer = new StringBuilder( 100 );
 		queryBuffer.append( "select from " ).append( key.getTable() ).append( " where " ).append( EntityKeyUtil.generatePrimaryKeyPredicate( key ) );
 		log.debugf( "removeTuple:Key: %s. query: %s ", key, queryBuffer );
@@ -244,7 +244,7 @@ public class OrientDBDialect extends BaseGridDialect
 	public Association getAssociation(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "getAssociation:AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
 		EntityKey entityKey = associationKey.getEntityKey();
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 		boolean existsPrimaryKey = EntityKeyUtil.existsPrimaryKeyInDB( db, entityKey );
 		if ( !existsPrimaryKey ) {
 			return ASSOCIATION_NOT_FOUND;
@@ -256,7 +256,7 @@ public class OrientDBDialect extends BaseGridDialect
 
 	private Map<RowKey, Tuple> createAssociationMap(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "createAssociationMap:AssociationKey: %s ; AssociationContext: %s", associationKey, associationContext );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 		List<ODocument> relationships = entityQueries.get( associationKey.getEntityKey().getMetadata() )
 				.findAssociation( db, associationKey, associationContext );
 
@@ -344,7 +344,7 @@ public class OrientDBDialect extends BaseGridDialect
 	private void putAssociationOperation(Association association, AssociationKey associationKey, AssociationOperation action,
 			AssociatedEntityKeyMetadata associatedEntityKeyMetadata) {
 		log.debugf( "putAssociationOperation: : action: %s ; metadata: %s; association:%s", action, associationKey.getMetadata(), association );
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 		if ( associationQueries.containsKey( associationKey.getMetadata() ) ) {
 			List<Map<String, Object>> relationship = associationQueries.get( associationKey.getMetadata() ).findRelationship( db,
 					associationKey, action.getKey() );
@@ -398,7 +398,7 @@ public class OrientDBDialect extends BaseGridDialect
 	public Number nextValue(NextValueRequest request) {
 		log.debugf( "NextValueRequest: %s", request );
 		long nextValue = 0;
-		ODatabaseDocumentTx db = provider.getCurrentDatabase();
+		ODatabaseDocument db = provider.getCurrentDatabase();
 		IdSourceType type = request.getKey().getMetadata().getType();
 		switch ( type ) {
 			case SEQUENCE:

@@ -6,12 +6,12 @@
  */
 package org.hibernate.ogm.datastore.orientdb.connection;
 
-import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
-import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
-
 import org.hibernate.ogm.datastore.orientdb.logging.impl.Log;
 import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
+
+import com.orientechnologies.orient.core.db.OPartitionedDatabasePool;
+import com.orientechnologies.orient.core.db.OPartitionedDatabasePoolFactory;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocument;
 
 /**
  * The class is thread local database holder.
@@ -26,7 +26,7 @@ import org.hibernate.ogm.datastore.orientdb.logging.impl.LoggerFactory;
  * @see <a href="http://orientdb.com/docs/2.2/Transactions.html">Transactions in OrientDB</a>
  * @see <a href="http://orientdb.com/docs/2.2/Java-Multi-Threading.html">Multi-Threading in OrientDB</a>
  */
-public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
+public class DatabaseHolder extends ThreadLocal<ODatabaseDocument> {
 
 	private static Log log = LoggerFactory.getLogger();
 	private final String orientDbUrl;
@@ -43,7 +43,7 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
 	}
 
 	@Override
-	protected ODatabaseDocumentTx initialValue() {
+	protected ODatabaseDocument initialValue() {
 		log.debugf( "create database %s for thread %s", orientDbUrl, Thread.currentThread().getName() );
 		return createConnectionForCurrentThread();
 	}
@@ -51,14 +51,14 @@ public class DatabaseHolder extends ThreadLocal<ODatabaseDocumentTx> {
 	@Override
 	public void remove() {
 		log.debugf( "drop database for thread %s", Thread.currentThread().getName() );
-		ODatabaseDocumentTx currentDb = get();
+		ODatabaseDocument currentDb = get();
 		currentDb.close();
 		super.remove();
 	}
 
-	private ODatabaseDocumentTx createConnectionForCurrentThread() {
+	private ODatabaseDocument createConnectionForCurrentThread() {
 		OPartitionedDatabasePool pool = factory.get( this.orientDbUrl, this.user, this.password );
-		ODatabaseDocumentTx db = pool.acquire();
+		ODatabaseDocument db = pool.acquire();
 		db.getMetadata().reload();
 		db.setValidationEnabled( true );
 		return db;
