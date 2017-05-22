@@ -39,6 +39,7 @@
                     <dependenciesToScan>
                         <dependency>org.hibernate.ogm:hibernate-ogm-core</dependency>
                     </dependenciesToScan>
+                    <argLine>-XX:MaxDirectMemorySize=2g</argLine>
                 </configuration>
             </plugin>
             <plugin>

@@ -232,7 +232,7 @@ public class TestHelper {
 		settings.put( OgmProperties.ENABLED, "true" );
 		settings.put( Environment.HBM2DDL_AUTO, "none" );
 		settings.put( "hibernate.search.default.directory_provider", "ram" );
-		settings.putAll( HELPER.getAdditionalConfigurationProperties() );
+		settings.putAll( HELPER.getEnvironmentProperties() );
 		return settings;
 	}
 

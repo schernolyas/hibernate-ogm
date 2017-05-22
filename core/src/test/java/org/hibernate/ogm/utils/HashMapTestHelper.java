@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.utils;
 
+import java.util.Collections;
 import java.util.Map;
 
 import org.hibernate.Session;
@@ -85,10 +86,9 @@ public class HashMapTestHelper implements GridDialectTestHelper {
 	}
 
 	@Override
-	public Map<String, String> getAdditionalConfigurationProperties() {
-		throw new UnsupportedOperationException( "Not supported yet." ); //To change body of generated methods, choose Tools | Templates.
+	public Map<String, String> getEnvironmentProperties() {
+		return Collections.emptyMap();
 	}
-
 
 	@Override
 	public long getNumberOfAssociations(SessionFactory sessionFactory, AssociationStorageType type) {
