@@ -221,57 +221,70 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		Boolean writeThroughValue = getWriteThroughOptionValue( optionsService, entityType );
 		Boolean storeKeepBinaryValue = getStoreKeepBinaryOptionValue( optionsService, entityType );
 		Class cacheStoreFactoryValue = getCacheStoreFactoryOptionValue( optionsService, entityType );
-		log.debugf( "readThroughValue:%b;writeThroughValue:%b;cacheStoreFactoryValue:%s",
-					readThroughValue,writeThroughValue,cacheStoreFactoryValue );
+		log.debugf( "readThroughValue:%b;writeThroughValue:%b;",
+					readThroughValue,writeThroughValue );
 
 		CacheConfiguration cacheConfiguration = new CacheConfiguration();
-		cacheConfiguration.setWriteThrough( writeThroughValue );
-		cacheConfiguration.setReadThrough( readThroughValue );
 		cacheConfiguration.setStoreKeepBinary( storeKeepBinaryValue );
-		setCacheStoreFactory( cacheConfiguration, cacheStoreFactoryValue, entityType.getName(), propertyReader );
+		setCacheStoreFactory( cacheConfiguration, cacheStoreFactoryValue, entityType.getName(), propertyReader,readThroughValue, writeThroughValue );
 
 		cacheConfiguration.setName( StringHelper.stringBeforePoint( entityKeyMetadata.getTable() ) );
 		cacheConfiguration.setAtomicityMode( CacheAtomicityMode.TRANSACTIONAL );
-
-		QueryEntity queryEntity = new QueryEntity();
-		queryEntity.setKeyType( getEntityIdClassName( entityKeyMetadata.getTable(), context ) );
-		queryEntity.setValueType( StringHelper.stringAfterPoint( entityKeyMetadata.getTable() ) );
-		for ( AssociationKeyMetadata associationKeyMetadata : context.getAllAssociationKeyMetadata() ) {
-			if ( associationKeyMetadata.getAssociationKind() != AssociationKind.EMBEDDED_COLLECTION
-					&& associationKeyMetadata.getTable().equals( entityKeyMetadata.getTable() )
-					&& !IgniteAssociationSnapshot.isThirdTableAssociation( associationKeyMetadata ) ) {
-				appendIndex( queryEntity, associationKeyMetadata, context );
+		if ( !( readThroughValue || writeThroughValue ) ) {
+			QueryEntity queryEntity = new QueryEntity();
+			queryEntity.setKeyType( getEntityIdClassName( entityKeyMetadata.getTable(), context ) );
+			queryEntity.setValueType( StringHelper.stringAfterPoint( entityKeyMetadata.getTable() ) );
+			for ( AssociationKeyMetadata associationKeyMetadata : context.getAllAssociationKeyMetadata() ) {
+				if ( associationKeyMetadata.getAssociationKind() != AssociationKind.EMBEDDED_COLLECTION
+						&& associationKeyMetadata.getTable().equals( entityKeyMetadata.getTable() )
+						&& !IgniteAssociationSnapshot.isThirdTableAssociation( associationKeyMetadata ) ) {
+					appendIndex( queryEntity, associationKeyMetadata, context );
+				}
 			}
+			cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
 		}
-		cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
 		return cacheConfiguration;
 	}
 
 	@SuppressWarnings("unchecked")
 	private void setCacheStoreFactory( CacheConfiguration cacheConfiguration, Class cacheStoreFactoryValue, String entityName,
-			ConfigurationPropertyReader propertyReader) {
+			ConfigurationPropertyReader propertyReader,Boolean readThroughValue,Boolean writeThroughValue) {
 		try {
+			log.infof( "set CacheStoreFactory  for Entity %s",  entityName );
 			String factoryName = propertyReader.property( String.format( IgniteProperties.IGNITE_CACHE_STORE_FACTORY_TEMPLATE,
 					entityName ), String.class ).getValue();
+			log.infof( "1. factoryName: %s",  factoryName );
 			if ( factoryName != null ) {
 				// set factory class from properties file
 				log.infof( "set CacheStoreFactory class %s for Entity %s", factoryName, entityName );
 				Class<?> factoryClass = Class.forName( factoryName );
 				cacheConfiguration.setCacheStoreFactory( (Factory<? extends CacheStore>) factoryClass.newInstance() );
+				cacheConfiguration.setReadThrough( readThroughValue );
+				cacheConfiguration.setWriteThrough( writeThroughValue );
 			}
 			else {
 				String adapterClassName = propertyReader.property( String.format(
 						IgniteProperties.IGNITE_CACHE_STORE_CLASS_TEMPLATE, entityName ), String.class )
 						.getValue();
+				log.infof( "2. adapterClassName: %s",  adapterClassName );
 				if ( adapterClassName != null ) {
 					// set adapter class from properties file
-					log.infof( "set CacheStore class %s for Entity %s", factoryName, entityName );
+					log.infof( "set CacheStore class %s for Entity %s", adapterClassName, entityName );
 					cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( Class.forName( adapterClassName ) ) );
+					cacheConfiguration.setReadThrough( readThroughValue );
+					cacheConfiguration.setWriteThrough( writeThroughValue );
+					return;
+
 				}
-				else if ( cacheStoreFactoryValue != null ) {
+				log.infof( "3. cacheStoreFactoryValue: %s",  cacheStoreFactoryValue );
+				if ( cacheStoreFactoryValue != null ) {
 					// set adapter class from annotation
 					log.infof( "set CacheStoreFactory class %s from annotation for Entity %s", cacheStoreFactoryValue, entityName );
 					cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( cacheStoreFactoryValue ) );
+					cacheConfiguration.setReadThrough( readThroughValue );
+					cacheConfiguration.setWriteThrough( writeThroughValue );
+					return;
+
 				}
 			}
 		}
