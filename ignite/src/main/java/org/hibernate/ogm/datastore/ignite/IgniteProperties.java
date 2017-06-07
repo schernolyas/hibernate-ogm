@@ -8,6 +8,9 @@ package org.hibernate.ogm.datastore.ignite;
 
 import org.hibernate.ogm.datastore.keyvalue.cfg.KeyValueStoreProperties;
 
+import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
+
 /**
  * Properties for configuring the Ignite datastore
  *
@@ -37,6 +40,26 @@ public final class IgniteProperties implements KeyValueStoreProperties {
 
 	public static final String IGNITE_CACHE_STORE_CLASS_TEMPLATE = "hibernate.ogm.ignite.persistent_store.%s.cache_store_class";
 	public static final String IGNITE_CACHE_STORE_FACTORY_TEMPLATE = "hibernate.ogm.ignite.persistent_store.%s.cache_store_factory";
+
+	public static final String IGNITE_ALLOWS_TRANSACTION_EMULATION = "hibernate.ogm.ignite.allows_transaction_emulation";
+	/**
+	 * Configuration property 'concurrency' for {@link org.apache.ignite.IgniteTransactions#txStart(TransactionConcurrency, TransactionIsolation, long, int)}
+	 * @see org.apache.ignite.transactions.TransactionConcurrency
+	 */
+	public static final String IGNITE_TRANSACTION_CONCURRENCY = "hibernate.ogm.ignite.transaction.concurrency";
+	/**
+	 * Configuration property 'isolation' for {@link org.apache.ignite.IgniteTransactions#txStart(TransactionConcurrency, TransactionIsolation, long, int)}
+	 * @see org.apache.ignite.transactions.TransactionIsolation
+	 */
+	public static final String IGNITE_TRANSACTION_ISOLATION = "hibernate.ogm.ignite.transaction.isolation";
+	/**
+	 * Configuration property 'timeout' for {@link org.apache.ignite.IgniteTransactions#txStart(TransactionConcurrency, TransactionIsolation, long, int)}
+	 */
+	public static final String IGNITE_TRANSACTION_TIMEOUT = "hibernate.ogm.ignite.transaction.timeout";
+	/**
+	 * Configuration property 'txsize' for {@link org.apache.ignite.IgniteTransactions#txStart(TransactionConcurrency, TransactionIsolation, long, int)}
+	 */
+	public static final String IGNITE_TRANSACTION_TXSIZE = "hibernate.ogm.ignite.transaction.txsize";
 
 	private IgniteProperties() {
 

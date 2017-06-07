@@ -46,6 +46,7 @@ import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
 import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.ignite.query.impl.QueryHints;
 import org.hibernate.ogm.datastore.ignite.query.parsing.impl.IgniteQueryParserService;
+import org.hibernate.ogm.datastore.ignite.transaction.impl.IgniteTransactionCoordinatorBuilder;
 import org.hibernate.ogm.datastore.ignite.transaction.impl.IgniteTransactionManagerFactory;
 import org.hibernate.ogm.datastore.ignite.util.StringHelper;
 import org.hibernate.ogm.datastore.spi.BaseDatastoreProvider;
@@ -60,6 +61,7 @@ import org.hibernate.ogm.model.key.spi.IdSourceKeyMetadata;
 import org.hibernate.ogm.model.key.spi.RowKey;
 import org.hibernate.ogm.query.spi.QueryParserService;
 import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
+import org.hibernate.resource.transaction.TransactionCoordinatorBuilder;
 import org.hibernate.service.spi.Configurable;
 import org.hibernate.service.spi.ServiceException;
 import org.hibernate.service.spi.ServiceRegistryAwareService;
@@ -487,4 +489,25 @@ public class IgniteDatastoreProvider extends BaseDatastoreProvider
 	private String getEntityCacheName(String entity) {
 		return StringHelper.stringBeforePoint( entity ) ;
 	}
+	/* (non-Javadoc)
+	 * @see org.hibernate.ogm.datastore.spi.BaseDatastoreProvider#allowsTransactionEmulation()
+	 */
+	@Override
+	public boolean allowsTransactionEmulation() {
+		boolean allowsTransactionEmulation = propertyReader.property( IgniteProperties.IGNITE_ALLOWS_TRANSACTION_EMULATION, Boolean.class )
+				.withDefault( Boolean.FALSE )
+				.getValue();
+		log.infof( "allows transaction emulation : %s",allowsTransactionEmulation );
+		return allowsTransactionEmulation;
+	}
+
+	/* (non-Javadoc)
+	 * @see org.hibernate.ogm.datastore.spi.BaseDatastoreProvider#getTransactionCoordinatorBuilder(org.hibernate.resource.transaction.TransactionCoordinatorBuilder)
+	 */
+	@Override
+	public TransactionCoordinatorBuilder getTransactionCoordinatorBuilder(TransactionCoordinatorBuilder coordinatorBuilder) {
+		// TODO Auto-generated method stub
+		return new IgniteTransactionCoordinatorBuilder( coordinatorBuilder, this );
+	}
+	
 }
