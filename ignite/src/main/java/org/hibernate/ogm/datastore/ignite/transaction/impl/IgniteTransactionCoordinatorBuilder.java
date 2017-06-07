@@ -9,12 +9,9 @@ package org.hibernate.ogm.datastore.ignite.transaction.impl;
 import org.hibernate.ConnectionAcquisitionMode;
 import org.hibernate.ConnectionReleaseMode;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteDatastoreProvider;
-import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 import org.hibernate.resource.transaction.TransactionCoordinator;
 import org.hibernate.resource.transaction.TransactionCoordinatorBuilder;
 import org.hibernate.resource.transaction.spi.TransactionCoordinatorOwner;
-
-import org.apache.ignite.transactions.TransactionConcurrency;
 
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
@@ -22,34 +19,33 @@ import org.apache.ignite.transactions.TransactionConcurrency;
 public class IgniteTransactionCoordinatorBuilder implements TransactionCoordinatorBuilder {
 	private final TransactionCoordinatorBuilder delegate;
 	private final IgniteDatastoreProvider datastoreProvider;
-	
 
 	/**
 	 * @param delegate transaction delegate
 	 * @param datastoreProvider instance of IgniteDatastoreProvider
 	 */
 	public IgniteTransactionCoordinatorBuilder(
-			TransactionCoordinatorBuilder delegate,IgniteDatastoreProvider datastoreProvider) {
+			TransactionCoordinatorBuilder delegate, IgniteDatastoreProvider datastoreProvider) {
 		super();
 		this.delegate = delegate;
 		this.datastoreProvider = datastoreProvider;
 	}
 
 	@Override
-	public TransactionCoordinator buildTransactionCoordinator(TransactionCoordinatorOwner owner, TransactionCoordinatorOptions options) {
+	public TransactionCoordinator buildTransactionCoordinator(
+			TransactionCoordinatorOwner owner,
+			TransactionCoordinatorOptions options) {
 		TransactionCoordinator coordinator = delegate.buildTransactionCoordinator( owner, options );
 		if ( delegate.isJta() ) {
 			//return new IgniteJtaTransactionCoordinator( coordinator, datastoreProvider );
 			//@todo add currect code of Victor
-			throw new UnsupportedOperationException("Not supported yet");
+			throw new UnsupportedOperationException( "Not supported yet" );
 		}
 		else {
 
 
-
-
 			return new IgniteLocalTransactionCoordinator( coordinator, datastoreProvider );
-}
+		}
 	}
 
 	@Override

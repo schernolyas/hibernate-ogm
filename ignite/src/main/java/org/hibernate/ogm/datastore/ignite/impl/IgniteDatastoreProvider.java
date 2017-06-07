@@ -75,7 +75,7 @@ import org.hibernate.service.spi.Stoppable;
  * @author Dmitriy Kozlov
  */
 public class IgniteDatastoreProvider extends BaseDatastoreProvider
-		implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
+implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 
 	private static final long serialVersionUID = 2278253954737494852L;
 	private static final Log log = LoggerFactory.getLogger();
@@ -144,8 +144,8 @@ public class IgniteDatastoreProvider extends BaseDatastoreProvider
 
 	public IgniteCache<Object, BinaryObject> getAssociationCache(AssociationKeyMetadata keyMetadata) {
 		return keyMetadata.getAssociationKind() == AssociationKind.EMBEDDED_COLLECTION
-					? getEntityCache( keyMetadata.getEntityKeyMetadata() )
-					: getEntityCache( keyMetadata.getTable() );
+				? getEntityCache( keyMetadata.getEntityKeyMetadata() )
+						: getEntityCache( keyMetadata.getTable() );
 	}
 
 	public IgniteCache<String, Long> getIdSourceCache(IdSourceKeyMetadata keyMetadata) {
@@ -233,8 +233,8 @@ public class IgniteDatastoreProvider extends BaseDatastoreProvider
 							"Neither " + IgniteProperties.CONFIGURATION_RESOURCE_NAME
 							+ " nor " + IgniteProperties.CONFIGURATION_CLASS_NAME
 							+ " properties is not set"
-					)
-			);
+							)
+					);
 		}
 		if ( !( jtaPlatform instanceof NoJtaPlatform ) ) {
 			conf.getTransactionConfiguration().setTxManagerFactory( new IgniteTransactionManagerFactory( jtaPlatform ) );
@@ -489,25 +489,26 @@ public class IgniteDatastoreProvider extends BaseDatastoreProvider
 	private String getEntityCacheName(String entity) {
 		return StringHelper.stringBeforePoint( entity ) ;
 	}
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
 	 * @see org.hibernate.ogm.datastore.spi.BaseDatastoreProvider#allowsTransactionEmulation()
 	 */
 	@Override
 	public boolean allowsTransactionEmulation() {
 		boolean allowsTransactionEmulation = propertyReader.property( IgniteProperties.IGNITE_ALLOWS_TRANSACTION_EMULATION, Boolean.class )
-				.withDefault( Boolean.FALSE )
-				.getValue();
-		log.infof( "allows transaction emulation : %s",allowsTransactionEmulation );
+				.withDefault( Boolean.FALSE ).getValue();
 		return allowsTransactionEmulation;
 	}
 
-	/* (non-Javadoc)
-	 * @see org.hibernate.ogm.datastore.spi.BaseDatastoreProvider#getTransactionCoordinatorBuilder(org.hibernate.resource.transaction.TransactionCoordinatorBuilder)
+	/*
+	 * (non-Javadoc)
+	 * @see
+	 * org.hibernate.ogm.datastore.spi.BaseDatastoreProvider#getTransactionCoordinatorBuilder(org.hibernate.resource.
+	 * transaction.TransactionCoordinatorBuilder)
 	 */
 	@Override
 	public TransactionCoordinatorBuilder getTransactionCoordinatorBuilder(TransactionCoordinatorBuilder coordinatorBuilder) {
-		// TODO Auto-generated method stub
 		return new IgniteTransactionCoordinatorBuilder( coordinatorBuilder, this );
 	}
-	
 }

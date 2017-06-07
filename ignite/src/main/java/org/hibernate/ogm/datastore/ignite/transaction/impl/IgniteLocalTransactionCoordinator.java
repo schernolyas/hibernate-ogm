@@ -16,10 +16,10 @@ import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReade
 import org.hibernate.resource.transaction.TransactionCoordinator;
 
 import org.apache.ignite.IgniteTransactions;
+import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
-import org.apache.ignite.configuration.TransactionConfiguration;
 
 /**
  * Coordinator for local transactions
@@ -35,9 +35,7 @@ public class IgniteLocalTransactionCoordinator extends ForwardingTransactionCoor
 	private final long timeout;
 	private final int txSize;
 
-	private  IgniteTransactions igniteTransactions;
-
-
+	private IgniteTransactions igniteTransactions;
 
 	/**
 	 * Constructor
@@ -45,20 +43,21 @@ public class IgniteLocalTransactionCoordinator extends ForwardingTransactionCoor
 	 * @param delegate transaction coordinator delegate
 	 * @param datastoreProvider Ignite Datastore provider
 	 */
-	public IgniteLocalTransactionCoordinator(TransactionCoordinator delegate, IgniteDatastoreProvider datastoreProvider) {
+	public IgniteLocalTransactionCoordinator(
+			TransactionCoordinator delegate,
+			IgniteDatastoreProvider datastoreProvider) {
 		super( delegate );
 		this.datastoreProvider = datastoreProvider;
 		this.igniteTransactions = datastoreProvider.getCacheManager().transactions();
 
 		ConfigurationPropertyReader propertyReader = datastoreProvider.getPropertyReader();
-		this.concurrency = propertyReader.property( IgniteProperties.IGNITE_TRANSACTION_CONCURRENCY,TransactionConcurrency.class ).
-				withDefault(TransactionConfiguration.DFLT_TX_CONCURRENCY ).getValue();
-		this.isolation = propertyReader.property( IgniteProperties.IGNITE_TRANSACTION_ISOLATION,TransactionIsolation.class ).
-				withDefault(TransactionConfiguration.DFLT_TX_ISOLATION ).getValue();
-		this.timeout = propertyReader.property( IgniteProperties.IGNITE_TRANSACTION_TIMEOUT,Long.class ).
-				withDefault(TransactionConfiguration.DFLT_TRANSACTION_TIMEOUT ).getValue();
-		this.txSize = propertyReader.property( IgniteProperties.IGNITE_TRANSACTION_TXSIZE,Integer.class ).
-				withDefault(0).getValue();
+		this.concurrency = propertyReader.property( IgniteProperties.IGNITE_TRANSACTION_CONCURRENCY,
+				TransactionConcurrency.class ).withDefault( TransactionConfiguration.DFLT_TX_CONCURRENCY ).getValue();
+		this.isolation = propertyReader.property( IgniteProperties.IGNITE_TRANSACTION_ISOLATION, TransactionIsolation.class )
+				.withDefault( TransactionConfiguration.DFLT_TX_ISOLATION ).getValue();
+		this.timeout = propertyReader.property( IgniteProperties.IGNITE_TRANSACTION_TIMEOUT, Long.class )
+				.withDefault( TransactionConfiguration.DFLT_TRANSACTION_TIMEOUT ).getValue();
+		this.txSize = propertyReader.property( IgniteProperties.IGNITE_TRANSACTION_TXSIZE, Integer.class ).withDefault( 0 ).getValue();
 	}
 
 	@Override
@@ -104,7 +103,7 @@ public class IgniteLocalTransactionCoordinator extends ForwardingTransactionCoor
 
 		@Override
 		public void begin() {
-			Transaction currentIgniteTransaction = igniteTransactions.txStart(concurrency,isolation,timeout,txSize);
+			Transaction currentIgniteTransaction = igniteTransactions.txStart( concurrency, isolation, timeout, txSize );
 			log.debugf( "begin new transaction: %s", currentIgniteTransaction );
 			super.begin();
 		}

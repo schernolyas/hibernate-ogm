@@ -6,8 +6,6 @@
  */
 package org.hibernate.ogm.datastore.ignite.utils.test.transaction;
 
-import static org.fest.assertions.Assertions.assertThat;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -15,23 +13,19 @@ import java.util.Map;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.ogm.datastore.ignite.IgniteProperties;
-import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
-import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
 import org.hibernate.ogm.utils.OgmTestCase;
-import org.junit.Rule;
+
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
+
+import static org.fest.assertions.Assertions.assertThat;
 
 /**
  * Local transaction testing
- * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  *
+ * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 public class LocalTransactionTest extends OgmTestCase {
-	private Log logger = LoggerFactory.getLogger();
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
-	
+
 	@Test
 	public void insertAssociations() {
 		Session session = openSession();
@@ -46,13 +40,13 @@ public class LocalTransactionTest extends OgmTestCase {
 		car1.setId( 1L );
 		car1.setTitle( "Maserati Birdcage" );
 		session.persist( car1 );
-		
+
 		Car car2 = new Car();
 		car2.setId( 2L );
 		car2.setTitle( "Ferrari 488 Spider" );
 		session.persist( car2 );
 		//add associations
-		
+
 		List<Car> cars = new LinkedList<>();
 		cars.add( car1 );
 		cars.add( car2 );
@@ -62,20 +56,20 @@ public class LocalTransactionTest extends OgmTestCase {
 			session.update( car );
 		}
 		session.update( garage );
-		
+
 		transaction.commit();
 		session.clear();
-		
+
 		// checking
-		Transaction transaction1 = session.beginTransaction();		
-		garage = (Garage) session.get( Garage.class,1L );
-		assertThat(garage).isNotNull();
-		assertThat(garage.getCars()).isNotNull();
-		assertThat(garage.getCars().size()).isEqualTo( 2 );
-		assertThat(garage.getCars()).contains( car1,car2 );
+		Transaction transaction1 = session.beginTransaction();
+		garage = (Garage) session.get( Garage.class, 1L );
+		assertThat( garage ).isNotNull();
+		assertThat( garage.getCars() ).isNotNull();
+		assertThat( garage.getCars().size() ).isEqualTo( 2 );
+		assertThat( garage.getCars() ).contains( car1, car2 );
 		transaction1.commit();
 	}
-	
+
 
 	/* (non-Javadoc)
 	 * @see org.hibernate.ogm.utils.OgmTestCase#getAnnotatedClasses()
@@ -83,7 +77,7 @@ public class LocalTransactionTest extends OgmTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 		// TODO Auto-generated method stub
-		return new Class[]{Car.class, Garage.class};
+		return new Class[] { Car.class, Garage.class };
 	}
 
 	/* (non-Javadoc)
@@ -93,7 +87,6 @@ public class LocalTransactionTest extends OgmTestCase {
 	protected void configure(Map<String, Object> settings) {
 		settings.put( IgniteProperties.IGNITE_ALLOWS_TRANSACTION_EMULATION, Boolean.TRUE );
 	}
-	
-	
+
 
 }
