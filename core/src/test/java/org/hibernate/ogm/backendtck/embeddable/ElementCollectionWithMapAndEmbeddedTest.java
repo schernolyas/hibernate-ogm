@@ -11,13 +11,17 @@ import static org.fest.assertions.MapAssert.entry;
 
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.ogm.utils.GridDialectType;
 import org.hibernate.ogm.utils.OgmTestCase;
+import org.hibernate.ogm.utils.SkipByGridDialect;
+
 import org.junit.Before;
 import org.junit.Test;
 
 /**
  * @author Davide D'Alto
  */
+@SkipByGridDialect( value = { GridDialectType.ORIENTDB }, comment = " OrientDB not supports it ")
 public class ElementCollectionWithMapAndEmbeddedTest extends OgmTestCase {
 
 	private ForumUser user;
