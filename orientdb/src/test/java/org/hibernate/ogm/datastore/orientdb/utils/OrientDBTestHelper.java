@@ -144,7 +144,7 @@ public class OrientDBTestHelper implements GridDialectTestHelper {
 		ConfigurationPropertyReader propertyReader = provider.getPropertyReader();
 		ODatabaseDocument db = provider.getCurrentDatabase();
 		log.infof( "call prepareDatabase! db closed: %s ", db.isClosed() );
-		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE TIMEZONE UTC" );
+		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE TIMEZONE \"UTC\"" );
 		NativeQueryUtil.executeNonIdempotentQuery( db, "ALTER DATABASE DATEFORMAT '"
 				.concat( PropertyReaderUtil.readDateFormatProperty( propertyReader ) )
 				.concat( "'" ) );
