@@ -6,13 +6,10 @@
  */
 package org.hibernate.ogm.datastore.ignite.utils.test.associations;
 
-import java.io.Serializable;
-import java.util.LinkedList;
-import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
+import javax.persistence.ManyToOne;
 
 import org.hibernate.ogm.datastore.ignite.options.CacheStoreFactory;
 import org.hibernate.ogm.datastore.ignite.options.ReadThrough;
@@ -26,22 +23,20 @@ import org.hibernate.ogm.datastore.ignite.options.WriteThrough;
 @ReadThrough
 @WriteThrough
 @StoreKeepBinary
-@CacheStoreFactory(JUGBinaryStore.class)
-public class CacheStoreJUG implements Serializable {
+@CacheStoreFactory(HallBinaryStore.class)
+public class CacheStoreHall {
 	private String id;
-	private String name;
-	private List<CacheStoreMember> members = new LinkedList<>();
-	private List<CacheStoreHall> halls = new LinkedList<>();
+	private CacheStoreJUG jug;
 
-	public CacheStoreJUG() {
+	public CacheStoreHall() {
 	}
 
-	public CacheStoreJUG(String id) {
+	public CacheStoreHall(String id) {
 		this.id = id;
 	}
 
 	@Id
-	@Column(name = "jug_id")
+	@Column(name = "hall_id")
 	public String getId() {
 		return id;
 	}
@@ -50,29 +45,12 @@ public class CacheStoreJUG implements Serializable {
 		this.id = id;
 	}
 
-	public String getName() {
-		return name;
+	@ManyToOne
+	public CacheStoreJUG getJug() {
+		return jug;
 	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	@OneToMany(mappedBy = "memberOf")
-	public List<CacheStoreMember> getMembers() {
-		return members;
-	}
-
-	public void setMembers(List<CacheStoreMember> members) {
-		this.members = members;
-	}
-
-	@OneToMany(mappedBy = "jug")
-	public List<CacheStoreHall> getHalls() {
-		return halls;
-	}
-
-	public void setHalls(List<CacheStoreHall> halls) {
-		this.halls = halls;
+	public void setJug(CacheStoreJUG jug) {
+		this.jug = jug;
 	}
 }

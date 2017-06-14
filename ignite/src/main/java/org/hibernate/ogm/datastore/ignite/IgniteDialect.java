@@ -314,7 +314,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				Object key = igniteTupleSnapshot.getCacheKey();
 				BinaryObject lastEntityVertion = entityCache.get( key );
 				log.debugf(
-						"getAssociation: lastEntityVertion.type().typeName(): %s; ",
+						"getAssociation: lastEntityVersion.type().typeName(): %s; ",
 						lastEntityVertion.type().typeName()
 				);
 				log.debugf(
@@ -324,6 +324,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				String notOwnerLinkFieldName = associationKey.getMetadata().getCollectionRole();
 
 				Map<Object, BinaryObject> associationMap = new LinkedHashMap<>();
+				log.debugf( "getAssociation: lastEntityVertion has field %s. Result: %b", notOwnerLinkFieldName, (lastEntityVertion.hasField( notOwnerLinkFieldName )) );
 				if ( lastEntityVertion.hasField( notOwnerLinkFieldName ) ) {
 					Collection associatedEntityKeys = lastEntityVertion.field( notOwnerLinkFieldName );
 					String associatedEntityName = associationKey.getTable();
@@ -333,6 +334,8 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 					for ( Object associatedKey : associatedEntityKeys ) {
 						associationMap.put( associatedKey, associatedEntityCache.get( associatedKey ) );
 					}
+				} else {
+					log.warnf("Entity %s with id %s not have field %s", igniteTupleSnapshot.getEntityKeyMetadata().getTable(),key, notOwnerLinkFieldName);
 				}
 				result = new Association( new IgniteAssociationSnapshot( associationKey, associationMap ) );
 			}
@@ -580,6 +583,45 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			associationCache.put( id, binaryObject );
 		}
 	}
+	private void removeInverseRelationship( AssociationKey associationKey, AssociationContext associationContext) {
+		TuplePointer tuplePointer = getOwnerEntityTuplePointer( associationKey, associationContext );
+		log.debugf( "removeInverseRelationship: tuplePointer: %s; ",
+					tuplePointer );
+		log.debugf( "removeInverseRelationship: key.getMetadata().isInverse(): %b; ",
+					associationKey.getMetadata().isInverse() );
+		IgniteTupleSnapshot igniteTupleSnapshot = (IgniteTupleSnapshot) tuplePointer.getTuple().getSnapshot();
+		log.debugf( "removeInverseRelationship: igniteTupleSnapshot.getCacheKey(): %s; ",
+					igniteTupleSnapshot.getCacheKey() );
+		log.debugf( "removeInverseRelationship: igniteTupleSnapshot.getEntityKeyMetadata(): %s; ",
+					igniteTupleSnapshot.getEntityKeyMetadata() );
+		boolean isReadThrough = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( ReadThroughOption.class );
+		boolean isStoreKeepBinary = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( StoreKeepBinaryOption.class );
+		log.debugf( "removeInverseRelationship: supports 'read-through' for entity: %s is %b ",
+					igniteTupleSnapshot.getEntityKeyMetadata().getTable(), isReadThrough );
+		if ( !isReadThrough ) {
+			//not needs to add association info to link non owner entity
+			return;
+		}
+		//need to remove link info
+		IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( igniteTupleSnapshot.getEntityKeyMetadata() );
+		if ( isStoreKeepBinary ) {
+			entityCache = entityCache.withKeepBinary();
+		}
+		Object key = igniteTupleSnapshot.getCacheKey();
+		BinaryObject lastEntityVersion = entityCache.get( key );
+		log.debugf( "insertInverseRelationship: lastEntityVersion.type().typeName(): %s; ",
+					lastEntityVersion.type().typeName() );
+		log.debugf( "insertInverseRelationship: associationKey.getMetadata().getCollectionRole(): %s; ",
+					associationKey.getMetadata().getCollectionRole() );
+		String notOwnerLinkFieldName = associationKey.getMetadata().getCollectionRole();
+		BinaryObjectBuilder builder = lastEntityVersion.toBuilder();
+		LinkedHashSet associationIds = new LinkedHashSet();
+		if ( lastEntityVersion.hasField( notOwnerLinkFieldName  ) ) {
+			associationIds.addAll( lastEntityVersion.field( notOwnerLinkFieldName  ) );
+		}
+		log.debugf( "removeInverseRelationship: associationKey: %s ",
+				   associationKey );
+	}
 
 	private void insertInverseRelationship( AssociationKey associationKey, Association association, AssociationContext associationContext) {
 		TuplePointer tuplePointer = getOwnerEntityTuplePointer( associationKey, associationContext );
@@ -606,44 +648,63 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			entityCache = entityCache.withKeepBinary();
 		}
 		Object key = igniteTupleSnapshot.getCacheKey();
-		BinaryObject lastEntityVertion = entityCache.get( key );
-		log.debugf( "insertOrUpdateAssociation: lastEntityVertion.type().typeName(): %s; ",
-					lastEntityVertion.type().typeName() );
-		log.debugf( "insertOrUpdateAssociation: associationKey.getMetadata().getCollectionRole(): %s; ",
+		BinaryObject lastEntityVersion = entityCache.get( key );
+		log.debugf( "insertInverseRelationship: lastEntityVersion.type().typeName(): %s; ",
+					lastEntityVersion.type().typeName() );
+		log.debugf( "insertInverseRelationship: associationKey.getMetadata().getCollectionRole(): %s; ",
 					associationKey.getMetadata().getCollectionRole() );
 		String notOwnerLinkFieldName = associationKey.getMetadata().getCollectionRole();
-		BinaryObjectBuilder builder = lastEntityVertion.toBuilder();
+		BinaryObjectBuilder builder = lastEntityVersion.toBuilder();
 		LinkedHashSet associationIds = new LinkedHashSet();
-		if ( lastEntityVertion.hasField( notOwnerLinkFieldName  ) ) {
-			associationIds.addAll( lastEntityVertion.field( notOwnerLinkFieldName  ) );
+		if ( lastEntityVersion.hasField( notOwnerLinkFieldName  ) ) {
+			associationIds.addAll( lastEntityVersion.field( notOwnerLinkFieldName  ) );
 		}
-		for ( RowKey rowKey : association.getKeys() ) {
-			//RowKey[memberOf_jug_id=summer_camp, member_id=emmanuel]
-			//@todo correct the magic number
-			String fieldNameFromOwnerSide = rowKey.getColumnNames()[1];
-			Object keyValueFromOwnerSide = rowKey.getColumnValue( fieldNameFromOwnerSide );
-			associationIds.add( keyValueFromOwnerSide );
+		for ( AssociationOperation op : association.getOperations() ) {
+			log.debugf( "insertInverseRelationship: operation type :(): %s; ",
+						op.getType() );
+			if (op.getType().equals( AssociationOperationType.PUT  )) {
+				for ( RowKey rowKey : association.getKeys() ) {
+					//RowKey[memberOf_jug_id=summer_camp, member_id=emmanuel]
+					//@todo correct the magic number
+					String fieldNameFromOwnerSide = rowKey.getColumnNames()[1];
+					Object keyValueFromOwnerSide = rowKey.getColumnValue( fieldNameFromOwnerSide );
+					associationIds.add( keyValueFromOwnerSide );
+				}
+			}  else if (op.getType().equals( AssociationOperationType.CLEAR  )) {
+				associationIds.clear();
+			}  else if (op.getType().equals( AssociationOperationType.REMOVE  )) {
+				associationIds.clear();
+				for ( RowKey rowKey : association.getKeys() ) {
+					//RowKey[memberOf_jug_id=summer_camp, member_id=emmanuel]
+					//@todo correct the magic number
+					String fieldNameFromOwnerSide = rowKey.getColumnNames()[1];
+					Object keyValueFromOwnerSide = rowKey.getColumnValue( fieldNameFromOwnerSide );
+					associationIds.add( keyValueFromOwnerSide );
+				}
+			}
 		}
-		log.debugf( "insertOrUpdateAssociation: notOwnerField: %s; value:%s ",
+
+
+		log.debugf( "insertInverseRelationship: notOwnerField: %s; value:%s ",
 					notOwnerLinkFieldName, associationIds
 		);
 		log.debugf(
-				"insertOrUpdateAssociation: associationKey.getMetadata().getAssociationType(): %s ",
+				"insertInverseRelationship: associationKey.getMetadata().getAssociationType(): %s ",
 				associationKey.getMetadata().getAssociationType()
 		);
 		switch ( associationKey.getMetadata().getAssociationType() ) {
 			case SET:
-				lastEntityVertion = builder.setField( notOwnerLinkFieldName, associationIds ).build();
+				lastEntityVersion = builder.setField( notOwnerLinkFieldName, associationIds ).build();
 				break;
 			case BAG:
-				lastEntityVertion = builder.setField( notOwnerLinkFieldName, new ArrayList<>( associationIds ) )
+				lastEntityVersion = builder.setField( notOwnerLinkFieldName, new ArrayList<>( associationIds ) )
 						.build();
 				break;
 			default:
 				throw new NotYetImplementedException( "Association Type " + associationKey.getMetadata()
 						.getAssociationType() + " not implemented yet!" );
 		}
-		entityCache.put( key, lastEntityVertion );
+		entityCache.put( key, lastEntityVersion );
 	}
 
 	/**
@@ -711,14 +772,22 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	}
 
 	@Override
-	public void removeAssociation(AssociationKey key, AssociationContext associationContext) {
-		if ( key.getMetadata().isInverse() ) {
-			return;
+	public void removeAssociation(AssociationKey associationKey, AssociationContext associationContext) {
+		log.debugf( "removeAssociation: associationKey: %s",associationKey );
+
+		if ( associationKey.getMetadata().isInverse() ) {
+			if ( associationKey.getMetadata().getAssociationKind() == AssociationKind.ASSOCIATION ) {
+				removeInverseRelationship( associationKey,  associationContext );
+				return;
+			}
+			else {
+				return;
+			}
 		}
 
-		IgniteCache<Object, BinaryObject> associationCache = provider.getAssociationCache( key.getMetadata() );
+		IgniteCache<Object, BinaryObject> associationCache = provider.getAssociationCache( associationKey.getMetadata() );
 
-		if ( key.getMetadata().getAssociationKind() == AssociationKind.ASSOCIATION ) {
+		if ( associationKey.getMetadata().getAssociationKind() == AssociationKind.ASSOCIATION ) {
 			QueryHints.Builder hintsBuilder = new QueryHints.Builder();
 			Boolean isCollocated = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( CollocatedAssociationOption.class );
 			if ( isCollocated ) {
@@ -728,18 +797,18 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			}
 			QueryHints hints = hintsBuilder.build();
 
-			if ( !IgniteAssociationSnapshot.isThirdTableAssociation( key.getMetadata() ) ) {
+			if ( !IgniteAssociationSnapshot.isThirdTableAssociation( associationKey.getMetadata() ) ) {
 				// clear reference
 				Map<Object, BinaryObject> changedObjects = new HashMap<>();
 
-				SqlFieldsQuery sqlQuery = provider.createSqlFieldsQueryWithLog( createAssociationQuery( key, true ), hints, key.getColumnValues() );
+				SqlFieldsQuery sqlQuery = provider.createSqlFieldsQueryWithLog( createAssociationQuery( associationKey, true ), hints, associationKey.getColumnValues() );
 				Iterable<List<?>> list = executeWithHints( associationCache, sqlQuery, hints );
 				for ( List<?> item : list ) {
 					Object id = item.get( /* _KEY */ 0 );
 					BinaryObject clearBo = (BinaryObject) item.get( /* _VALUE */ 1 );
 					if ( clearBo != null ) {
 						BinaryObjectBuilder clearBoBuilder = provider.createBinaryObjectBuilder( clearBo );
-						for ( String columnName : key.getMetadata().getRowKeyColumnNames() ) {
+						for ( String columnName : associationKey.getMetadata().getRowKeyColumnNames() ) {
 							clearBoBuilder.removeField( StringHelper.realColumnName( columnName ) );
 						}
 						changedObjects.put( id, clearBoBuilder.build() );
@@ -754,7 +823,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				// remove objects
 				Set<Object> removedObjects = new HashSet<>();
 
-				SqlFieldsQuery sqlQuery = provider.createSqlFieldsQueryWithLog( createAssociationQuery( key, false ), hints, key.getColumnValues() );
+				SqlFieldsQuery sqlQuery = provider.createSqlFieldsQueryWithLog( createAssociationQuery( associationKey, false ), hints, associationKey.getColumnValues() );
 				Iterable<List<?>> list = executeWithHints( associationCache, sqlQuery, hints );
 				for ( List<?> item : list ) {
 					removedObjects.add( /* _KEY */ item.get( 0 ) );
@@ -765,12 +834,12 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				}
 			}
 		}
-		else if ( key.getMetadata().getAssociationKind() == AssociationKind.EMBEDDED_COLLECTION ) {
+		else if ( associationKey.getMetadata().getAssociationKind() == AssociationKind.EMBEDDED_COLLECTION ) {
 			Object id = ( (IgniteTupleSnapshot) associationContext.getEntityTuplePointer().getTuple().getSnapshot() ).getCacheKey();
 			BinaryObject binaryObject = associationCache.get( id );
 			Contracts.assertNotNull( binaryObject, "binaryObject" );
 			BinaryObjectBuilder binaryObjectBuilder = provider.createBinaryObjectBuilder( binaryObject );
-			binaryObjectBuilder.removeField( key.getMetadata().getCollectionRole() );
+			binaryObjectBuilder.removeField( associationKey.getMetadata().getCollectionRole() );
 			binaryObject = binaryObjectBuilder.build();
 			associationCache.put( id, binaryObject );
 		}
