@@ -334,8 +334,9 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 					for ( Object associatedKey : associatedEntityKeys ) {
 						associationMap.put( associatedKey, associatedEntityCache.get( associatedKey ) );
 					}
-				} else {
-					log.warnf("Entity %s with id %s not have field %s", igniteTupleSnapshot.getEntityKeyMetadata().getTable(),key, notOwnerLinkFieldName);
+				}
+				else {
+					log.warnf( "Entity %s with id %s not have field %s", igniteTupleSnapshot.getEntityKeyMetadata().getTable() , key , notOwnerLinkFieldName );
 				}
 				result = new Association( new IgniteAssociationSnapshot( associationKey, associationMap ) );
 			}
@@ -619,8 +620,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		if ( lastEntityVersion.hasField( notOwnerLinkFieldName  ) ) {
 			associationIds.addAll( lastEntityVersion.field( notOwnerLinkFieldName  ) );
 		}
-		log.debugf( "removeInverseRelationship: associationKey: %s ",
-				   associationKey );
+		log.debugf( "removeInverseRelationship: associationKey: %s ", associationKey );
 	}
 
 	private void insertInverseRelationship( AssociationKey associationKey, Association association, AssociationContext associationContext) {
@@ -662,7 +662,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		for ( AssociationOperation op : association.getOperations() ) {
 			log.debugf( "insertInverseRelationship: operation type :(): %s; ",
 						op.getType() );
-			if (op.getType().equals( AssociationOperationType.PUT  )) {
+			if ( op.getType().equals( AssociationOperationType.PUT  ) ) {
 				for ( RowKey rowKey : association.getKeys() ) {
 					//RowKey[memberOf_jug_id=summer_camp, member_id=emmanuel]
 					//@todo correct the magic number
@@ -670,9 +670,11 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 					Object keyValueFromOwnerSide = rowKey.getColumnValue( fieldNameFromOwnerSide );
 					associationIds.add( keyValueFromOwnerSide );
 				}
-			}  else if (op.getType().equals( AssociationOperationType.CLEAR  )) {
+			}
+			else if ( op.getType().equals( AssociationOperationType.CLEAR  ) ) {
 				associationIds.clear();
-			}  else if (op.getType().equals( AssociationOperationType.REMOVE  )) {
+			}
+			else if ( op.getType().equals( AssociationOperationType.REMOVE  ) ) {
 				associationIds.clear();
 				for ( RowKey rowKey : association.getKeys() ) {
 					//RowKey[memberOf_jug_id=summer_camp, member_id=emmanuel]

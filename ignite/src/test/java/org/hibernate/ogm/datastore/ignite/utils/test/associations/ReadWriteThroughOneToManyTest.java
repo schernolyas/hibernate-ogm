@@ -143,7 +143,7 @@ public class ReadWriteThroughOneToManyTest extends OgmTestCase {
 		transaction.commit();
 
 		Transaction transaction1 = session.beginTransaction();
-		hall2 = session.get( CacheStoreHall.class, "2");
+		hall2 = session.get( CacheStoreHall.class, "2" );
 		assertThat( hall2 ).isNotNull();
 		session.delete( hall2 );
 		CacheStoreJUG jugFromCache = session.get( CacheStoreJUG.class, "summer_camp" );
@@ -162,7 +162,7 @@ public class ReadWriteThroughOneToManyTest extends OgmTestCase {
 
 		BinaryObject jugBinaryObject = JUGBinaryStore.store.get( jugFromCache.getId() );
 		Collection<?> hallsCollection = jugBinaryObject.field( "halls" );
-		logger.info( "hallsCollection: "+hallsCollection );
+		logger.info( "hallsCollection: " + hallsCollection );
 		assertThat( hallsCollection.size() ).isEqualTo( 1 );
 		assertThat( hallsCollection ).containsOnly( hall1.getId() );
 
