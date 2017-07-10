@@ -13,11 +13,9 @@ import org.hibernate.Transaction;
 import org.hibernate.ogm.backendtck.associations.collection.types.Child;
 import org.hibernate.ogm.backendtck.associations.collection.types.GrandChild;
 import org.hibernate.ogm.backendtck.associations.collection.types.GrandMother;
-import org.hibernate.ogm.datastore.impl.DatastoreProviderType;
 import org.hibernate.ogm.utils.BytemanHelper;
 import org.hibernate.ogm.utils.BytemanHelperStateCleanup;
 import org.hibernate.ogm.utils.OgmTestCase;
-import org.hibernate.ogm.utils.SkipByDatastoreProvider;
 import org.jboss.byteman.contrib.bmunit.BMRule;
 import org.jboss.byteman.contrib.bmunit.BMRules;
 import org.junit.Rule;
@@ -26,8 +24,11 @@ import org.junit.Test;
 /**
  * @author Guillaume Smet
  */
-@SkipByDatastoreProvider({ DatastoreProviderType.FONGO })
 public class MongoDBPerformanceTest extends OgmTestCase {
+
+	private static final String MONGO_COLLECTION = "com.mongodb.client.MongoCollection";
+	private static final String HELPER = "org.hibernate.ogm.utils.BytemanHelper";
+	private static final String BSON_DOCUMENT = "org.bson.conversions.Bson";
 
 	@Rule
 	public BytemanHelperStateCleanup bytemanState = new BytemanHelperStateCleanup();
@@ -35,31 +36,24 @@ public class MongoDBPerformanceTest extends OgmTestCase {
 	@Test
 	@BMRules(rules = {
 			@BMRule(
-					targetClass = "com.mongodb.DBCollection",
-					targetMethod = "insert(java.util.List, com.mongodb.WriteConcern)",
-					helper = "org.hibernate.ogm.utils.BytemanHelper",
+					targetClass = MONGO_COLLECTION,
+					isInterface = true,
+					targetMethod = "insertMany(java.util.List)",
+					helper = HELPER,
 					action = "countInvocation(\"update\")",
-					name = "countInsert"),
-			@BMRule(targetClass = "com.mongodb.DBCollection",
-					targetMethod = "update(com.mongodb.DBObject, com.mongodb.DBObject, boolean, boolean, com.mongodb.WriteConcern)",
-					helper = "org.hibernate.ogm.utils.BytemanHelper",
+					name = "countInsertMany"),
+			@BMRule(targetClass = MONGO_COLLECTION,
+					isInterface = true,
+					targetMethod = "updateOne(" + BSON_DOCUMENT + "," + BSON_DOCUMENT + ",com.mongodb.client.model.UpdateOptions)",
+					helper = HELPER,
 					action = "countInvocation(\"update\")",
-					name = "countUpdate"),
-			@BMRule(targetClass = "com.mongodb.DBCollection",
-					targetMethod = "update(com.mongodb.DBObject, com.mongodb.DBObject, boolean, boolean, com.mongodb.WriteConcern)",
-					helper = "org.hibernate.ogm.utils.BytemanHelper",
-					action = "countInvocation(\"update\")",
-					name = "countUpdate"),
-			@BMRule(targetClass = "com.mongodb.DBCollection",
-					targetMethod = "findAndModify(com.mongodb.DBObject, com.mongodb.DBObject)",
-					helper = "org.hibernate.ogm.utils.BytemanHelper",
-					action = "countInvocation(\"update\")",
-					name = "countFindAndModify"),
-			@BMRule(targetClass = "com.mongodb.DBCollection",
-					targetMethod = "findOne(com.mongodb.DBObject, com.mongodb.DBObject, com.mongodb.ReadPreference)",
-					helper = "org.hibernate.ogm.utils.BytemanHelper",
+					name = "countUpdateOne"),
+			@BMRule(targetClass = MONGO_COLLECTION,
+					isInterface = true,
+					targetMethod = "find(" + BSON_DOCUMENT + ")",
+					helper = HELPER,
 					action = "countInvocation(\"load\")",
-					name = "countFindOne")
+					name = "countFind")
 	})
 	public void testNumberOfCallsToDatastore() throws Exception {
 		//insert entity with embedded collection
