@@ -24,7 +24,7 @@ import org.junit.Test;
 public class GridFsTest extends OgmJpaTestCase {
 
 	@Test
-	public void testSaveBinaryToGridfs() {
+	public void testSaveBlobToGridfs() {
 		EntityManager em = getFactory().createEntityManager();
 		try {
 			em.getTransaction().begin();
@@ -35,7 +35,12 @@ public class GridFsTest extends OgmJpaTestCase {
 			Blob blob = Hibernate.getLobCreator( em.unwrap( Session.class ) ).createBlob( new byte[]{0,1,2,3,4,5,6,7,8,9}  );
 			photo.setContent( blob );
 
+			em.persist( photo );
+
 			em.getTransaction().commit();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
 		}
 		finally {
 			em.close();
