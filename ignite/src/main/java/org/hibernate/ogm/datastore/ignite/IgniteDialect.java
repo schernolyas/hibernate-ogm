@@ -619,8 +619,13 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		LinkedHashSet associationIds = new LinkedHashSet();
 		if ( lastEntityVersion.hasField( notOwnerLinkFieldName  ) ) {
 			associationIds.addAll( lastEntityVersion.field( notOwnerLinkFieldName  ) );
+			builder.removeField( notOwnerLinkFieldName );
+			lastEntityVersion = builder.build();
+			log.debugf( "removeInverseRelationship: remove field: %s ", notOwnerLinkFieldName );
+			entityCache.put( key, lastEntityVersion );
 		}
 		log.debugf( "removeInverseRelationship: associationKey: %s ", associationKey );
+		log.debugf( "removeInverseRelationship: associationIds: %s ", associationIds );
 	}
 
 	private void insertInverseRelationship( AssociationKey associationKey, Association association, AssociationContext associationContext) {
