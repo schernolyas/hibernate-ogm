@@ -21,12 +21,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.ignite.IgniteAtomicSequence;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.binary.BinaryObjectBuilder;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-
 import org.hibernate.HibernateException;
 import org.hibernate.LockMode;
 import org.hibernate.cfg.NotYetImplementedException;
@@ -92,6 +86,12 @@ import org.hibernate.ogm.type.spi.GridType;
 import org.hibernate.ogm.util.impl.Contracts;
 import org.hibernate.persister.entity.Lockable;
 import org.hibernate.type.Type;
+
+import org.apache.ignite.IgniteAtomicSequence;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectBuilder;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 
 public class IgniteDialect extends BaseGridDialect implements GridDialect, QueryableGridDialect<IgniteQueryDescriptor>,MultigetGridDialect {
 
@@ -844,11 +844,15 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		else if ( associationKey.getMetadata().getAssociationKind() == AssociationKind.EMBEDDED_COLLECTION ) {
 			Object id = ( (IgniteTupleSnapshot) associationContext.getEntityTuplePointer().getTuple().getSnapshot() ).getCacheKey();
 			BinaryObject binaryObject = associationCache.get( id );
-			Contracts.assertNotNull( binaryObject, "binaryObject" );
-			BinaryObjectBuilder binaryObjectBuilder = provider.createBinaryObjectBuilder( binaryObject );
-			binaryObjectBuilder.removeField( associationKey.getMetadata().getCollectionRole() );
-			binaryObject = binaryObjectBuilder.build();
-			associationCache.put( id, binaryObject );
+			if ( binaryObject != null ) {
+				BinaryObjectBuilder binaryObjectBuilder = provider.createBinaryObjectBuilder( binaryObject );
+				binaryObjectBuilder.removeField( associationKey.getMetadata().getCollectionRole() );
+				binaryObject = binaryObjectBuilder.build();
+				associationCache.put( id, binaryObject );
+			}
+			else {
+				log.warnf( "Binary object with id %s from cache %s not exists", id, associationCache.getName() );
+			}
 		}
 	}
 
