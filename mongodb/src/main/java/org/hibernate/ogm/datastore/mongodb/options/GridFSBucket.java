@@ -9,6 +9,9 @@ package org.hibernate.ogm.datastore.mongodb.options;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+import org.hibernate.ogm.datastore.mongodb.options.impl.GridFSBucketConverter;
+import org.hibernate.ogm.options.spi.MappingOption;
+
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
@@ -18,6 +21,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  */
 @Target({ METHOD, FIELD })
 @Retention(RUNTIME)
+@MappingOption(GridFSBucketConverter.class)
 public @interface GridFSBucket {
 	String value();
 }

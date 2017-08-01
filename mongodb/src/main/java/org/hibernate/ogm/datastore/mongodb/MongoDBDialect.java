@@ -56,6 +56,7 @@ import org.hibernate.ogm.datastore.mongodb.type.impl.SerializableAsBinaryGridTyp
 import org.hibernate.ogm.datastore.mongodb.type.impl.StringAsObjectIdGridType;
 import org.hibernate.ogm.datastore.mongodb.type.impl.StringAsObjectIdType;
 import org.hibernate.ogm.datastore.mongodb.utils.DocumentUtil;
+import org.hibernate.ogm.datastore.mongodb.utils.TableEntityTypeMappingInfo;
 import org.hibernate.ogm.dialect.batch.spi.BatchableGridDialect;
 import org.hibernate.ogm.dialect.batch.spi.GroupedChangesToEntityOperation;
 import org.hibernate.ogm.dialect.batch.spi.InsertOrUpdateAssociationOperation;
@@ -1256,7 +1257,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		if ( !queue.isClosed() ) {
 			Operation operation = queue.poll();
 			Map<MongoCollection<Document>, BatchInsertionTask> inserts = new HashMap<MongoCollection<Document>, BatchInsertionTask>();
-			OptionsService optionsService = provider.getOptionService();
+
 
 			List<Tuple> insertTuples = new ArrayList<Tuple>();
 
@@ -1304,7 +1305,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		Document insertStatement = null;
 		Document updateStatement = new Document();
 		WriteConcern writeConcern = null;
-		OptionsService optionsService = provider.getOptionService();
+		OptionsService optionService = provider.getOptionService();
 
 		final UpdateOptions updateOptions = new UpdateOptions().upsert( true );
 		for ( Operation operation : groupedOperation.getOperations() ) {
