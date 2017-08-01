@@ -98,6 +98,7 @@ import org.hibernate.ogm.model.spi.Association;
 import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.model.spi.Tuple.SnapshotType;
 import org.hibernate.ogm.model.spi.TupleOperation;
+import org.hibernate.ogm.options.spi.OptionsService;
 import org.hibernate.ogm.type.impl.ByteStringType;
 import org.hibernate.ogm.type.impl.CharacterStringType;
 import org.hibernate.ogm.type.impl.StringCalendarDateType;
@@ -1255,6 +1256,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		if ( !queue.isClosed() ) {
 			Operation operation = queue.poll();
 			Map<MongoCollection<Document>, BatchInsertionTask> inserts = new HashMap<MongoCollection<Document>, BatchInsertionTask>();
+			OptionsService optionsService = provider.getOptionService();
 
 			List<Tuple> insertTuples = new ArrayList<Tuple>();
 
@@ -1302,6 +1304,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		Document insertStatement = null;
 		Document updateStatement = new Document();
 		WriteConcern writeConcern = null;
+		OptionsService optionsService = provider.getOptionService();
 
 		final UpdateOptions updateOptions = new UpdateOptions().upsert( true );
 		for ( Operation operation : groupedOperation.getOperations() ) {
