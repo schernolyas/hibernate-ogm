@@ -12,28 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteAtomicSequence;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteIllegalStateException;
-import org.apache.ignite.IgniteState;
-import org.apache.ignite.Ignition;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.binary.BinaryObjectBuilder;
-import org.apache.ignite.cache.CacheTypeMetadata;
-import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgnitionEx;
-import org.apache.ignite.lang.IgniteCallable;
-import org.apache.ignite.resources.IgniteInstanceResource;
-import org.apache.ignite.thread.IgniteThread;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
 import org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform;
@@ -68,6 +46,27 @@ import org.hibernate.service.spi.ServiceRegistryAwareService;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteAtomicSequence;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteIllegalStateException;
+import org.apache.ignite.IgniteState;
+import org.apache.ignite.Ignition;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectBuilder;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.lang.IgniteCallable;
+import org.apache.ignite.resources.IgniteInstanceResource;
+import org.apache.ignite.thread.IgniteThread;
 
 /**
  * Provides access to a Ignite instance
@@ -362,13 +361,10 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 			result = toValidKeyObject( key.getColumnValues()[0], cacheConfig.getKeyType() );
 		}
 		else {
-			HashCodeBuilder hashBuilder = new HashCodeBuilder();
 			BinaryObjectBuilder builder = createBinaryObjectBuilder( findKeyType( key.getMetadata() ) );
 			for ( int i = 0; i < key.getColumnNames().length; i++ ) {
 				builder.setField( StringHelper.stringAfterPoint( key.getColumnNames()[i] ), key.getColumnValues()[i] );
-				hashBuilder.append( key.getColumnValues()[i] );
 			}
-			builder.hashCode( hashBuilder.toHashCode() );
 			result = builder.build();
 		}
 		return result;
@@ -401,13 +397,10 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 				result = rowKey.getColumnValue( associationKeyColumns[0] );
 			}
 			else {
-				HashCodeBuilder hashBuilder = new HashCodeBuilder();
 				BinaryObjectBuilder builder = createBinaryObjectBuilder( findKeyType( keyMetadata.getAssociatedEntityKeyMetadata().getEntityKeyMetadata() ) );
 				for ( int i = 0; i < associationKeyColumns.length; i++ ) {
 					builder.setField( StringHelper.stringAfterPoint( associationKeyColumns[i] ), rowKey.getColumnValue( associationKeyColumns[i] ) );
-					hashBuilder.append( rowKey.getColumnValue( associationKeyColumns[i] ) );
 				}
-				builder.hashCode( hashBuilder.toHashCode() );
 				result = builder.build();
 			}
 		}
@@ -451,7 +444,7 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 				}
 			}
 			if ( result == null ) {
-				if ( cacheConfig.getTypeMetadata() != null ) {
+				/*if ( cacheConfig.getTypeMetadata() != null ) {
 					for ( CacheTypeMetadata ctm : (Collection<CacheTypeMetadata>) cacheConfig.getTypeMetadata() ) {
 						if ( ctm.getValueType() != null && cacheType.equalsIgnoreCase( ctm.getValueType() ) ) {
 							result = ctm.getKeyType();
@@ -459,11 +452,11 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 						}
 					}
 				}
-				if ( result == null ) {
+				if ( result == null ) { */
 					//if nothing found we use id field name
 					result = StringHelper.stringBeforePoint( keyMetadata.getColumnNames()[0] );
 					result = StringUtils.capitalize( result );
-				}
+				//}
 			}
 			compositeIdTypes.put( keyMetadata.getTable(), result );
 		}

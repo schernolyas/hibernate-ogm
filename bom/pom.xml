@@ -10,7 +10,7 @@
 
     <groupId>org.hibernate.ogm</groupId>
     <artifactId>hibernate-ogm-bom</artifactId>
-    <version>5.2.0-SNAPSHOT</version>
+    <version>5.2.0-2.1-SNAPSHOT</version>
 
     <packaging>pom</packaging>
 
@@ -92,9 +92,7 @@
         <lettuceCommonsPoolVersion>2.4.2</lettuceCommonsPoolVersion>
         <lettuceGuavaVersion>18.0</lettuceGuavaVersion> <!-- Currently in sync with the version of Wildfly -->
         <!-- Ignite -->
-        <igniteVersion>1.8.0</igniteVersion>
-        <igniteCommonsLang3Version>3.3.2</igniteCommonsLang3Version>
-
+        <igniteVersion>2.1.0</igniteVersion>
     </properties>
 
     <inceptionYear>2010</inceptionYear>

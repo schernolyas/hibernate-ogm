@@ -6,6 +6,7 @@
  */
 package org.hibernate.ogm.datastore.ignite.utils.test.transaction;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 
@@ -17,7 +18,7 @@ import javax.persistence.OneToMany;
  * @author Sergey Chernolyas &lt;sergey.chernolyas@gmail.com&gt;
  */
 @Entity
-public class Garage {
+public class Garage implements Serializable {
 
 	@Id
 	private Long id;
