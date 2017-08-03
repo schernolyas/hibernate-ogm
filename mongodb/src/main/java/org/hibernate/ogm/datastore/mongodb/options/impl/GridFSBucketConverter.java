@@ -6,7 +6,6 @@
  */
 package org.hibernate.ogm.datastore.mongodb.options.impl;
 
-import org.hibernate.ogm.datastore.mongodb.options.BinaryStorage;
 import org.hibernate.ogm.datastore.mongodb.options.GridFSBucket;
 import org.hibernate.ogm.options.spi.AnnotationConverter;
 import org.hibernate.ogm.options.spi.OptionValuePair;

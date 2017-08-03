@@ -6,9 +6,9 @@
  */
 package org.hibernate.ogm.datastore.mongodb.utils;
 
-import java.util.Map;
-
 import org.hibernate.engine.jdbc.BinaryStream;
+import org.hibernate.ogm.datastore.mongodb.logging.impl.Log;
+import org.hibernate.ogm.datastore.mongodb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.mongodb.options.BinaryStorageType;
 import org.hibernate.ogm.datastore.mongodb.options.impl.BinaryStorageOption;
 import org.hibernate.ogm.datastore.mongodb.options.impl.GridFSBucketOption;
@@ -25,6 +25,7 @@ import org.bson.types.ObjectId;
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
  */
 public class GridFsUtil {
+	private static final Log log = LoggerFactory.getLogger();
 
 	public static void storeContentToGridFs(MongoDatabase mongoDatabase, Document currentDocument,
 												EntityKey entityKey, OptionsService optionService) {

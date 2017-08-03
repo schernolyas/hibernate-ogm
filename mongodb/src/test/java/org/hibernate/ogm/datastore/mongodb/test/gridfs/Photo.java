@@ -24,7 +24,7 @@ import static org.hibernate.ogm.datastore.mongodb.options.BinaryStorageType.GRID
 @Entity
 public class Photo {
 	@Id
-	String id;
+	private String id;
 
 	private String description;
 

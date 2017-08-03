@@ -17,6 +17,6 @@ public class BinaryStorageOption extends UniqueOption<BinaryStorageType> {
 
 	@Override
 	public BinaryStorageType getDefaultValue(ConfigurationPropertyReader propertyReader) {
-		return BinaryStorageType.GRID_FS;
+		return null;
 	}
 }
