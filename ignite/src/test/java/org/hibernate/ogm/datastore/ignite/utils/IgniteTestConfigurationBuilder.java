@@ -6,17 +6,13 @@
  */
 package org.hibernate.ogm.datastore.ignite.utils;
 
-import java.io.Serializable;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-import org.hibernate.ogm.datastore.ignite.IgniteConfigurationBuilder;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -33,9 +29,11 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.hibernate.ogm.datastore.ignite.IgniteConfigurationBuilder;
 
 /**
  * Ignite cache configuration for tests
@@ -73,7 +71,7 @@ public class IgniteTestConfigurationBuilder implements IgniteConfigurationBuilde
 		config.setLocalHost( "127.0.0.1" );
 		config.setPeerClassLoadingEnabled( true );
 		config.setClientMode( false );
-		//config.setMarshaller( new BinaryMarshaller() ) ;
+		config.setMarshaller( new BinaryMarshaller() ) ;
 		BinaryConfiguration binaryConfiguration = new BinaryConfiguration();
 		binaryConfiguration.setCompactFooter( false );		// it is necessary only for embedded collections (@ElementCollection)
 		config.setBinaryConfiguration( binaryConfiguration );
@@ -191,7 +189,7 @@ public class IgniteTestConfigurationBuilder implements IgniteConfigurationBuilde
 		return new TestCacheConfigBuilder( name );
 	}
 
-	private class TestCacheConfigBuilder implements Serializable {
+	private class TestCacheConfigBuilder {
 
 		private CacheConfiguration cacheConfig;
 		private QueryEntity queryEntity;
@@ -205,6 +203,7 @@ public class IgniteTestConfigurationBuilder implements IgniteConfigurationBuilde
 			cacheConfig.setAtomicityMode( CacheAtomicityMode.TRANSACTIONAL );
 			cacheConfig.setCacheMode( CacheMode.PARTITIONED );
 			cacheConfig.setWriteSynchronizationMode( CacheWriteSynchronizationMode.FULL_SYNC );
+			cacheConfig.setStartSize( 10 );
 			cacheConfig.setBackups( 0 );
 			cacheConfig.setAffinity( new RendezvousAffinityFunction( false, 2 ) );
 			cacheConfig.setCopyOnRead( false );
@@ -246,7 +245,7 @@ public class IgniteTestConfigurationBuilder implements IgniteConfigurationBuilde
 		public CacheConfiguration<String, BinaryObject> build() {
 			if ( forceQueryEntity || !indexes.isEmpty() || !queryEntity.getFields().isEmpty() ) {
 				queryEntity.setKeyType( keyTypeName != null ? keyTypeName : keyType.getName() );
-				queryEntity.setIndexes( new LinkedList<>( indexes.values()  ) );
+				queryEntity.setIndexes( indexes.values() );
 				cacheConfig.setQueryEntities( Arrays.asList( queryEntity ) );
 			}
 			if ( keyTypeName == null ) {
