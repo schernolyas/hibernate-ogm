@@ -772,6 +772,9 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		else if ( type == StandardBasicTypes.BLOB ) {
 			return BlobGridType.INSTANCE;
 		}
+		else if ( type == StandardBasicTypes.BLOB ) {
+			return BlobGridType.INSTANCE;
+		}
 		else if ( type == StandardBasicTypes.BYTE ) {
 			return ByteStringType.INSTANCE;
 		}
