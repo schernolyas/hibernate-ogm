@@ -70,7 +70,10 @@ public class MongoDBQueryParsingResult implements QueryParsingResult {
 			null,
 			null,
 			null,
-			unwinds
+			unwinds,
+			null,
+			null,
+			null
 		);
 	}
 

@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -119,13 +120,20 @@ import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.MapReduceIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.BulkWriteOptions;
+import com.mongodb.client.model.Collation;
+import com.mongodb.client.model.CollationAlternate;
+import com.mongodb.client.model.CollationCaseFirst;
+import com.mongodb.client.model.CollationMaxVariable;
+import com.mongodb.client.model.CollationStrength;
 import com.mongodb.client.model.FindOneAndDeleteOptions;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.InsertOneModel;
+import com.mongodb.client.model.MapReduceAction;
 import com.mongodb.client.model.ReturnDocument;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
@@ -303,7 +311,10 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	}
 
 	private static Document getProjection(OperationContext operationContext) {
-		return getProjection( operationContext.getTupleTypeContext().getSelectableColumns() );
+		Set<String> columns = new HashSet<>();
+		columns.addAll( operationContext.getTupleTypeContext().getPolymorphicEntityColumns() );
+		columns.addAll( operationContext.getTupleTypeContext().getSelectableColumns() );
+		return getProjection( new ArrayList<>( columns ) );
 	}
 
 	/**
@@ -821,6 +832,8 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 				return doCount( queryDescriptor, collection );
 			case DISTINCT:
 				return doDistinct( queryDescriptor, collection );
+			case MAP_REDUCE:
+				return doMapReduce( queryDescriptor, collection );
 			case INSERT:
 			case REMOVE:
 			case UPDATE:
@@ -937,16 +950,17 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	/**
 	 * do 'Distinct' operation
 	 *
-	 * @param queryDescriptor descriptor of MongoDN query
+	 * @param queryDescriptor descriptor of MongoDB query
 	 * @param collection collection for execute the operation
 	 * @return result iterator
 	 * @see <a href ="https://docs.mongodb.com/manual/reference/method/db.collection.distinct/">distinct</a>
 	 */
 	private static ClosableIterator<Tuple> doDistinct(final MongoDBQueryDescriptor queryDescriptor, final MongoCollection<Document> collection) {
 		DistinctIterable<?> distinctFieldValues = collection.distinct( queryDescriptor.getDistinctFieldName(), queryDescriptor.getCriteria(), String.class );
-		if ( queryDescriptor.getCollation() != null ) {
-			distinctFieldValues = distinctFieldValues.collation( queryDescriptor.getCollation() );
-		}
+		Collation collation = getCollation( queryDescriptor.getOptions() );
+
+		distinctFieldValues = collation != null ? distinctFieldValues.collation( collation ) : distinctFieldValues;
+
 		MongoCursor<?> cursor = distinctFieldValues.iterator();
 		List<Object> documents = new ArrayList<>();
 		while ( cursor.hasNext() ) {
@@ -954,6 +968,104 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		}
 		MapTupleSnapshot snapshot = new MapTupleSnapshot( Collections.<String, Object>singletonMap( "n", documents ) );
 		return CollectionHelper.newClosableIterator( Collections.singletonList( new Tuple( snapshot, SnapshotType.UNKNOWN ) ) );
+	}
+
+	/**
+	 * do 'Map Reduce' operation
+	 * @param queryDescriptor descriptor of MongoDB map reduce query
+	 * @param collection collection on which operation will be performed
+	 * @return result iterator
+	 * @see <a href ="https://docs.mongodb.com/manual/reference/method/db.collection.mapReduce/">MapReduce</a>
+	 */
+	private static ClosableIterator<Tuple> doMapReduce(final MongoDBQueryDescriptor queryDescriptor, final MongoCollection<Document> collection) {
+
+		MapReduceIterable<Document> mapReduceIterable = collection.mapReduce( queryDescriptor.getMapFunction(), queryDescriptor.getReduceFunction() );
+		Document options = queryDescriptor.getOptions();
+		if ( options != null ) {
+			Document query = (Document) options.get( "query" );
+			Document sort = (Document) options.get( "sort" );
+			Integer limit = options.getInteger( "limit" );
+			String finalizeFunction = options.getString( "finalize" );
+			Document scope = (Document) options.get( "scope" );
+			Boolean jsMode = options.getBoolean( "jsMode" );
+			Boolean verbose = options.getBoolean( "verbose" );
+			Boolean bypassDocumentValidation = options.getBoolean( "bypassDocumentValidation" );
+			Collation collation = getCollation( (Document) options.get( "collation" ) );
+			MapReduceAction mapReduceAction = null;
+			String collectionName = null;
+			String dbName = null;
+			Boolean sharded = null;
+			Boolean nonAtomic = null;
+
+			Object out;
+			if ( ( out = options.get( "out" ) ) != null ) {
+				if ( out instanceof String ) {
+					collectionName = (String) out;
+				}
+				else if ( out instanceof Document ) {
+					Document outDocument = (Document) out;
+					if ( outDocument.containsKey( "merge" ) ) {
+						mapReduceAction = MapReduceAction.MERGE;
+						collectionName = outDocument.getString( "merge" );
+					}
+					else if ( outDocument.containsKey( "replace" ) ) {
+						mapReduceAction = MapReduceAction.REPLACE;
+						collectionName = outDocument.getString( "replace" );
+					}
+					else if ( ( (Document) out ).containsKey( "reduce" ) ) {
+						mapReduceAction = MapReduceAction.REDUCE;
+						collectionName = outDocument.getString( "reduce" );
+					}
+					dbName = outDocument.getString( "db" );
+					sharded = outDocument.getBoolean( "sharded" );
+					nonAtomic = outDocument.getBoolean( "nonAtomic" );
+				}
+			}
+			mapReduceIterable = ( query != null ) ? mapReduceIterable.filter( query ) : mapReduceIterable;
+			mapReduceIterable = ( sort != null ) ? mapReduceIterable.sort( sort ) : mapReduceIterable;
+			mapReduceIterable = ( limit != null ) ? mapReduceIterable.limit( limit ) : mapReduceIterable;
+			mapReduceIterable = ( finalizeFunction != null ) ? mapReduceIterable.finalizeFunction( finalizeFunction ) : mapReduceIterable;
+			mapReduceIterable = ( scope != null ) ? mapReduceIterable.scope( scope ) : mapReduceIterable;
+			mapReduceIterable = ( jsMode != null ) ? mapReduceIterable.jsMode( jsMode ) : mapReduceIterable;
+			mapReduceIterable = ( verbose != null ) ? mapReduceIterable.verbose( verbose ) : mapReduceIterable;
+			mapReduceIterable = ( bypassDocumentValidation != null ) ? mapReduceIterable.bypassDocumentValidation( bypassDocumentValidation ) : mapReduceIterable;
+			mapReduceIterable = ( collation != null ) ? mapReduceIterable.collation( collation ) : mapReduceIterable;
+			mapReduceIterable = ( mapReduceAction != null ) ? mapReduceIterable.action( mapReduceAction ) : mapReduceIterable;
+			mapReduceIterable = ( collectionName != null ) ? mapReduceIterable.collectionName( collectionName ) : mapReduceIterable;
+			mapReduceIterable = ( dbName != null ) ? mapReduceIterable.databaseName( dbName ) : mapReduceIterable;
+			mapReduceIterable = ( sharded != null ) ? mapReduceIterable.sharded( sharded ) : mapReduceIterable;
+			mapReduceIterable = ( nonAtomic != null ) ? mapReduceIterable.nonAtomic( nonAtomic ) : mapReduceIterable;
+		}
+
+		MongoCursor<Document> cursor = mapReduceIterable.iterator();
+		Map<Object, Object> documents = new LinkedHashMap<>();
+		while ( cursor.hasNext() ) {
+			Document doc = cursor.next();
+			documents.put( doc.get( "_id" ), doc.get( "value" ) );
+		}
+		MapTupleSnapshot snapshot = new MapTupleSnapshot( Collections.<String, Object>singletonMap( "n", documents ) );
+		return CollectionHelper.newClosableIterator( Collections.singletonList( new Tuple( snapshot, SnapshotType.UNKNOWN ) ) );
+	}
+
+	private static Collation getCollation(Document dbObject) {
+		Collation collation = null;
+		if ( dbObject != null ) {
+			String caseFirst = dbObject.getString( "caseFirst" );
+			Integer strength = dbObject.getInteger( "strength" );
+			String alternate = dbObject.getString( "alternate" );
+			String maxVariable = dbObject.getString( "maxVariable" );
+			collation =  Collation.builder()
+					.locale( (String) dbObject.get( "locale" ) )
+					.caseLevel( (Boolean) dbObject.get( "caseLevel" ) )
+					.numericOrdering( (Boolean) dbObject.get( "numericOrdering" ) )
+					.backwards( (Boolean) dbObject.get( "backwards" ) )
+					.collationCaseFirst( caseFirst == null ? null : CollationCaseFirst.fromString( caseFirst ) )
+					.collationStrength( strength == null ? null : CollationStrength.fromInt( strength ) )
+					.collationAlternate( alternate == null ? null : CollationAlternate.fromString( alternate ) )
+					.collationMaxVariable(  maxVariable == null ? null : CollationMaxVariable.fromString( maxVariable ) )
+					.build();
+		}
+		return collation;
 	}
 
 	private static ClosableIterator<Tuple> doFind(MongoDBQueryDescriptor query, QueryParameters queryParameters, MongoCollection<Document> collection,
@@ -1059,7 +1171,6 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		return new SingleTupleIterator( theOne, collection, entityKeyMetadata );
 	}
 
-	@SuppressWarnings("unchecked")
 	private static int doInsert(final MongoDBQueryDescriptor queryDesc, final MongoCollection<Document> collection) {
 		Document options = queryDesc.getOptions();
 		Boolean ordered = FALSE;
@@ -1078,12 +1189,12 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		if ( queryDesc.getUpdateOrInsertMany() != null ) {
 			operationList = new ArrayList<>( queryDesc.getUpdateOrInsertMany().size() );
 			for ( Document doc : queryDesc.getUpdateOrInsertMany() ) {
-				operationList.add( new InsertOneModel( doc ) );
+				operationList.add( new InsertOneModel<>( doc ) );
 			}
 		}
 		else {
 			operationList = new ArrayList<>( 1 );
-			operationList.add( new InsertOneModel( queryDesc.getUpdateOrInsertOne() ) );
+			operationList.add( new InsertOneModel<>( queryDesc.getUpdateOrInsertOne() ) );
 		}
 		final BulkWriteResult result = collection.withWriteConcern( ( wc != null ? wc : collection.getWriteConcern() ) ).bulkWrite( operationList, new BulkWriteOptions().ordered( ordered ) );
 
@@ -1311,7 +1422,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 					Document document = getCurrentDocument( snapshot, insertStatement, entityKey );
 					insertStatement = objectForInsert( tuple, document );
 
-					getOrCreateBatchInsertionTask( inserts, entityKey.getMetadata(), collection, writeConcern )
+					getOrCreateBatchInsertionTask( inserts, entityKey.getMetadata(), collection )
 							.put( entityKey, insertStatement );
 					insertTuples.add( tuple );
 				}
@@ -1333,12 +1444,19 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 				if ( storageStrategy == AssociationStorageStrategy.IN_ENTITY ) {
 					writeConcern = mergeWriteConcern( writeConcern, getWriteConcern( associationContext ) );
 					if ( insertStatement != null ) {
+						// The association is updated in a new document
 						MongoHelpers.setValue( insertStatement, collectionRole, rows );
 					}
 					else {
-						MongoHelpers.setValue( ( (MongoDBTupleSnapshot) associationContext.getEntityTuplePointer().getTuple().getSnapshot() ).getDbObject(),
-								associationKey.getMetadata().getCollectionRole(), toStore );
+						// The association is updated on an existing document
 						addSetToQuery( updateStatement, collectionRole, toStore );
+
+						Document document = getDocument( association, associationContext );
+
+						// The document might be null when deleting detached entities
+						if ( document != null ) {
+							MongoHelpers.setValue( document, associationKey.getMetadata().getCollectionRole(), toStore );
+						}
 					}
 				}
 				else {
@@ -1391,6 +1509,16 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		}
 	}
 
+	private Document getDocument(Association association, AssociationContext associationContext) {
+		TuplePointer tuplePointer = associationContext.getEntityTuplePointer();
+		if ( tuplePointer.getTuple() != null ) {
+			Tuple tuple = tuplePointer.getTuple();
+			MongoDBTupleSnapshot tupleSnapshot = (MongoDBTupleSnapshot) tuple.getSnapshot();
+			return tupleSnapshot.getDbObject();
+		}
+		return null;
+	}
+
 	@Override
 	public ParameterMetadataBuilder getParameterMetadataBuilder() {
 		return NoOpParameterMetadataBuilder.INSTANCE;
@@ -1400,11 +1528,12 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		return insertStatement != null ? insertStatement : snapshot.getDbObject();
 	}
 
-	private static BatchInsertionTask getOrCreateBatchInsertionTask(Map<MongoCollection<Document>, BatchInsertionTask> inserts, EntityKeyMetadata entityKeyMetadata, MongoCollection<Document> collection, WriteConcern writeConcern) {
+	private static BatchInsertionTask getOrCreateBatchInsertionTask(Map<MongoCollection<Document>, BatchInsertionTask> inserts,
+			EntityKeyMetadata entityKeyMetadata, MongoCollection<Document> collection) {
 		BatchInsertionTask insertsForCollection = inserts.get( collection );
 
 		if ( insertsForCollection == null ) {
-			insertsForCollection = new BatchInsertionTask( entityKeyMetadata, writeConcern );
+			insertsForCollection = new BatchInsertionTask( entityKeyMetadata );
 			inserts.put( collection, insertsForCollection );
 		}
 
@@ -1420,7 +1549,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			}
 
 			try {
-				collection.insertMany( entry.getValue().getAll()  );
+				collection.insertMany( entry.getValue().getAll() );
 			}
 			catch ( DuplicateKeyException | MongoBulkWriteException dke ) {
 				// This exception is used by MongoDB for all the unique indexes violation, not only the primary key
@@ -1634,12 +1763,10 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 		private final EntityKeyMetadata entityKeyMetadata;
 		private final Map<EntityKey, Document> inserts;
-		private final WriteConcern writeConcern;
 
-		public BatchInsertionTask(EntityKeyMetadata entityKeyMetadata, WriteConcern writeConcern) {
+		public BatchInsertionTask(EntityKeyMetadata entityKeyMetadata) {
 			this.entityKeyMetadata = entityKeyMetadata;
 			this.inserts = new HashMap<EntityKey, Document>();
-			this.writeConcern = writeConcern;
 		}
 
 		public EntityKeyMetadata getEntityKeyMetadata() {
@@ -1650,10 +1777,6 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			return new ArrayList<Document>( inserts.values() );
 		}
 
-		public Document get(EntityKey entityKey) {
-			return inserts.get( entityKey );
-
-		}
 		public boolean containsKey(EntityKey entityKey) {
 			return inserts.containsKey( entityKey );
 		}
@@ -1664,10 +1787,6 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 		public void put(EntityKey entityKey, Document object) {
 			inserts.put( entityKey, object );
-		}
-
-		public WriteConcern getWriteConcern() {
-			return writeConcern;
 		}
 
 		public boolean isEmpty() {
