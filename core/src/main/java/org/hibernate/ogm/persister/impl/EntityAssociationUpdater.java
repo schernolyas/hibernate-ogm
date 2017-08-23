@@ -151,7 +151,6 @@ class EntityAssociationUpdater {
 	}
 
 	private void addNavigationalInformationForInverseSide(int propertyIndex, AssociationKeyMetadata associationKeyMetadata, Object[] newColumnValue) {
-		AssociationPersister associationPersister = createAssociationPersister( propertyIndex, associationKeyMetadata, newColumnValue );
 
 		RowKey rowKey = getInverseRowKey( associationKeyMetadata, newColumnValue );
 
@@ -159,6 +158,8 @@ class EntityAssociationUpdater {
 		for ( String column : rowKey.getColumnNames() ) {
 			associationRow.put( column, rowKey.getColumnValue( column ) );
 		}
+
+		AssociationPersister associationPersister = createInverseAssociationPersister( propertyIndex, associationKeyMetadata, newColumnValue );
 		associationPersister.getAssociation().put( rowKey, associationRow );
 
 		if ( associationPersister.getAssociationContext().getEntityTuplePointer().getTuple() == null ) {
@@ -169,7 +170,7 @@ class EntityAssociationUpdater {
 	}
 
 	private void removeNavigationalInformationFromInverseSide(int propertyIndex, AssociationKeyMetadata associationKeyMetadata, Object[] oldColumnValue) {
-		AssociationPersister associationPersister = createAssociationPersister( propertyIndex, associationKeyMetadata, oldColumnValue );
+		AssociationPersister associationPersister = createInverseAssociationPersister( propertyIndex, associationKeyMetadata, oldColumnValue );
 
 		Association association = associationPersister.getAssociationOrNull();
 
@@ -184,31 +185,34 @@ class EntityAssociationUpdater {
 		}
 	}
 
-	private AssociationPersister createAssociationPersister(int propertyIndex, AssociationKeyMetadata associationKeyMetadata, Object[] keyColumnValues) {
+	private AssociationPersister createInverseAssociationPersister(int propertyIndex, AssociationKeyMetadata associationKeyMetadata, Object[] keyColumnValues) {
 		OptionsServiceContext serviceContext = session.getFactory()
 				.getServiceRegistry()
 				.getService( OptionsService.class )
 				.context();
 
 		Class<?> entityType = persister.getPropertyTypes()[propertyIndex].getReturnedClass();
+		String entityName = persister.getFactory().getClassMetadata( entityType ).getEntityName();
+		OgmEntityPersister inverseEntityPersister = (OgmEntityPersister) persister.getFactory().getEntityPersister( entityName );
 
-		AssociationTypeContext associationTypeContext = new AssociationTypeContextImpl(
-				serviceContext.getPropertyOptions( entityType, associationKeyMetadata.getCollectionRole() ),
-				serviceContext.getEntityOptions( entityType ),
-				persister.getTupleTypeContext(),
-				associationKeyMetadata.getAssociatedEntityKeyMetadata(),
-				persister.getPropertyNames()[propertyIndex]
-		);
+		String mainSidePropertyName = persister.getPropertyNames()[propertyIndex];
 
-		return new AssociationPersister(
+		AssociationTypeContext associationTypeContext = new AssociationTypeContextImpl.Builder( serviceContext )
+				.associationKeyMetadata( associationKeyMetadata )
+				.hostingEntityPersister( inverseEntityPersister )
+				.mainSidePropertyName( mainSidePropertyName )
+				.build();
+
+		return new AssociationPersister.Builder(
 					persister.getPropertyTypes()[propertyIndex].getReturnedClass()
 				)
 				.hostingEntity( getReferencedEntity( propertyIndex ) )
 				.gridDialect( gridDialect )
-				.associationKeyMetadata(  associationKeyMetadata )
+				.associationKeyMetadata( associationKeyMetadata )
 				.keyColumnValues( keyColumnValues )
 				.session( session )
-				.associationTypeContext( associationTypeContext );
+				.associationTypeContext( associationTypeContext )
+				.build();
 	}
 
 	/**

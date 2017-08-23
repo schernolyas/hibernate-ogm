@@ -8,9 +8,11 @@ package org.hibernate.ogm.datastore.mongodb.test.query.nativequery;
 
 import static org.fest.assertions.Assertions.assertThat;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import org.fest.assertions.Fail;
+import org.fest.assertions.MapAssert;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -30,9 +32,10 @@ import com.mongodb.BasicDBList;
  */
 public class MongoDBSessionCLIQueryTest extends OgmTestCase {
 
-	private final OscarWildePoem portia = new OscarWildePoem( 1L, "Portia", "Oscar Wilde", 1881 );
-	private final OscarWildePoem athanasia = new OscarWildePoem( 2L, "Athanasia", "Oscar Wilde", 1879, "ebook" );
-	private final OscarWildePoem imperatrix = new OscarWildePoem( 3L, "Ave Imperatrix", "Oscar Wilde", 1882,"audible", "ebook", "paperback" );
+	private final OscarWildePoem portia = new OscarWildePoem( 1L, "Portia", "Oscar Wilde", 1881, 15 );
+	private final OscarWildePoem athanasia = new OscarWildePoem( 2L, "Athanasia", "Oscar Wilde", 1879, 37, (byte) 5, "ebook" );
+	private final OscarWildePoem imperatrix = new OscarWildePoem( 3L, "Ave Imperatrix", "Oscar Wilde", 1882, 48, (byte) 5, "audible", "ebook", "paperback" );
+
 
 	@Before
 	public void init() {
@@ -782,4 +785,75 @@ public class MongoDBSessionCLIQueryTest extends OgmTestCase {
 			session.clear();
 		}
 	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1246")
+	public void testSimpleMapReduce() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".mapReduce('function() { emit( this._id, this.copiesSold);}','function(keyId, values) { return Array.sum(values); }')";
+			LinkedHashMap result = (LinkedHashMap) session.createNativeQuery( nativeQuery ).uniqueResult();
+			assertThat( result.size() ).isEqualTo( 3 );
+			assertThat( result ).includes( MapAssert.entry( 1l, 15.0 ), MapAssert.entry( 2l, 37.0 ), MapAssert.entry( 3l, 48.0 ) );
+			transaction.commit();
+			session.clear();
+		}
+	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1246")
+	public void testMapReduceWithReplaceAction() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".mapReduce('function() { emit( this.author, this.copiesSold);}','function(keyId, values) { return Array.sum(values); }',{ 'out' : { 'replace' : 'WILDE_MAP_REDUCE' }  })";
+			LinkedHashMap result = (LinkedHashMap) session.createNativeQuery( nativeQuery ).uniqueResult();
+			assertThat( result.size() ).isEqualTo( 1 );
+			assertThat( result ).includes( MapAssert.entry( "Oscar Wilde", 100.0 ) );
+			transaction.commit();
+			session.clear();
+		}
+	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1246")
+	public void testMapReduceWithCollectionName() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".mapReduce('function() { emit( this.author, this.copiesSold);}','function(keyId, values) { return Array.sum(values); }',{ 'out' : 'WILDE_MAP_REDUCE'  })";
+			LinkedHashMap result = (LinkedHashMap) session.createNativeQuery( nativeQuery ).uniqueResult();
+			assertThat( result.size() ).isEqualTo( 1 );
+			assertThat( result ).includes( MapAssert.entry( "Oscar Wilde", 100.0 ) );
+			transaction.commit();
+			session.clear();
+		}
+	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1246")
+	public void testMapReduceWithQuery() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".mapReduce('function() { emit( this.author, this.copiesSold);}','function(keyId, values) { return Array.sum(values); }',{ 'out' : 'WILDE_MAP_REDUCE', 'query' : { 'year' : {'$gt' : 1881}}} )";
+			LinkedHashMap result = (LinkedHashMap) session.createNativeQuery( nativeQuery ).uniqueResult();
+			assertThat( result.size() ).isEqualTo( 1 );
+			assertThat( result ).includes( MapAssert.entry( "Oscar Wilde", 48.0 ) );
+			transaction.commit();
+			session.clear();
+		}
+	}
+
+	@Test
+	@TestForIssue(jiraKey = "OGM-1246")
+	public void testMapReduceWithOptions() throws Exception {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+			String nativeQuery = "db." + OscarWildePoem.TABLE_NAME + ".mapReduce('function() { emit( this.author, this.copiesSold);}','function(keyId, values) { return Array.sum(values); }',{ 'out' : 'WILDE_MAP_REDUCE', 'query' : { 'year' : {'$gt' : 1880}}, 'limit' : 1, 'sort' : {'copiesSold' : 1 }, 'collation': { 'locale' : 'en', 'caseLevel' : false, 'caseFirst' : 'upper'} })";
+			LinkedHashMap result = (LinkedHashMap) session.createNativeQuery( nativeQuery ).uniqueResult();
+			assertThat( result.size() ).isEqualTo( 1 );
+			assertThat( result ).includes( MapAssert.entry( "Oscar Wilde", 15.0 ) );
+			transaction.commit();
+			session.clear();
+		}
+	}
+
 }

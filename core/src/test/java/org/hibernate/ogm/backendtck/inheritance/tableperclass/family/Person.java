@@ -9,24 +9,24 @@ package org.hibernate.ogm.backendtck.inheritance.tableperclass.family;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.ManyToOne;
 
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.search.annotations.Indexed;
 
 @Entity
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @DiscriminatorColumn(name = "TYPE", discriminatorType = DiscriminatorType.STRING)
+@Indexed
 class Person {
 
-	@GeneratedValue(generator = "uuid")
-	@GenericGenerator(name = "uuid", strategy = "uuid2")
 	@Id
-	private String id;
-
 	private String name;
+
+	@ManyToOne
+	private Family familyName;
 
 	public Person() {
 	}
@@ -35,19 +35,24 @@ class Person {
 		this.name = name;
 	}
 
-	public String getId() {
-		return id;
-	}
-
-	public void setId(String id) {
-		this.id = id;
-	}
-
 	public String getName() {
 		return name;
 	}
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public Family getFamilyName() {
+		return familyName;
+	}
+
+	public void setFamilyName(Family familyName) {
+		this.familyName = familyName;
+	}
+
+	@Override
+	public String toString() {
+		return name;
 	}
 }

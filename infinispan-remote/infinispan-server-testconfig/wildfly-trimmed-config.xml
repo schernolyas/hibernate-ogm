@@ -235,6 +235,7 @@
 
         <local-cache name="Man" />
         <local-cache name="Woman" />
+        <local-cache name="Family" />
 
         <local-cache name="FORUM_USER" />
         <local-cache name="ForumUser_issues" />
@@ -242,8 +243,21 @@
         <local-cache name="DisneyGrandMother" />
         <local-cache name="DisneyGrandMother_grandChildren" />
 
+        <local-cache name="ACCOUNT" />
+        <local-cache name="ACCOUNT_ENTRY" />
+        <local-cache name="ADDRESS" />
+        <local-cache name="CONTACT_DETAIL" />
+        <local-cache name="CREDIT_CONDITION" />
+        <local-cache name="DEPOSITOR" />
+        <local-cache name="GiroAccount" />
+        <local-cache name="InstantAccessAccount" />
+
         <local-cache name="TreeNode" />
         <local-cache name="TreeNode_children" />
+
+        <local-cache name="VideoGame" />
+        <local-cache name="PlayableCharacter" />
+        <local-cache name="NonPlayableCharacter" />
 
         <local-cache name="sequences" />
         <local-cache name="hibernate_sequences" />
