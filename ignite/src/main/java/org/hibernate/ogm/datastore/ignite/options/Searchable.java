@@ -17,10 +17,12 @@ import org.hibernate.ogm.options.spi.MappingOption;
 /**
  * Specified that the field is indexed for search read-through entities.
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
+ * @deprecated Don't use it. Use SQL queries
  */
 @Target({ ElementType.METHOD, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 @MappingOption(SearchableConverter.class)
+@Deprecated
 public @interface Searchable {
 	//@todo set index name here
 	boolean value() default true;

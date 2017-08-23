@@ -69,6 +69,7 @@ public class IgniteTestConfigurationBuilder implements IgniteConfigurationBuilde
 
 	private IgniteConfiguration createConfig() {
 		IgniteConfiguration config = new IgniteConfiguration();
+		config.setActiveOnStart( true );
 
 		config.setLocalHost( "127.0.0.1" );
 		config.setPeerClassLoadingEnabled( true );

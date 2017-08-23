@@ -13,6 +13,7 @@ import org.hibernate.ogm.options.spi.OptionValuePair;
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
  */
+@Deprecated
 public class SearchableConverter implements AnnotationConverter<Searchable> {
 
 	@Override

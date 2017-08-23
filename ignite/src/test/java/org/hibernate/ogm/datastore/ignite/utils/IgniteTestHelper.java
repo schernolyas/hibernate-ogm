@@ -137,7 +137,7 @@ public class IgniteTestHelper implements GridDialectTestHelper {
 	@Override
 	public void dropSchemaAndDatabase(SessionFactory sessionFactory) {
 		if ( Ignition.allGrids().size() > 1 ) { // some tests doesn't stop DatastareProvider
-			String currentGridName = getProvider( sessionFactory ).getGridName();
+			String currentGridName = getProvider( sessionFactory ).getInstanceName();
 			for ( Ignite grid : Ignition.allGrids() ) {
 				if ( !Objects.equals( currentGridName, grid.name() ) ) {
 					grid.close();

@@ -12,6 +12,7 @@ import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReade
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
  */
+@Deprecated
 public class SearchableOption extends UniqueOption<Boolean> {
 	@Override
 	public Boolean getDefaultValue(ConfigurationPropertyReader propertyReader) {

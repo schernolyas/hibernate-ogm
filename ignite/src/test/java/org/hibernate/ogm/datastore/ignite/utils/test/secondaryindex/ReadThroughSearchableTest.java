@@ -19,7 +19,6 @@ import org.hibernate.ogm.utils.OgmTestCase;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Test;
 
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
@@ -29,7 +28,7 @@ import static org.fest.assertions.Assertions.assertThat;
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
  */
-
+@Deprecated
 public class ReadThroughSearchableTest extends OgmTestCase {
 	private Log logger = LoggerFactory.getLogger();
 	private final ReadThroughFruit apple = new ReadThroughFruit( "1", "apple", "apple desc" );
@@ -69,7 +68,7 @@ public class ReadThroughSearchableTest extends OgmTestCase {
 		}
 	}
 
-	@Test
+	//@Test
 	public void testIndexes() throws Exception {
 
 		IgniteCache<Object, BinaryObject> indexCache =

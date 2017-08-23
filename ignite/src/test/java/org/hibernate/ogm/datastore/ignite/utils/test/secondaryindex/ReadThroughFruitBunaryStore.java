@@ -17,6 +17,7 @@ import org.apache.ignite.binary.BinaryObject;
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
  */
+@Deprecated
 public class ReadThroughFruitBunaryStore extends AbstractHashMapBinaryStore {
 	public static final Map<String, BinaryObject> store = Collections.synchronizedMap( new HashMap<>() );
 

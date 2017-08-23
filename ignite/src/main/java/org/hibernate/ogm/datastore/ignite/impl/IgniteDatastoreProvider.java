@@ -85,7 +85,7 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 	private IgniteProviderConfiguration config;
 	private ConfigurationPropertyReader propertyReader;
 
-	private String gridName;
+	private String instanceName;
 	/** true - if we run inside the server node (for distributed tasks) */
 	private boolean localNode = false;
 	/** true - if we start node and we have to stop it */
@@ -109,7 +109,7 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 			cache = cacheManager.cache( entityCacheName );
 		}
 		catch (IllegalStateException ex) {
-			if ( Ignition.state( gridName ) == IgniteState.STOPPED ) {
+			if ( Ignition.state( instanceName ) == IgniteState.STOPPED ) {
 				log.stoppedIgnite();
 				restart();
 				cache = cacheManager.cache( entityCacheName );
@@ -183,17 +183,17 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 			localNode = Thread.currentThread() instanceof IgniteThread; // vk: take local node instance
 			if ( localNode ) {
 				cacheManager = (IgniteEx) Ignition.localIgnite();
-				gridName = cacheManager.name();
+				instanceName = cacheManager.name();
 			}
 			else {
 				IgniteConfiguration conf = createIgniteConfiguration();
-				gridName = createGridName( conf );
+				instanceName = createInstanceName( conf );
 				try {
-					cacheManager = (IgniteEx) Ignition.ignite( gridName );
+					cacheManager = (IgniteEx) Ignition.ignite( instanceName );
 				}
 				catch (IgniteIllegalStateException iise) {
 					// not found, then start
-					conf.setGridName( gridName );
+					conf.setIgniteInstanceName( instanceName );
 					cacheManager = (IgniteEx) Ignition.start( conf );
 					stopOnExit = true;
 				}
@@ -245,15 +245,15 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 		return cacheManager;
 	}
 
-	private String createGridName(IgniteConfiguration conf) {
+	private String createInstanceName(IgniteConfiguration conf) {
 		String name = null;
 		if ( StringUtils.isNotEmpty( config.getInstanceName() ) ) {
 			name = config.getInstanceName();
 		}
 		else {
 			IgniteConfiguration igniteConfiguration = createIgniteConfiguration();
-			if ( StringUtils.isNotEmpty( igniteConfiguration.getGridName() ) ) {
-				name = igniteConfiguration.getGridName();
+			if ( StringUtils.isNotEmpty( igniteConfiguration.getIgniteInstanceName() ) ) {
+				name = igniteConfiguration.getIgniteInstanceName();
 			}
 			else if ( config.getUrl() != null ) {
 				name = config.getUrl().getPath();
@@ -266,8 +266,8 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 		return name;
 	}
 
-	public String getGridName() {
-		return gridName;
+	public String getInstanceName() {
+		return instanceName;
 	}
 
 	@Override
