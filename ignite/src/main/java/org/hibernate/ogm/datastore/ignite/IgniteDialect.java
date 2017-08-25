@@ -215,34 +215,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			}
 			Object value = tuple.get( columnName );
 
-			if ( isReadThrough ) {
-				if ( isIndexField( searchableFields, columnName ) ) {
-					//@todo correct index
-					log.debugf( "insertOrUpdateTuple: index cache name: %s", IgniteCacheInitializer.generateIndexName( key.getTable(), columnName ) );
-					IgniteCache<Object, BinaryObject> indexEntityCache = provider.getEntityCache( IgniteCacheInitializer.generateIndexName( key.getTable(), columnName ) );
-					if ( value != null ) {
-						//add value to index
-						BinaryObject currentBinaryObject = indexEntityCache.get( value );
-						BinaryObjectBuilder indexBuilder = currentBinaryObject != null ? currentBinaryObject.toBuilder() : provider.createBinaryObjectBuilder( "Searchable" );
-						if ( indexBuilder.getField( INDEX_FIELD ) == null ) {
-							HashSet idSet = new HashSet();
-							idSet.add( key.getColumnValues()[0] );
-							indexBuilder.setField( INDEX_FIELD, idSet );
-						}
-						else {
-							Set idSet = indexBuilder.getField( INDEX_FIELD );
-							idSet.add( key.getColumnValues()[0] ); //@todo think about composite keys
-						}
-						BinaryObject indexObject = indexBuilder.build();
-						indexEntityCache.put( value, indexObject );
-					}
-					else {
-						Object previusValue = tuple.getSnapshot().get( columnName );
-						//remove value from index
-					}
 
-				}
-			}
 
 			if ( value != null ) {
 				builder.setField( StringHelper.realColumnName( columnName ), value );
@@ -261,21 +234,6 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( key.getMetadata() );
 		BinaryObject removedObject = entityCache.get( provider.createKeyObject( key ) );
 		Boolean isReadThrough = tupleContext.getTupleTypeContext().getOptionsContext().getUnique( ReadThroughOption.class );
-		if ( isReadThrough ) {
-			Class<?> entityType = IgniteCacheInitializer.getTableEntityTypeMapping().get( key.getTable() );
-			Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Searchable.class, false );
-			for ( Field searchableField : searchableFields ) {
-				log.debugf( "removeTuple: index cache name: %s" , IgniteCacheInitializer.generateIndexName( key.getTable() ,searchableField.getName() ) );
-				IgniteCache<Object, BinaryObject> indexEntityCache = provider.getEntityCache( IgniteCacheInitializer.generateIndexName( key.getTable() , searchableField.getName() ) );
-				Object value = removedObject.field( searchableField.getName() );
-				BinaryObjectBuilder builder = indexEntityCache.get( value ).toBuilder();
-
-				Set idSet = builder.getField( INDEX_FIELD );
-				idSet.remove( key.getColumnValues()[0] );
-				builder.setField( INDEX_FIELD, idSet );
-				indexEntityCache.put( value,builder.build() );
-			}
-		}
 		entityCache.remove( provider.createKeyObject( key ) );
 
 	}
@@ -888,7 +846,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				}
 				break;
 			case SEQUENCE:
-				IgniteAtomicSequence seq = provider.atomicSequence( request.getKey().getMetadata().getName(), request.getInitialValue(), true );
+				IgniteAtomicSequence seq = provider.atomicSequence( request.getKey().getMetadata().getName(), request.getInitialValue(), false );
 				result = seq.getAndAdd( request.getIncrement() );
 				break;
 		}

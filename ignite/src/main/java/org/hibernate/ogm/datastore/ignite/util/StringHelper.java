@@ -33,4 +33,13 @@ public class StringHelper {
 		}
 		return result;
 	}
+
+	public static String stringAfterUnderscore(String value) {
+		String result = value;
+		int index = result.indexOf( '_' );
+		if ( index >= 0 ) {
+			result = result.substring( index + 1 );
+		}
+		return result;
+	}
 }
