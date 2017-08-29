@@ -821,6 +821,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 
 	@Override
 	public Number nextValue(NextValueRequest request) {
+		log.debugf( "generate next value: %s",request );
 		Long result = null;
 		switch ( request.getKey().getMetadata().getType() ) {
 			case TABLE:
@@ -846,6 +847,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				}
 				break;
 			case SEQUENCE:
+
 				IgniteAtomicSequence seq = provider.atomicSequence( request.getKey().getMetadata().getName(), request.getInitialValue(), false );
 				result = seq.getAndAdd( request.getIncrement() );
 				break;

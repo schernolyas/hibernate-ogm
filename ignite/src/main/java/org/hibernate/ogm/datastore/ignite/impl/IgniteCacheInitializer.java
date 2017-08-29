@@ -177,8 +177,18 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		//generate sequences
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
 			for ( Sequence sequence : namespace.getSequences() ) {
+				log.debugf( "initializeIdSources. generate sequence: %s ",sequence.getName().getSequenceName().getCanonicalName() );
 				igniteDatastoreProvider.atomicSequence( sequence.getName().getSequenceName().getCanonicalName(),  sequence.getInitialValue(), true );
 			}
+		}
+		//generate atomicSequences
+		String atomicSequenceNames = propertyReader.property( IgniteProperties.IGNITE_ATOMIC_SEQUENCE_NAMES,String.class ).getValue();
+		if ( atomicSequenceNames != null ) {
+			log.debugf( "initializeIdSources. generate atomicSequenceNames: %s ", atomicSequenceNames );
+			for ( String atomicSequenceName : atomicSequenceNames.split( "," ) ) {
+				igniteDatastoreProvider.atomicSequence( atomicSequenceName,  0, true );
+			}
+
 		}
 	}
 

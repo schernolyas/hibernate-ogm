@@ -60,6 +60,10 @@ public final class IgniteProperties implements KeyValueStoreProperties {
 	 * Configuration property 'txsize' for {@link org.apache.ignite.IgniteTransactions#txStart(TransactionConcurrency, TransactionIsolation, long, int)}
 	 */
 	public static final String IGNITE_TRANSACTION_TXSIZE = "hibernate.ogm.ignite.transaction.txsize";
+	/**
+	 * Configuration property 'atomicSequenceNames' for  list names of used atomicSequence objects
+	 * */
+	public static final String IGNITE_ATOMIC_SEQUENCE_NAMES = "hibernate.ogm.ignite.atomicSequenceNames";
 
 	private IgniteProperties() {
 
