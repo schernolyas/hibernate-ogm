@@ -245,7 +245,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		}
 
 		for ( String idFieldName : associationKeyMetadata.getRowKeyColumnNames() ) {
-			log.debugf( "appendIndex. idFieldName: %s , %s, %s",idFieldName, generateIndexName( idFieldName ), StringHelper.stringAfterUnderscore( idFieldName ) );
+			log.debugf( "appendIndex. idFieldName: %s , %s",idFieldName, generateIndexName( idFieldName ) );
 			queryEntity.addQueryField( generateIndexName( idFieldName ), String.class.getName(),null );
 			queryEntity.setIndexes( Arrays.asList( new QueryIndex( generateIndexName( idFieldName ), QueryIndexType.SORTED  ) ) );
 		}
