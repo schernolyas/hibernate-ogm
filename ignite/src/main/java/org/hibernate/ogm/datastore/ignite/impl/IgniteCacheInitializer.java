@@ -88,14 +88,16 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 
 
 		for ( EntityKeyMetadata entityKeyMetadata : context.getAllEntityKeyMetadata() ) {
+			log.debugf( "initializeEntities. current entityKeyMetadata: %s", entityKeyMetadata );
 
 			try {
 				try {
+					log.debugf( "initializeEntities. try to get cache for entity: %s", entityKeyMetadata.getTable() );
 
 					igniteDatastoreProvider.getEntityCache( entityKeyMetadata );
 				}
 				catch (HibernateException ex) {
-
+					log.debugf( "initializeEntities. create schema for entity: %s", entityKeyMetadata.getTable() );
 					CacheConfiguration config = createEntityCacheConfiguration( entityKeyMetadata, context, propertyReader );
 					igniteDatastoreProvider.initializeCache( config );
 					/*createReadThroughIndexConfiguration( entityKeyMetadata, context ).forEach( cacheConfiguration -> {
@@ -171,6 +173,12 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 				catch (Exception ex) {
 					// just write error to log
 					throw log.unableToInitializeCache( idSourceKeyMetadata.getName(), ex );
+				}
+			}
+			else if ( idSourceKeyMetadata.getType() == IdSourceKeyMetadata.IdSourceType.SEQUENCE ) {
+				log.debugf( "initializeIdSources. generate sequence: %s ",idSourceKeyMetadata.getName() );
+				if ( idSourceKeyMetadata.getName() != null ) {
+					igniteDatastoreProvider.atomicSequence( idSourceKeyMetadata.getName(),  1, true );
 				}
 			}
 		}
@@ -296,6 +304,8 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		if ( !( readThroughValue || writeThroughValue ) ) {
 			QueryEntity queryEntity = new QueryEntity();
 			queryEntity.setTableName( entityKeyMetadata.getTable() );
+			log.debugf( "createEntityCacheConfiguration. create QueryEntity for table:%s;",
+						entityKeyMetadata.getTable() );
 			queryEntity.setKeyType( getEntityIdClassName( entityKeyMetadata.getTable(), context ).getSimpleName() );
 			queryEntity.setValueType( StringHelper.stringAfterPoint( entityKeyMetadata.getTable() ) );
 			addTableInfo( queryEntity,context, entityKeyMetadata.getTable() );
