@@ -62,6 +62,7 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.PersistentStoreConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.lang.IgniteCallable;
@@ -190,11 +191,33 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 				instanceName = createInstanceName( conf );
 				try {
 					cacheManager = (IgniteEx) Ignition.ignite( instanceName );
+					log.info( "== Instance of Ignite taken ==" );
 				}
 				catch (IgniteIllegalStateException iise) {
 					// not found, then start
 					conf.setIgniteInstanceName( instanceName );
+
+					Boolean usePersistence = propertyReader.property( IgniteProperties.IGNITE_SUPPORT_PERSISTENCE,Boolean.class )
+							.withDefault( Boolean.FALSE ).getValue();
+
+					if ( usePersistence ) {
+						PersistentStoreConfiguration persistentStoreConfiguration = new PersistentStoreConfiguration();
+						String workDirectory = propertyReader.property( IgniteProperties.IGNITE_WORK_DIRECTORY,String.class )
+								.required().getValue();
+						log.infof( "workDirectory: %s",workDirectory  );
+						conf.setWorkDirectory( workDirectory );
+
+
+						conf.setPersistentStoreConfiguration( persistentStoreConfiguration );
+						conf.setActiveOnStart( true );
+					}
+
+
 					cacheManager = (IgniteEx) Ignition.start( conf );
+					log.info( "== New instance of Ignite started ==" );
+					if ( usePersistence ) {
+						cacheManager.active( true );
+					}
 					stopOnExit = true;
 				}
 			}

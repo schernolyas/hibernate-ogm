@@ -61,9 +61,11 @@ public final class IgniteProperties implements KeyValueStoreProperties {
 	 */
 	public static final String IGNITE_TRANSACTION_TXSIZE = "hibernate.ogm.ignite.transaction.txsize";
 	/**
-	 * Configuration property 'atomicSequenceNames' for  list names of used atomicSequence objects
+	 * Configuration property 'support_persistence' activate Ignite Native Persistence feature
+	 * @see <a href="https://apacheignite.readme.io/docs/distributed-persistent-store">Ignite Native Persistence</a>
 	 * */
-	public static final String IGNITE_ATOMIC_SEQUENCE_NAMES = "hibernate.ogm.ignite.atomicSequenceNames";
+	public static final String IGNITE_SUPPORT_PERSISTENCE = "hibernate.ogm.ignite.support_persistence";
+	public static final String IGNITE_WORK_DIRECTORY = "hibernate.ogm.ignite.work.directory.path";
 
 	private IgniteProperties() {
 
