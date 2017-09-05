@@ -35,7 +35,7 @@ import org.junit.rules.ExpectedException;
  * @author Gunnar Morling
  */
 @SkipByGridDialect(
-		value = { GridDialectType.CASSANDRA, GridDialectType.INFINISPAN_REMOTE, GridDialectType.IGNITE },
+		value = { GridDialectType.INFINISPAN_REMOTE },
 		comment = "list - bag semantics unsupported (no primary key)"
 )
 public class OptimisticLockingExtraTest extends OgmTestCase {

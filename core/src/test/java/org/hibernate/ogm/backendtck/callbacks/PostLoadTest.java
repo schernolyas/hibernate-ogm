@@ -24,7 +24,7 @@ import org.junit.Test;
  * @author David Williams
  */
 @SkipByGridDialect(
-		value = { GridDialectType.CASSANDRA, GridDialectType.INFINISPAN_REMOTE },
+		value = { GridDialectType.INFINISPAN_REMOTE },
 		comment = "Zoo.animals set - bag semantics unsupported (no primary key)"
 )
 public class PostLoadTest extends OgmJpaTestCase {
@@ -97,6 +97,7 @@ public class PostLoadTest extends OgmJpaTestCase {
 	}
 
 	@After
+	@Override
 	public void removeEntities() throws Exception {
 		EntityManager em = getFactory().createEntityManager();
 		em.getTransaction().begin();

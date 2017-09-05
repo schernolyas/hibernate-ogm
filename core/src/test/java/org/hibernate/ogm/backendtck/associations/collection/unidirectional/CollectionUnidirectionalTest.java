@@ -15,13 +15,11 @@ import static org.junit.Assert.assertNotNull;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.ogm.utils.OgmTestCase;
-
 import org.junit.Test;
 
 /**
  * @author Emmanuel Bernard
  */
-
 public class CollectionUnidirectionalTest extends OgmTestCase {
 
 	@Test

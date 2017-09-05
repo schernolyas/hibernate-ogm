@@ -81,12 +81,7 @@ public class HashMapTestHelper implements GridDialectTestHelper {
 	}
 
 	@Override
-	public void prepareDatabase(SessionFactory sessionFactory) {
-
-	}
-
-	@Override
-	public Map<String, String> getEnvironmentProperties() {
+	public Map<String, String> getAdditionalConfigurationProperties() {
 		return Collections.emptyMap();
 	}
 

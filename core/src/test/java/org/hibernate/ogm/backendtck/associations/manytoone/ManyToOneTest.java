@@ -7,7 +7,6 @@
 package org.hibernate.ogm.backendtck.associations.manytoone;
 
 import static org.fest.assertions.Assertions.assertThat;
-import static org.hibernate.ogm.utils.GridDialectType.IGNITE;
 import static org.hibernate.ogm.utils.GridDialectType.NEO4J_EMBEDDED;
 import static org.hibernate.ogm.utils.GridDialectType.NEO4J_REMOTE;
 import static org.hibernate.ogm.utils.TestHelper.get;
@@ -21,7 +20,6 @@ import java.util.EnumSet;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.ogm.utils.OgmTestCase;
-import org.hibernate.ogm.utils.SkipByGridDialect;
 import org.hibernate.ogm.utils.TestForIssue;
 import org.hibernate.ogm.utils.TestHelper;
 import org.junit.Test;
@@ -29,7 +27,6 @@ import org.junit.Test;
 /**
  * @author Emmanuel Bernard
  */
-@SkipByGridDialect( value = { IGNITE },comment = "Not implemented yet!")
 public class ManyToOneTest extends OgmTestCase {
 
 	@Test

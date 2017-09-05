@@ -30,7 +30,6 @@ import org.junit.Test;
 /**
  * @author Emmanuel Bernard emmanuel@hibernate.org
  */
-
 public class BatchFetchingTest extends OgmTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {

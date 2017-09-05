@@ -7,7 +7,6 @@
 package org.hibernate.ogm.backendtck.queries;
 
 import static org.fest.assertions.Assertions.assertThat;
-import static org.hibernate.ogm.utils.GridDialectType.IGNITE;
 import static org.hibernate.ogm.utils.GridDialectType.MONGODB;
 import static org.hibernate.ogm.utils.GridDialectType.NEO4J_EMBEDDED;
 import static org.hibernate.ogm.utils.GridDialectType.NEO4J_REMOTE;
@@ -30,7 +29,7 @@ import org.hibernate.Transaction;
 import org.hibernate.hql.ParsingException;
 import org.hibernate.ogm.utils.OgmTestCase;
 import org.hibernate.ogm.utils.SkipByGridDialect;
-//import org.hibernate.ogm.utils.TestForIssue;
+import org.hibernate.ogm.utils.TestForIssue;
 import org.hibernate.ogm.utils.TestHelper;
 import org.hibernate.ogm.utils.TestSessionFactory;
 import org.hibernate.resource.transaction.spi.TransactionStatus;
@@ -45,7 +44,6 @@ import org.junit.rules.ExpectedException;
  * @author Sanne Grinovero &lt;sanne@hibernate.org&gt; (C) 2012 Red Hat Inc.
  * @author Gunnar Morling
  */
-//@SkipByGridDialect( value = {IGNITE}, comment = "Not supported by dialect yet!")
 public class SimpleQueriesTest extends OgmTestCase {
 
 	@TestSessionFactory
@@ -87,13 +85,13 @@ public class SimpleQueriesTest extends OgmTestCase {
 				"from Helicopter" ) );
 	}
 
-	//@Test
+	@Test
 	public void testSimpleQueryOnUnindexedSuperType() throws Exception {
 		assertQuery( session, 17, session.createQuery(
 				"from java.lang.Object" ) );
 	}
 
-	//@Test
+	@Test
 	public void testFailingQuery() {
 		thrown.expect( HibernateException.class );
 		thrown.expectMessage( "OGM000024" );
@@ -107,35 +105,33 @@ public class SimpleQueriesTest extends OgmTestCase {
 	}
 
 	@Test
-	@SkipByGridDialect(value = { IGNITE }, comment = "Projection is not supported.")
 	public void testUnqualifiedProjectionQuery() throws Exception {
 		List<ProjectionResult> projectionResult = asProjectionResults( "select id, description from Hypothesis h where id = 16" );
 		assertThat( projectionResult ).containsOnly( new ProjectionResult( "16", "stuff works" ) );
 	}
 
 	@Test
-	@SkipByGridDialect(value = { IGNITE }, comment = "Projection is not supported.")
 	public void testQualifiedProjectionQuery() throws Exception {
 		List<ProjectionResult> projectionResult = asProjectionResults( "select h.id, h.description from Hypothesis h where h.id = 16" );
 		assertThat( projectionResult ).containsOnly( new ProjectionResult( "16", "stuff works" ) );
 	}
 
 	@Test
-	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE, IGNITE }, comment = "Selecting from associations is not yet implemented.")
+	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE }, comment = "Selecting from associations is not yet implemented.")
 	public void testSelectingAttributeFromAssociatedEntityInProjectionQuery() throws Exception {
 		List<ProjectionResult> projectionResult = asProjectionResults( "select h.author.name from Hypothesis h where h.id = 16" );
 		assertThat( projectionResult ).containsOnly( new ProjectionResult( "alfred" ) );
 	}
 
 	@Test
-	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE, IGNITE  }, comment = "Selecting from associations is not yet implemented.")
+	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE }, comment = "Selecting from associations is not yet implemented.")
 	public void testSelectingAttributeFromIndirectlyAssociatedEntityInProjectionQuery() throws Exception {
 		List<ProjectionResult> projectionResult = asProjectionResults( "select h.author.address.street from Hypothesis h where h.id = 16" );
 		assertThat( projectionResult ).containsOnly( new ProjectionResult( "Main Street" ) );
 	}
 
 	@Test
-	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE, IGNITE  }, comment = "Projecting complete entity is not yet implemented.")
+	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE }, comment = "Projecting complete entity is not yet implemented.")
 	public void testSelectingCompleteEntityInProjectionQuery() throws Exception {
 		List<?> projectionResult = session.createQuery( "select h, h.id from Hypothesis h where h.id = 16" ).list();
 		assertThat( projectionResult ).hasSize( 1 );
@@ -145,7 +141,7 @@ public class SimpleQueriesTest extends OgmTestCase {
 	}
 
 	@Test
-	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE, IGNITE  }, comment = "Doesn't apply to MongoDB or Neo4j queries.")
+	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE }, comment = "Doesn't apply to MongoDB or Neo4j queries.")
 	public void testSelectingCompleteIndexedEmbeddedEntityInProjectionQueryRaisesException() throws Exception {
 		thrown.expect( ParsingException.class );
 		thrown.expectMessage( "HQL100005" );
@@ -161,47 +157,42 @@ public class SimpleQueriesTest extends OgmTestCase {
 
 	@Test
 	public void testNegatedQuery() throws Exception {
-		try {
-			List<?> result = session.createQuery( "from Hypothesis h where not h.id = '13'" ).list();
-			assertThat( result ).onProperty( "id" ).containsOnly( "14", "15", "16", "17", "18", "19", "20" );
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
+		List<?> result = session.createQuery( "from Hypothesis h where not h.id = '13'" ).list();
+		assertThat( result ).onProperty( "id" ).containsOnly( "14", "15", "16", "17", "18", "19", "20" );
 	}
 
-	//@Test
+	@Test
 	public void testNegatedQueryOnNumericProperty() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position <> 4" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "14", "15", "17", "18", "19" );
 	}
 
-	//@Test
+	@Test
 	public void testQueryWithConjunctionAndNegation() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position = 2 and not h.id = '13'" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "14" );
 	}
 
-	//@Test
+	@Test
 	public void testQueryWithRangeAndNegation() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position between 2 and 3 and not h.id = '13'" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "14", "15" );
 	}
 
-	//@Test
+	@Test
 	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE }, comment = "Selecting from associations is not yet implemented.")
 	public void testQueryWithPropertyFromAssociatedEntityInWhereClause() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.author.name = 'alfred'" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "16" );
 	}
 
-	//@Test
+	@Test
 	public void testConstantNumericQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.id = 13" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13" );
 	}
 
-	//@Test
+	@Test
 	public void testParametricQueries() throws Exception {
 		List<?> result = session
 				.createQuery( "from Hypothesis h where h.description = :myParam" )
@@ -210,7 +201,7 @@ public class SimpleQueriesTest extends OgmTestCase {
 		assertThat( result ).onProperty( "id" ).containsOnly( "16" );
 	}
 
-	//@Test
+	@Test
 	public void testConstantParameterRangeQuery() throws Exception {
 		List<?> result = session
 				.createQuery( "from Hypothesis h where h.description BETWEEN 'H' and 'Q'" )
@@ -218,7 +209,7 @@ public class SimpleQueriesTest extends OgmTestCase {
 		assertThat( result ).onProperty( "id" ).containsOnly( "14", "15", "17" );
 	}
 
-	//@Test
+	@Test
 	public void testRangeQueryWithParameters() throws Exception {
 		List<?> result = session
 				.createQuery( "from Hypothesis h where h.description BETWEEN :start and :end" )
@@ -229,7 +220,7 @@ public class SimpleQueriesTest extends OgmTestCase {
 		assertThat( result ).onProperty( "id" ).containsOnly( "14", "15", "17" );
 	}
 
-	//@Test
+	@Test
 	public void testDateRangeQueryWithParameters() throws Exception {
 		Calendar calendar = Calendar.getInstance( TimeZone.getTimeZone( "GMT" ) );
 		calendar.clear();
@@ -249,105 +240,105 @@ public class SimpleQueriesTest extends OgmTestCase {
 		assertThat( result ).onProperty( "id" ).containsOnly( "15", "16" );
 	}
 
-	//@Test
+	@Test
 	public void testConstantParameterNumericRangeQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position BETWEEN 1 and 2" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "14" );
 	}
 
-	//@Test
+	@Test
 	public void testLessQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position < 3" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "14" );
 	}
 
-	//@Test
+	@Test
 	public void testNotLessQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where NOT h.position < 3" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "15", "16", "17", "18", "19", "20" );
 	}
 
-	//@Test
+	@Test
 	public void testLessOrEqualsQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position <= 3" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "14", "15" );
 	}
 
-	//@Test
+	@Test
 	public void testNotLessOrEqualsQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where NOT h.position <= 3" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "16", "17", "18", "19", "20" );
 	}
 
-	//@Test
+	@Test
 	public void testGreaterOrEqualsQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position >= 2" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "14", "15", "16", "17", "18", "19", "20" );
 	}
 
-	//@Test
+	@Test
 	public void testGreaterQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position > 2" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "15", "16", "17", "18", "19", "20" );
 	}
 
-	//@Test
+	@Test
 	public void testInQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position IN (2, 3, 4)" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "14", "15", "16", "20" );
 	}
 
-	//@Test
+	@Test
 	public void testInQueryOnStringProperty() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.id IN ('15', '16')" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "15", "16" );
 	}
 
-	//@Test
+	@Test
 	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE }, comment = "Selecting from associated entities is not yet implemented.")
 	public void testInQueryOnAssociatedEntity() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.author.name IN ('alma', 'alfred')" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "14", "16" );
 	}
 
-	//@Test
+	@Test
 	public void testNotInQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.position NOT IN (3, 4)" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "14", "17", "18", "19" );
 	}
 
-	//@Test
+	@Test
 	public void testNotInQueryReturnsEntityWithQueriedPropertySetToNull() throws Exception {
 		List<?> result = session.createQuery( "from Helicopter h where h.name NOT IN ('No creative clue')" ).list();
 		assertThat( result ).onProperty( "name" ).containsOnly( null, "Lama" );
 	}
 
-	//@Test
-	//@TestForIssue(jiraKey = "OGM-581")
+	@Test
+	@TestForIssue(jiraKey = "OGM-581")
 	public void testParameterList() throws Exception {
 		List<String> paramList = Arrays.asList( "Lama", "Puma" );
 		List<?> result = session.createQuery( "from Helicopter h where h.name IN (:names)" ).setParameterList( "names", paramList ).list();
 		assertThat( result ).onProperty( "name" ).containsOnly( "Lama" );
 	}
 
-	//@Test
-	//@TestForIssue(jiraKey = "OGM-581")
+	@Test
+	@TestForIssue(jiraKey = "OGM-581")
 	public void testParameterListWithLongList() throws Exception {
 		List<Long> paramList = Arrays.asList( 1L, 2L, 4L );
 		List<?> result = session.createQuery( "from Author a where a.id IN (:ids)" ).setParameterList( "ids", paramList ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( 1L, 2L );
 	}
 
-	//@Test
-	//@TestForIssue(jiraKey = "OGM-581")
+	@Test
+	@TestForIssue(jiraKey = "OGM-581")
 	public void testParameterListWithLongArray() throws Exception {
 		Long[] paramArray = new Long[] { 1L, 2L, 4L };
 		List<?> result = session.createQuery( "from Author a where a.id IN (:ids)" ).setParameterList( "ids", paramArray ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( 1L, 2L );
 	}
 
-	//@Test
-	//@TestForIssue(jiraKey = "OGM-581")
+	@Test
+	@TestForIssue(jiraKey = "OGM-581")
 	public void testParameterListWithDate() throws Exception {
 		List<Date> paramList = new ArrayList<>();
 
@@ -366,46 +357,46 @@ public class SimpleQueriesTest extends OgmTestCase {
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "14" );
 	}
 
-	//@Test
+	@Test
 	public void testLikeQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.description LIKE '%dimensions%'" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "15" );
 	}
 
-	//@Test
+	@Test
 	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE }, comment = "Querying on associated entities is not yet implemented.")
 	public void testLikeQueryWithSingleCharacterWildCard() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.author.name LIKE 'al_red'" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "16" );
 	}
 
-	//@Test
+	@Test
 	public void testLikeQueryOnMultiwords() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.description LIKE 'There are more than%'" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "20" );
 	}
 
-	//@Test
+	@Test
 	public void testLikeQueryOnMultiwordsNoMatch() throws Exception {
 		//It is case-sensitive, as Analysis is disabled on wildcard queries:
 		List<?> result = session.createQuery( "from Hypothesis h where h.description LIKE 'there are more than%'" ).list();
 		assertThat( result ).isEmpty();
 	}
 
-	//@Test
+	@Test
 	public void testLikeQueryOnMultiwordsAsPrefix() throws Exception {
 		//It is case-sensitive, as Analysis is disabled on wildcard queries:
 		List<?> result = session.createQuery( "from Hypothesis h where h.description LIKE '%e'" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "14" );
 	}
 
-	//@Test
+	@Test
 	public void testLikeQueryOnMultiwordsPrefixed() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.description LIKE '%the cave'" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13" );
 	}
 
-	//@Test
+	@Test
 	public void testNegatedLikeQueryOnMultiwords() throws Exception {
 		//Matching out:
 		// "13" - "There are more than two dimensions over the shadows we see out of the cave"
@@ -416,45 +407,45 @@ public class SimpleQueriesTest extends OgmTestCase {
 		assertThat( result ).onProperty( "id" ).containsOnly( "17", "18" );
 	}
 
-	//@Test
+	@Test
 	public void testNotLikeQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.description NOT LIKE '%dimensions%'" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "14", "16", "17", "18", "19", "20" );
 	}
 
-	//@Test
+	@Test
 	public void testIsNullQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.description IS null" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "19" );
 	}
 
-	//@Test
+	@Test
 	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE }, comment = "Querying on associated entities is not yet implemented.")
 	public void testIsNullQueryOnPropertyOfAssociatedEntity() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.author.name IS null" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "19" );
 	}
 
-	//@Test
+	@Test
 	public void testIsNotNullQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.description IS NOT null" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "13", "14", "15", "16", "17", "18", "20" );
 	}
 
-	//@Test
+	@Test
 	@SkipByGridDialect(value = { MONGODB, NEO4J_EMBEDDED, NEO4J_REMOTE }, comment = "Querying on associated entities is not yet implemented.")
 	public void testIsNotNullQueryOnAssociatedEntity() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.author IS NOT null" ).list();
 		assertThat( result ).onProperty( "id" ).containsOnly( "14", "16", "19" );
 	}
 
-	//@Test
+	@Test
 	public void testGetNamedQuery() throws Exception {
 		Helicopter result = (Helicopter) session.getNamedQuery( Helicopter.BY_NAME ).setParameter( "name", "Lama" ).uniqueResult();
 		assertThat( result.getName() ).isEqualTo( "Lama" );
 	}
 
-	//@Test
+	@Test
 	public void testFirstResultAndMaxRows() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h where h.description IS NOT null ORDER BY id" )
 				.setFirstResult( 2 )
@@ -463,7 +454,7 @@ public class SimpleQueriesTest extends OgmTestCase {
 		assertThat( result ).onProperty( "id" ).containsOnly( "15", "16", "17" );
 	}
 
-	//@Test
+	@Test
 	public void testOrderedQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h order by h.description" ).list();
 		assertThat( result ).onProperty( "description" ).ignoreNullOrder().containsExactly(
@@ -478,7 +469,7 @@ public class SimpleQueriesTest extends OgmTestCase {
 		);
 	}
 
-	//@Test
+	@Test
 	public void testOrderedDescQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h order by h.description desc" ).list();
 		assertThat( result ).onProperty( "description" ).ignoreNullOrder().containsExactly(
@@ -493,7 +484,7 @@ public class SimpleQueriesTest extends OgmTestCase {
 		);
 	}
 
-	//@Test
+	@Test
 	public void testOrderedDescByNumericFieldWithCustomColumnNameQuery() throws Exception {
 		List<?> result = session.createQuery( "from Hypothesis h order by h.position desc" ).list();
 		assertThat( result ).onProperty( "position" ).containsExactly(
@@ -501,7 +492,7 @@ public class SimpleQueriesTest extends OgmTestCase {
 		);
 	}
 
-	//@Test
+	@Test
 	public void testOrderedDescAndAscQuery() throws Exception {
 		List<?> result = session.createQuery( "from Helicopter h order by h.make desc, h.name" ).list();
 
@@ -513,7 +504,7 @@ public class SimpleQueriesTest extends OgmTestCase {
 		);
 	}
 
-	//@Test
+	@Test
 	public void testProjectionWithNullValue() throws Exception {
 		List<ProjectionResult> projectionResult = asProjectionResults( "select name, make from Helicopter" );
 		assertThat( projectionResult ).containsOnly(
@@ -525,8 +516,8 @@ public class SimpleQueriesTest extends OgmTestCase {
 		);
 	}
 
-	//@Test
-	//@TestForIssue(jiraKey = "OGM-424")
+	@Test
+	@TestForIssue(jiraKey = "OGM-424")
 	public void testAutoFlushIsAppliedDuringQueryExecution() throws Exception {
 		Query query = session.createQuery( "from Hypothesis" );
 		assertQuery( session, 8, query );
@@ -547,8 +538,8 @@ public class SimpleQueriesTest extends OgmTestCase {
 		session.delete( hypothesis );
 	}
 
-	//@Test
-	//@TestForIssue(jiraKey = "OGM-424")
+	@Test
+	@TestForIssue(jiraKey = "OGM-424")
 	public void testEntitiesInsertedInCurrentSessionAreFoundByQueriesNotBasedOnHibernateSearch() throws Exception {
 		Query query = session.createQuery( "from Hypothesis h where h.position = 30" );
 		assertQuery( session, 0, query );
@@ -569,8 +560,8 @@ public class SimpleQueriesTest extends OgmTestCase {
 		session.delete( hypothesis );
 	}
 
-	//@Test
-	//@TestForIssue(jiraKey = "OGM-424")
+	@Test
+	@TestForIssue(jiraKey = "OGM-424")
 	public void testSetFlushModeIsApplied() throws Exception {
 		Query query = session.createQuery( "from Hypothesis h where h.position = 31" );
 		assertQuery( session, 0, query );

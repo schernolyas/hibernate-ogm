@@ -7,7 +7,6 @@
 package org.hibernate.ogm.backendtck.massindex;
 
 import static org.fest.assertions.Assertions.assertThat;
-import static org.hibernate.ogm.utils.GridDialectType.IGNITE;
 import static org.hibernate.ogm.utils.GridDialectType.MONGODB;
 
 import java.util.Arrays;
@@ -30,7 +29,6 @@ import org.junit.Test;
 /**
  * @author Davide D'Alto &lt;davide@hibernate.org&gt;
  */
-@SkipByGridDialect( value = {IGNITE}, comment = "Not supported by dialect yet!")
 public class AssociationMassIndexerTest extends OgmJpaTestCase {
 
 	@Test

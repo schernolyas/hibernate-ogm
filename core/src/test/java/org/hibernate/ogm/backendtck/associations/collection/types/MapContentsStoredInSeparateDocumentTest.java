@@ -28,10 +28,9 @@ import org.junit.Test;
  * @author Gunnar Morling
  */
 @SkipByGridDialect(
-		value = { GridDialectType.EHCACHE, GridDialectType.HASHMAP, GridDialectType.INFINISPAN, GridDialectType.INFINISPAN_REMOTE,
-				GridDialectType.NEO4J_EMBEDDED, GridDialectType.NEO4J_REMOTE, GridDialectType.CASSANDRA, GridDialectType.REDIS_HASH,
-				GridDialectType.IGNITE },
-		comment = "Only the document stores CouchDB and MongoDB and Redis JSON support the configuration of specific association storage strategies"
+		value = { GridDialectType.HASHMAP, GridDialectType.INFINISPAN, GridDialectType.INFINISPAN_REMOTE,
+				GridDialectType.NEO4J_EMBEDDED, GridDialectType.NEO4J_REMOTE },
+		comment = "Make sense only for document type datastores"
 )
 public class MapContentsStoredInSeparateDocumentTest extends OgmTestCase {
 

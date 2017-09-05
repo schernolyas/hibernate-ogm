@@ -12,13 +12,11 @@ import static org.junit.Assert.assertNull;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.ogm.utils.OgmTestCase;
-
 import org.junit.Test;
 
 /**
  * @author Emmanuel Bernard
  */
-
 public class OneToOneTest extends OgmTestCase {
 
 	@Test

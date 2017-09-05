@@ -6,7 +6,6 @@
  */
 package org.hibernate.ogm.backendtck.queries;
 
-import static org.hibernate.ogm.utils.GridDialectType.IGNITE;
 import static org.hibernate.ogm.utils.OgmAssertions.assertThat;
 
 import java.util.List;
@@ -22,7 +21,6 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.ogm.utils.OgmTestCase;
-import org.hibernate.ogm.utils.SkipByGridDialect;
 import org.hibernate.ogm.utils.TestForIssue;
 import org.hibernate.ogm.utils.TestSessionFactory;
 import org.hibernate.search.annotations.Analyze;
@@ -38,7 +36,6 @@ import org.junit.rules.ExpectedException;
 /**
  * @author Davide D'Alto
  */
-@SkipByGridDialect( value = {IGNITE}, comment = "Not supported by dialect yet!")
 public class SimpleQueriesWithSingleTableInheritanceTest extends OgmTestCase {
 
 	@TestSessionFactory

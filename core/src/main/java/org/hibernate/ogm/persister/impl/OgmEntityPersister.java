@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.hibernate.AssertionFailure;
 import org.hibernate.HibernateException;
@@ -73,6 +74,7 @@ import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.model.spi.Association;
 import org.hibernate.ogm.model.spi.Tuple;
+import org.hibernate.ogm.model.spi.Tuple.SnapshotType;
 import org.hibernate.ogm.options.spi.OptionsService;
 import org.hibernate.ogm.options.spi.OptionsService.OptionsServiceContext;
 import org.hibernate.ogm.type.spi.GridType;
@@ -434,22 +436,42 @@ public abstract class OgmEntityPersister extends AbstractEntityPersister impleme
 		return mainSidePersister == inversePropertyType.getAssociatedJoinable( factory ) && mainSideProperty.equals( associatedProperty );
 	}
 
-	private List<String> selectableColumnNames(final EntityDiscriminator discriminator) {
-		List<String> columnNames = new ArrayList<String>();
+	private static List<String> selectableColumnNames(final OgmEntityPersister persister, final EntityDiscriminator discriminator) {
+		Set<String> columnNames = new HashSet<String>();
 
-		for ( int propertyCount = 0; propertyCount < this.getPropertySpan(); propertyCount++ ) {
-			String[] property = this.getPropertyColumnNames( propertyCount );
+		for ( int propertyCount = 0; propertyCount < persister.getPropertySpan(); propertyCount++ ) {
+			String[] property = persister.getPropertyColumnNames( propertyCount );
 			for ( int columnCount = 0; columnCount < property.length; columnCount++ ) {
 				columnNames.add( property[columnCount] );
 			}
 		}
 
-		if ( discriminator.getColumnName() != null ) {
+		if ( discriminator != null && discriminator.getColumnName() != null ) {
 			columnNames.add( discriminator.getColumnName() );
 		}
 
-		columnNames.addAll( getEmbeddedCollectionColumns() );
+		columnNames.addAll( persister.getEmbeddedCollectionColumns() );
 
+		return new ArrayList<>( columnNames );
+	}
+
+	private static Set<String> polymorphicEntityColumns(final OgmEntityPersister persister, List<String> selectableColumnNames, final EntityDiscriminator discriminator) {
+		Set<String> columnNames = new HashSet<>();
+		if ( !persister.getEntityMetamodel().getSubclassEntityNames().isEmpty() ) {
+			@SuppressWarnings("unchecked")
+			Set<String> subclasses = persister.getEntityMetamodel().getSubclassEntityNames();
+			for ( String className : subclasses ) {
+				OgmEntityPersister subEntityPersister = (OgmEntityPersister) persister.getFactory().getEntityPersister( className );
+				if ( !subEntityPersister.equals( persister ) ) {
+					List<String> subEntityColumnNames = selectableColumnNames( subEntityPersister, null );
+					for ( String column : subEntityColumnNames ) {
+						if ( !selectableColumnNames.contains( column ) ) {
+							columnNames.add( column );
+						}
+					}
+				}
+			}
+		}
 		return columnNames;
 	}
 
@@ -591,8 +613,11 @@ public abstract class OgmEntityPersister extends AbstractEntityPersister impleme
 			}
 		}
 
+		List<String> selectableColumnNames = selectableColumnNames( this, discriminator );
+		Set<String> polymorphicEntityColumns = polymorphicEntityColumns( this, selectableColumnNames, discriminator );
 		return new TupleTypeContextImpl(
-				selectableColumnNames( discriminator ),
+				selectableColumnNames,
+				polymorphicEntityColumns,
 				associatedEntityKeyMetadata,
 				roles,
 				optionsService.context().getEntityOptions( getMappedClass() ),
@@ -785,23 +810,22 @@ public abstract class OgmEntityPersister extends AbstractEntityPersister impleme
 				.getService( OptionsService.class )
 				.context();
 
-		AssociationTypeContext associationTypeContext = new AssociationTypeContextImpl(
-				serviceContext.getPropertyOptions( inversePersister.getMappedClass(), associationKeyMetadata.getCollectionRole() ),
-				serviceContext.getEntityOptions( inversePersister.getMappedClass() ),
-				inversePersister.getTupleTypeContext(),
-				associationKeyMetadata.getAssociatedEntityKeyMetadata(),
-				getPropertyNames()[propertyIndex]
-		);
+		AssociationTypeContext associationTypeContext = new AssociationTypeContextImpl.Builder( serviceContext )
+				.associationKeyMetadata( associationKeyMetadata )
+				.hostingEntityPersister( inversePersister )
+				.mainSidePropertyName( getPropertyNames()[propertyIndex] )
+				.build();
 
-		AssociationPersister associationPersister = new AssociationPersister(
-				inversePersister.getMappedClass()
+		AssociationPersister associationPersister = new AssociationPersister.Builder(
+					inversePersister.getMappedClass()
 				)
 				.gridDialect( gridDialect )
 				.key( uniqueKey, gridUniqueKeyType )
 				.associationKeyMetadata( associationKeyMetadata )
 				.session( session )
 				.associationTypeContext( associationTypeContext )
-				.hostingEntity( session.getPersistenceContext().getEntity( new org.hibernate.engine.spi.EntityKey( (Serializable) uniqueKey, inversePersister ) ) );
+				.hostingEntity( session.getPersistenceContext().getEntity( new org.hibernate.engine.spi.EntityKey( (Serializable) uniqueKey, inversePersister ) ) )
+				.build();
 
 		final Association ids = associationPersister.getAssociationOrNull();
 
@@ -1220,6 +1244,7 @@ public abstract class OgmEntityPersister extends AbstractEntityPersister impleme
 				TuplePointer tuplePointer = getSharedTuplePointer( key, object, session );
 				Tuple resultset = tuplePointer.getTuple();
 				resultset = createNewResultSetIfNull( key, resultset, id, session );
+				resultset.setSnapshotType( SnapshotType.UPDATE );
 				saveSharedTuple( object, resultset, session );
 
 				if ( mightManageInverseAssociations ) {
@@ -1448,6 +1473,7 @@ public abstract class OgmEntityPersister extends AbstractEntityPersister impleme
 			}
 
 			resultset = createNewResultSetIfNull( key, resultset, id, session );
+			resultset.setSnapshotType( SnapshotType.INSERT );
 			TuplePointer tuplePointer = saveSharedTuple( object, resultset, session );
 
 			// add the discriminator
@@ -1588,13 +1614,14 @@ public abstract class OgmEntityPersister extends AbstractEntityPersister impleme
 				OgmCollectionPersister collectionPersister = (OgmCollectionPersister) getFactory()
 						.getCollectionPersister( collectionType.getRole() );
 
-				AssociationPersister associationPersister = new AssociationPersister( collectionPersister.getOwnerEntityPersister().getMappedClass() )
+				AssociationPersister associationPersister = new AssociationPersister.Builder( collectionPersister.getOwnerEntityPersister().getMappedClass() )
 						.hostingEntity( entity )
 						.gridDialect( gridDialect )
 						.key( id, collectionPersister.getKeyGridType() )
 						.associationKeyMetadata( collectionPersister.getAssociationKeyMetadata() )
 						.associationTypeContext( collectionPersister.getAssociationTypeContext() )
-						.session( session );
+						.session( session )
+						.build();
 
 				Association association = associationPersister.getAssociationOrNull();
 				if ( association != null && !association.isEmpty() ) {
@@ -1710,7 +1737,7 @@ public abstract class OgmEntityPersister extends AbstractEntityPersister impleme
 	}
 
 	@Override
-	protected int getSubclassTableSpan() {
+	public int getSubclassTableSpan() {
 		return 1;
 	}
 

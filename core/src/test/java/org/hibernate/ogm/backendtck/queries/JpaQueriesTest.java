@@ -22,7 +22,6 @@ import org.junit.rules.ExpectedException;
 /**
  * @author Davide D'Alto &lt;davide@hibernate.org&gt;
  */
-
 public class JpaQueriesTest extends OgmJpaTestCase {
 
 	private static final String POLICE_HELICOPTER = "Bell 206";

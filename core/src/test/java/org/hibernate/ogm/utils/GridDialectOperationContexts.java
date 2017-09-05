@@ -10,13 +10,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.hibernate.Session;
 import org.hibernate.ogm.dialect.impl.AssociationContextImpl;
-import org.hibernate.ogm.dialect.impl.AssociationTypeContextImpl;
 import org.hibernate.ogm.dialect.impl.TupleContextImpl;
 import org.hibernate.ogm.dialect.impl.TupleTypeContextImpl;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
+import org.hibernate.ogm.dialect.spi.AssociationTypeContext;
 import org.hibernate.ogm.dialect.spi.TransactionContext;
 import org.hibernate.ogm.dialect.spi.TupleContext;
 import org.hibernate.ogm.dialect.spi.TupleTypeContext;
@@ -56,6 +57,7 @@ public class GridDialectOperationContexts {
 
 		private OptionsContext optionsContext = EmptyOptionsContext.INSTANCE;
 		private List<String> selectableColumns = Collections.<String>emptyList();
+		private Set<String> polymorphicEntityColumns = Collections.<String>emptySet();
 		private Map<String, AssociatedEntityKeyMetadata> associatedEntityMetadata = Collections.<String, AssociatedEntityKeyMetadata>emptyMap();
 		private Map<String, String> roles = Collections.<String, String>emptyMap();
 
@@ -66,6 +68,11 @@ public class GridDialectOperationContexts {
 
 		public TupleTypeContextBuilder selectableColumns(List<String> columns) {
 			this.selectableColumns = columns;
+			return this;
+		}
+
+		public TupleTypeContextBuilder polymorphicEntityColumns(Set<String> columns) {
+			this.polymorphicEntityColumns = columns;
 			return this;
 		}
 
@@ -80,12 +87,16 @@ public class GridDialectOperationContexts {
 		}
 
 		public TupleTypeContext buildTupleTypeContext() {
-			return new TupleTypeContextImpl( Collections.unmodifiableList( selectableColumns ), Collections.unmodifiableMap( associatedEntityMetadata ),
-					Collections.unmodifiableMap( roles ), optionsContext, null, null );
+			return new TupleTypeContextImpl(
+					selectableColumns,
+					polymorphicEntityColumns,
+					associatedEntityMetadata,
+					roles,
+					optionsContext, null, null );
 		}
 	}
 
-	public static class AssociationContextBuilder {
+	private static class AssociationContextBuilder {
 
 		private OptionsContext optionsContext = EmptyOptionsContext.INSTANCE;
 		private OptionsContext ownerEntityOptionsContext = EmptyOptionsContext.INSTANCE;
@@ -94,29 +105,35 @@ public class GridDialectOperationContexts {
 		private String roleOnMainSide = null;
 		private TransactionContext transactionContext = null;
 
-		public AssociationContextBuilder optionsContext(OptionsContext optionsContext) {
-			this.optionsContext = optionsContext;
-			return this;
-		}
-
-		public AssociationContextBuilder ownerEntityOptionsContext(OptionsContext ownerEntityOptionsContext) {
-			this.ownerEntityOptionsContext = ownerEntityOptionsContext;
-			return this;
-		}
-
-		public AssociationContextBuilder ownerEntityTupleTypeContext(TupleTypeContext ownerEntityTupleTypeContext) {
-			this.ownerEntityTupleTypeContext = ownerEntityTupleTypeContext;
-			return this;
-		}
-
-		public AssociationContextBuilder transactionContext(Session session) {
-			this.transactionContext = TransactionContextHelper.transactionContext( session );
-			return this;
-		}
-
 		public AssociationContext buildAssociationContext() {
-			return new AssociationContextImpl( new AssociationTypeContextImpl( optionsContext, ownerEntityOptionsContext, ownerEntityTupleTypeContext,
-					associatedEntityKeyMetadata, roleOnMainSide ), new TuplePointer(), transactionContext );
+			AssociationTypeContext associationTypeContext = new AssociationTypeContext() {
+
+				@Override
+				public String getRoleOnMainSide() {
+					return roleOnMainSide;
+				}
+
+				@Override
+				public TupleTypeContext getHostingEntityTupleTypeContext() {
+					return ownerEntityTupleTypeContext;
+				}
+
+				@Override
+				public OptionsContext getHostingEntityOptionsContext() {
+					return ownerEntityOptionsContext;
+				}
+
+				@Override
+				public OptionsContext getOptionsContext() {
+					return optionsContext;
+				}
+
+				@Override
+				public AssociatedEntityKeyMetadata getAssociatedEntityKeyMetadata() {
+					return associatedEntityKeyMetadata;
+				}
+			};
+			return new AssociationContextImpl( associationTypeContext, new TuplePointer(), transactionContext );
 		}
 	}
 
