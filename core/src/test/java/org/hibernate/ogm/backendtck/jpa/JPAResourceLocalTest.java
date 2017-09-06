@@ -19,7 +19,6 @@ import org.hibernate.ogm.utils.PackagingRule;
 import org.hibernate.ogm.utils.RequiresTransactionalCapabilitiesRule;
 import org.hibernate.ogm.utils.SkippableTestRunner;
 import org.hibernate.ogm.utils.TestHelper;
-import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
 
 import org.junit.Rule;
 import org.junit.Test;
