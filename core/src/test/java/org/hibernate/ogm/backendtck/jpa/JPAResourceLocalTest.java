@@ -17,16 +17,19 @@ import javax.persistence.Persistence;
 
 import org.hibernate.ogm.utils.PackagingRule;
 import org.hibernate.ogm.utils.RequiresTransactionalCapabilitiesRule;
+import org.hibernate.ogm.utils.SkippableTestRunner;
 import org.hibernate.ogm.utils.TestHelper;
 import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * @author Emmanuel Bernard &lt;emmanuel@hibernate.org&gt;
  */
-public class JPAResourceLocalTest extends OgmJpaTestCase {
+@RunWith (SkippableTestRunner.class)
+public class JPAResourceLocalTest  {
 
 	@Rule
 	public PackagingRule packaging = new PackagingRule( "persistencexml/transaction-type-resource-local.xml", Poem.class );
@@ -82,10 +85,5 @@ public class JPAResourceLocalTest extends OgmJpaTestCase {
 			dropSchemaAndDatabase( emf );
 			emf.close();
 		}
-	}
-
-	@Override
-	public Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { Poem.class };
 	}
 }
