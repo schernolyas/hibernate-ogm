@@ -7,8 +7,6 @@ org.hibernate.ogm.backendtck.queries.SingleTablenheritancePersistTest
 org.hibernate.ogm.backendtck.type.converter.JpaAttributeConverterTest#jpaConverterIsApplied
 org.hibernate.ogm.backendtck.type.converter.JpaAttributeConverterTest#jpaConverterIsAppliedToCustomType
 
-org.hibernate.ogm.backendtck.type.BuiltInTypeTest
-
 org.hibernate.ogm.backendtck.optimisticlocking.OptimisticLockingTest
 
 org.hibernate.ogm.backendtck.queries.SimpleQueriesTest

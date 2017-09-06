@@ -9,6 +9,7 @@ package org.hibernate.ogm.datastore.ignite.impl;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
@@ -58,10 +59,16 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 	private static final long serialVersionUID = -8564869898957031491L;
 	private static final Log log = LoggerFactory.getLogger();
 	private static Map<String, Class<?>> tableEntityTypeMapping;
+	private static Map<Class<?>, Class<?>> h2TypeMapping;
 
-	public static Map<String, Class<?>> getTableEntityTypeMapping() {
-		return Collections.unmodifiableMap( tableEntityTypeMapping );
+	static {
+		Map<Class<?>, Class<?>> map = new HashMap<>(  );
+		map.put( Character.class, String.class );
+
+		h2TypeMapping = Collections.unmodifiableMap( map );
 	}
+
+
 
 	@Override
 	public void initializeSchema(SchemaDefinitionContext context) {
@@ -263,7 +270,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		return entityPersister.getIdentifierType().getReturnedClass();
 	}
 
-	private CacheConfiguration createEntityCacheConfiguration(EntityKeyMetadata entityKeyMetadata, SchemaDefinitionContext context, ConfigurationPropertyReader propertyReader) {
+	private CacheConfiguration<?,?> createEntityCacheConfiguration(EntityKeyMetadata entityKeyMetadata, SchemaDefinitionContext context, ConfigurationPropertyReader propertyReader) {
 		log.debugf( "entityKeyMetadata: %s", entityKeyMetadata );
 		OptionsService optionsService = context.getSessionFactory().getServiceRegistry().getService( OptionsService.class );
 		//@todo refactor it!
@@ -272,21 +279,15 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 
 		Boolean readThroughValue = getReadThroughOptionValue( optionsService, entityType );
 		Boolean writeThroughValue = getWriteThroughOptionValue( optionsService, entityType );
-		Boolean storeKeepBinaryValue = getStoreKeepBinaryOptionValue( optionsService, entityType );
-		Class cacheStoreFactoryValue = getCacheStoreFactoryOptionValue( optionsService, entityType );
+		Class<?> cacheStoreFactoryValue = getCacheStoreFactoryOptionValue( optionsService, entityType );
 		log.debugf( "readThroughValue:%b;writeThroughValue:%b;",
 					readThroughValue,writeThroughValue );
 
-		CacheConfiguration cacheConfiguration = new CacheConfiguration();
-		cacheConfiguration.setStoreKeepBinary( storeKeepBinaryValue );
+		CacheConfiguration<?,?> cacheConfiguration = new CacheConfiguration<>();
+		cacheConfiguration.setStoreKeepBinary( true );
 		if ( readThroughValue || writeThroughValue ) {
-			setCacheStoreFactory(
-					cacheConfiguration,
-					cacheStoreFactoryValue,
-					entityType.getName(),
-					propertyReader,
-					readThroughValue,
-					writeThroughValue
+			setCacheStoreFactory( cacheConfiguration, cacheStoreFactoryValue,
+								  entityType.getName(), propertyReader, readThroughValue, writeThroughValue
 			);
 		}
 
@@ -313,6 +314,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		return cacheConfiguration;
 	}
 
+	@SuppressWarnings("unchecked")
 	private void addTableInfo(QueryEntity queryEntity, SchemaDefinitionContext context, String tableName) {
 		Namespace namespace = context.getDatabase().getDefaultNamespace();
 		Optional<Table> tableOptional = namespace.getTables().stream().filter( currentTable -> currentTable.getName().equals( tableName ) ).findFirst();
@@ -325,6 +327,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 					// it is simple type. add the field
 					SimpleValue simpleValue = (SimpleValue) value;
 					Class returnValue = simpleValue.getType().getReturnedClass();
+					returnValue = h2TypeMapping.getOrDefault( returnValue , returnValue  );
 					queryEntity.addQueryField( currentColumn.getName(),returnValue.getName(),null );
 				}
 			}
