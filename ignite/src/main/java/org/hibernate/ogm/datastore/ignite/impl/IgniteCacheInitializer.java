@@ -287,8 +287,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		cacheConfiguration.setStoreKeepBinary( true );
 		if ( readThroughValue || writeThroughValue ) {
 			setCacheStoreFactory( cacheConfiguration, cacheStoreFactoryValue,
-								  entityType.getName(), propertyReader, readThroughValue, writeThroughValue
-			);
+					entityType.getName(), propertyReader, readThroughValue, writeThroughValue );
 		}
 
 		cacheConfiguration.setName( StringHelper.stringBeforePoint( entityKeyMetadata.getTable() ) );
