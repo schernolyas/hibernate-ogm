@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -43,6 +44,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CachePeekMode;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 
 /**
  * @author Dmitriy Kozlov
@@ -71,7 +73,7 @@ public class IgniteTestHelper implements GridDialectTestHelper {
 			AssociationKeyMetadata associationKeyMetadata = ( (OgmCollectionPersister) collectionPersister ).getAssociationKeyMetadata();
 			if ( associationKeyMetadata.getAssociationKind() == AssociationKind.ASSOCIATION ) {
 				IgniteCache<Object, BinaryObject> associationCache = getAssociationCache( sessionFactory, associationKeyMetadata );
-				/*StringBuilder query = new StringBuilder( "SELECT " )
+				StringBuilder query = new StringBuilder( "SELECT " )
 											.append( StringHelper.realColumnName( associationKeyMetadata.getColumnNames()[0] ) )
 											.append( " FROM " ).append( associationKeyMetadata.getTable() );
 				SqlFieldsQuery sqlQuery = datastoreProvider.createSqlFieldsQueryWithLog( query.toString(), null );
@@ -82,8 +84,8 @@ public class IgniteTestHelper implements GridDialectTestHelper {
 					if ( value != null ) {
 						uniqs.add( value );
 					}
-				} */
-				Set<Object> uniqs = new HashSet<>();
+				}
+
 				for ( Iterator<Cache.Entry<Object,BinaryObject>> it =  associationCache.iterator(); it.hasNext(); ) {
 					Cache.Entry<Object,BinaryObject> entry = it.next();
 					uniqs.add( entry.getValue().field( StringHelper.realColumnName( associationKeyMetadata.getColumnNames()[0] ) ) );
@@ -185,12 +187,10 @@ public class IgniteTestHelper implements GridDialectTestHelper {
 	}
 
 	@Override
-	public Map<String, String> getEnvironmentProperties() {
-		return Collections.emptyMap();
+	public Map<String, String> getAdditionalConfigurationProperties() {
+		Map<String, String> map = new HashMap<>(  );
+		return map;
 	}
 
-	@Override
-	public void prepareDatabase(SessionFactory sessionFactory) {
 
-	}
 }

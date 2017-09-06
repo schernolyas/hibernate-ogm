@@ -32,13 +32,11 @@ import org.hibernate.loader.custom.Return;
 import org.hibernate.loader.custom.ScalarReturn;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteAssociationRowSnapshot;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteAssociationSnapshot;
-import org.hibernate.ogm.datastore.ignite.impl.IgniteCacheInitializer;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteDatastoreProvider;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteEmbeddedAssociationSnapshot;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteTupleSnapshot;
 import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
 import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
-import org.hibernate.ogm.datastore.ignite.options.Searchable;
 import org.hibernate.ogm.datastore.ignite.options.impl.CollocatedAssociationOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.ReadThroughOption;
 import org.hibernate.ogm.datastore.ignite.options.impl.StoreKeepBinaryOption;
@@ -47,7 +45,6 @@ import org.hibernate.ogm.datastore.ignite.query.impl.IgniteQueryDescriptor;
 import org.hibernate.ogm.datastore.ignite.query.impl.IgniteSqlQueryParser;
 import org.hibernate.ogm.datastore.ignite.query.impl.QueryHints;
 import org.hibernate.ogm.datastore.ignite.type.impl.IgniteGridTypeMapper;
-import org.hibernate.ogm.datastore.ignite.util.ClassUtil;
 import org.hibernate.ogm.datastore.ignite.util.StringHelper;
 import org.hibernate.ogm.datastore.map.impl.MapTupleSnapshot;
 import org.hibernate.ogm.dialect.multiget.spi.MultigetGridDialect;
@@ -95,7 +92,6 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 
 public class IgniteDialect extends BaseGridDialect implements GridDialect, QueryableGridDialect<IgniteQueryDescriptor>,MultigetGridDialect {
 
-	public static final String INDEX_FIELD = "indexField";
 	private static final long serialVersionUID = -4347702430400562694L;
 	private static final Log log = LoggerFactory.getLogger();
 
@@ -146,24 +142,16 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	@Override
 	public List<Tuple> getTuples(EntityKey[] keys, TupleContext tupleContext) {
 		Map<Object, EntityKey> idKeyMap = Stream.of( keys ).collect(
-				Collectors.toMap( ( EntityKey key ) -> {
-					return provider.createKeyObject( key );
-				}, ( EntityKey key ) -> {
-					return key;
-				} ) );
+				Collectors.toMap( ( EntityKey key ) -> provider.createKeyObject( key ), ( EntityKey key ) -> key ) );
 
-		//all keys from one cache
+		// all keys from one cache
 		IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( keys[0].getMetadata() );
 		return entityCache.getAll( idKeyMap.keySet() ).entrySet().stream()
-				.map( ( Map.Entry<Object, BinaryObject> entry ) -> {
-					return new Tuple(
-							new IgniteTupleSnapshot(
-									entry.getKey(),
-									entry.getValue(),
-									idKeyMap.get( entry.getKey() ).getMetadata()
-							), SnapshotType.UPDATE );
-				} ).collect(
-						Collectors.toList() );
+				.map( ( Map.Entry<Object, BinaryObject> entry ) -> new Tuple(
+						new IgniteTupleSnapshot( entry.getKey(), entry.getValue(),
+								idKeyMap.get( entry.getKey() ).getMetadata() ),
+						SnapshotType.UPDATE ) )
+				.collect( Collectors.toList() );
 	}
 
 	@Override
@@ -197,16 +185,13 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		if ( tuple.getSnapshotType() == SnapshotType.UPDATE ) {
 			IgniteTupleSnapshot tupleSnapshot = (IgniteTupleSnapshot) tuple.getSnapshot();
 			keyObject = tupleSnapshot.getCacheKey();
-			builder = provider.createBinaryObjectBuilder( tupleSnapshot.getCacheValue() );
+			//builder = provider.createBinaryObjectBuilder( tupleSnapshot.getCacheValue() );
+			builder = provider.createBinaryObjectBuilder( entityCache.get( keyObject ) );
 		}
 		else {
 			keyObject = provider.createKeyObject( key );
-			log.debugf( "key.getMetadata() : %s", key.getMetadata() );
 			builder = provider.createBinaryObjectBuilder( provider.getEntityTypeName( key.getMetadata().getTable() ) );
 		}
-		//@todo refactor it!
-		Class<?> entityType = IgniteCacheInitializer.getTableEntityTypeMapping().get( key.getTable() );
-		Field[] searchableFields = ClassUtil.getAnnotatedDeclaredFields( entityType, Searchable.class, false );
 
 
 		for ( String columnName : tuple.getColumnNames() ) {
@@ -214,9 +199,6 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				continue;
 			}
 			Object value = tuple.get( columnName );
-
-
-
 			if ( value != null ) {
 				builder.setField( StringHelper.realColumnName( columnName ), value );
 			}
@@ -241,7 +223,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	@Override
 	public Association getAssociation(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "getAssociation: association key : %s; associationContext: %s",
-					associationKey,associationContext );
+				associationKey,associationContext );
 		Association result = null;
 		IgniteCache<Object, BinaryObject> associationCache = provider.getAssociationCache( associationKey.getMetadata() );
 
@@ -262,7 +244,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				log.debugf(
 						"getAssociation: key.getMetadata().isInverse(): %b; ",
 						associationKey.getMetadata().isInverse()
-				);
+						);
 				IgniteTupleSnapshot igniteTupleSnapshot = (IgniteTupleSnapshot) tuplePointer.getTuple().getSnapshot();
 				//need to add link info
 				IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( igniteTupleSnapshot.getEntityKeyMetadata() );
@@ -274,11 +256,11 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				log.debugf(
 						"getAssociation: lastEntityVersion.type().typeName(): %s; ",
 						lastEntityVertion.type().typeName()
-				);
+						);
 				log.debugf(
 						"getAssociation: associationKey.getMetadata().getCollectionRole(): %s; ",
 						associationKey.getMetadata().getCollectionRole()
-				);
+						);
 				String notOwnerLinkFieldName = associationKey.getMetadata().getCollectionRole();
 
 				Map<Object, BinaryObject> associationMap = new LinkedHashMap<>();
@@ -309,7 +291,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				QueryHints hints = hintsBuilder.build();
 
 				SqlFieldsQuery sqlQuery = provider.createSqlFieldsQueryWithLog( createAssociationQuery( associationKey,true ),
-																				hints, associationKey.getColumnValues() );
+						hints, associationKey.getColumnValues() );
 				Iterable<List<?>> list = executeWithHints( associationCache, sqlQuery, hints );
 
 				Iterator<List<?>> iterator = list.iterator();
@@ -360,9 +342,9 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	@Override
 	public Association createAssociation(AssociationKey associationKey, AssociationContext associationContext) {
 		log.debugf( "createAssociation: association key : %s; associationContext: %s",
-					associationKey,associationContext );
+				associationKey,associationContext );
 		log.debugf( "createAssociation: key.getMetadata().getAssociationKind(): %s",
-					associationKey.getMetadata().getAssociationKind() );
+				associationKey.getMetadata().getAssociationKind() );
 		if ( associationKey.getMetadata().getAssociationKind() == AssociationKind.ASSOCIATION ) {
 			return new Association( new IgniteAssociationSnapshot( associationKey ) );
 		}
@@ -377,9 +359,9 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	@Override
 	public void insertOrUpdateAssociation(AssociationKey associationKey, Association association, AssociationContext associationContext) {
 		log.debugf( "insertOrUpdateAssociation: association key : %s; association : %s; associationContext: %s",
-					associationKey,association,associationContext );
+				associationKey,association,associationContext );
 		log.debugf( "insertOrUpdateAssociation: key.getMetadata().isInverse(): %b; associationKey.getMetadata().getAssociationKind(): %s ",
-					associationKey.getMetadata().isInverse(), associationKey.getMetadata().getAssociationKind() );
+				associationKey.getMetadata().isInverse(), associationKey.getMetadata().getAssociationKind() );
 
 		//@todo refactor it. Method is too big and complex!
 		if ( associationKey.getMetadata().isInverse() ) {
@@ -404,74 +386,74 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				Tuple previousStateTuple = associationSnapshot.get( op.getKey() );
 				Tuple currentStateTuple = op.getValue();
 				Object previousId = previousStateTuple != null
-										? ( (IgniteAssociationRowSnapshot) previousStateTuple.getSnapshot() ).getCacheKey()
-										: null;
-				if ( op.getType() == AssociationOperationType.CLEAR
-						|| op.getType() == AssociationOperationType.REMOVE && !thirdTableAssociation ) {
-					BinaryObject clearBo = associationCache.get( previousId );
-					if ( clearBo != null ) {
-						BinaryObjectBuilder clearBoBuilder = provider.createBinaryObjectBuilder( clearBo );
-						for ( String columnName : associationKey.getColumnNames() ) {
-							clearBoBuilder.removeField( columnName );
-						}
-						for ( String columnName : associationKey.getMetadata().getRowKeyIndexColumnNames() ) {
-							clearBoBuilder.removeField( columnName );
-						}
-						changedObjects.put( previousId, clearBoBuilder.build() );
-					}
-				}
-				else if ( op.getType() == AssociationOperationType.PUT ) {
-					Object currentId = null;
-					if ( currentStateTuple.getSnapshot().isEmpty() ) {
-						currentId = provider.createAssociationKeyObject( op.getKey(), associationKey.getMetadata() );
-					}
-					else {
-						currentId = ( (IgniteAssociationRowSnapshot) currentStateTuple.getSnapshot() ).getCacheKey();
-					}
-					BinaryObject putBo = previousId != null ? associationCache.get( previousId ) : null;
-					BinaryObjectBuilder putBoBuilder = null;
-					if ( putBo != null ) {
-						boolean hasChanges = false;
-						for ( String columnName : currentStateTuple.getColumnNames() ) {
-							if ( associationKey.getMetadata().getAssociatedEntityKeyMetadata().getEntityKeyMetadata().isKeyColumn( columnName ) ) {
-								continue;
-							}
-							hasChanges = Objects.equals( currentStateTuple.get( columnName ), putBo.field( columnName ) );
-							if ( hasChanges ) {
-								break;
+						? ( (IgniteAssociationRowSnapshot) previousStateTuple.getSnapshot() ).getCacheKey()
+								: null;
+						if ( op.getType() == AssociationOperationType.CLEAR
+								|| op.getType() == AssociationOperationType.REMOVE && !thirdTableAssociation ) {
+							BinaryObject clearBo = associationCache.get( previousId );
+							if ( clearBo != null ) {
+								BinaryObjectBuilder clearBoBuilder = provider.createBinaryObjectBuilder( clearBo );
+								for ( String columnName : associationKey.getColumnNames() ) {
+									clearBoBuilder.removeField( columnName );
+								}
+								for ( String columnName : associationKey.getMetadata().getRowKeyIndexColumnNames() ) {
+									clearBoBuilder.removeField( columnName );
+								}
+								changedObjects.put( previousId, clearBoBuilder.build() );
 							}
 						}
-						if ( !hasChanges ) { //vk: all changes already set. nothing to update
-							continue;
+						else if ( op.getType() == AssociationOperationType.PUT ) {
+							Object currentId = null;
+							if ( currentStateTuple.getSnapshot().isEmpty() ) {
+								currentId = provider.createAssociationKeyObject( op.getKey(), associationKey.getMetadata() );
+							}
+							else {
+								currentId = ( (IgniteAssociationRowSnapshot) currentStateTuple.getSnapshot() ).getCacheKey();
+							}
+							BinaryObject putBo = previousId != null ? associationCache.get( previousId ) : null;
+							BinaryObjectBuilder putBoBuilder = null;
+							if ( putBo != null ) {
+								boolean hasChanges = false;
+								for ( String columnName : currentStateTuple.getColumnNames() ) {
+									if ( associationKey.getMetadata().getAssociatedEntityKeyMetadata().getEntityKeyMetadata().isKeyColumn( columnName ) ) {
+										continue;
+									}
+									hasChanges = Objects.equals( currentStateTuple.get( columnName ), putBo.field( columnName ) );
+									if ( hasChanges ) {
+										break;
+									}
+								}
+								if ( !hasChanges ) { //vk: all changes already set. nothing to update
+									continue;
+								}
+								putBoBuilder = provider.createBinaryObjectBuilder( putBo );
+							}
+							else {
+								putBoBuilder = provider.createBinaryObjectBuilder( provider.getEntityTypeName( associationKey.getMetadata().getTable() ) );
+							}
+							for ( String columnName : currentStateTuple.getColumnNames() ) {
+								if ( associationKey.getMetadata().getAssociatedEntityKeyMetadata().getEntityKeyMetadata().isKeyColumn( columnName ) ) {
+									continue;
+								}
+								Object value = currentStateTuple.get( columnName );
+								if ( value != null ) {
+									putBoBuilder.setField( StringHelper.realColumnName( columnName ), value );
+								}
+								else {
+									putBoBuilder.removeField( columnName );
+								}
+							}
+							if ( previousId != null && !previousId.equals( currentId ) ) {
+								removedObjects.add( previousId );
+							}
+							changedObjects.put( currentId, putBoBuilder.build() );
 						}
-						putBoBuilder = provider.createBinaryObjectBuilder( putBo );
-					}
-					else {
-						putBoBuilder = provider.createBinaryObjectBuilder( provider.getEntityTypeName( associationKey.getMetadata().getTable() ) );
-					}
-					for ( String columnName : currentStateTuple.getColumnNames() ) {
-						if ( associationKey.getMetadata().getAssociatedEntityKeyMetadata().getEntityKeyMetadata().isKeyColumn( columnName ) ) {
-							continue;
-						}
-						Object value = currentStateTuple.get( columnName );
-						if ( value != null ) {
-							putBoBuilder.setField( StringHelper.realColumnName( columnName ), value );
+						else if ( op.getType() == AssociationOperationType.REMOVE ) {
+							removedObjects.add( previousId );
 						}
 						else {
-							putBoBuilder.removeField( columnName );
+							throw new UnsupportedOperationException( "AssociationOperation not supported: " + op.getType() );
 						}
-					}
-					if ( previousId != null && !previousId.equals( currentId ) ) {
-						removedObjects.add( previousId );
-					}
-					changedObjects.put( currentId, putBoBuilder.build() );
-				}
-				else if ( op.getType() == AssociationOperationType.REMOVE ) {
-					removedObjects.add( previousId );
-				}
-				else {
-					throw new UnsupportedOperationException( "AssociationOperation not supported: " + op.getType() );
-				}
 			}
 
 			if ( !changedObjects.isEmpty() ) {
@@ -505,7 +487,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 						Tuple currentStateTuple = op.getValue();
 						BinaryObjectBuilder putBoBuilder = provider.createBinaryObjectBuilder(
 								provider.getEntityTypeName( itemMetadata.getTable() )
-						);
+								);
 						for ( String columnName : op.getKey().getColumnNames() ) {
 							Object value = op.getKey().getColumnValue( columnName );
 							if ( value != null ) {
@@ -545,18 +527,18 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	private void removeInverseRelationship( AssociationKey associationKey, AssociationContext associationContext) {
 		TuplePointer tuplePointer = getOwnerEntityTuplePointer( associationKey, associationContext );
 		log.debugf( "removeInverseRelationship: tuplePointer: %s; ",
-					tuplePointer );
+				tuplePointer );
 		log.debugf( "removeInverseRelationship: key.getMetadata().isInverse(): %b; ",
-					associationKey.getMetadata().isInverse() );
+				associationKey.getMetadata().isInverse() );
 		IgniteTupleSnapshot igniteTupleSnapshot = (IgniteTupleSnapshot) tuplePointer.getTuple().getSnapshot();
 		log.debugf( "removeInverseRelationship: igniteTupleSnapshot.getCacheKey(): %s; ",
-					igniteTupleSnapshot.getCacheKey() );
+				igniteTupleSnapshot.getCacheKey() );
 		log.debugf( "removeInverseRelationship: igniteTupleSnapshot.getEntityKeyMetadata(): %s; ",
-					igniteTupleSnapshot.getEntityKeyMetadata() );
+				igniteTupleSnapshot.getEntityKeyMetadata() );
 		boolean isReadThrough = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( ReadThroughOption.class );
 		boolean isStoreKeepBinary = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( StoreKeepBinaryOption.class );
 		log.debugf( "removeInverseRelationship: supports 'read-through' for entity: %s is %b ",
-					igniteTupleSnapshot.getEntityKeyMetadata().getTable(), isReadThrough );
+				igniteTupleSnapshot.getEntityKeyMetadata().getTable(), isReadThrough );
 		if ( !isReadThrough ) {
 			//not needs to add association info to link non owner entity
 			return;
@@ -569,9 +551,9 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		Object key = igniteTupleSnapshot.getCacheKey();
 		BinaryObject lastEntityVersion = entityCache.get( key );
 		log.debugf( "insertInverseRelationship: lastEntityVersion.type().typeName(): %s; ",
-					lastEntityVersion.type().typeName() );
+				lastEntityVersion.type().typeName() );
 		log.debugf( "insertInverseRelationship: associationKey.getMetadata().getCollectionRole(): %s; ",
-					associationKey.getMetadata().getCollectionRole() );
+				associationKey.getMetadata().getCollectionRole() );
 		String notOwnerLinkFieldName = associationKey.getMetadata().getCollectionRole();
 		BinaryObjectBuilder builder = lastEntityVersion.toBuilder();
 		LinkedHashSet associationIds = new LinkedHashSet();
@@ -589,18 +571,18 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	private void insertInverseRelationship( AssociationKey associationKey, Association association, AssociationContext associationContext) {
 		TuplePointer tuplePointer = getOwnerEntityTuplePointer( associationKey, associationContext );
 		log.debugf( "insertInverseRelationship: tuplePointer: %s; ",
-					tuplePointer );
+				tuplePointer );
 		log.debugf( "insertInverseRelationship: key.getMetadata().isInverse(): %b; ",
-					associationKey.getMetadata().isInverse() );
+				associationKey.getMetadata().isInverse() );
 		IgniteTupleSnapshot igniteTupleSnapshot = (IgniteTupleSnapshot) tuplePointer.getTuple().getSnapshot();
 		log.debugf( "insertInverseRelationship: igniteTupleSnapshot.getCacheKey(): %s; ",
-					igniteTupleSnapshot.getCacheKey() );
+				igniteTupleSnapshot.getCacheKey() );
 		log.debugf( "insertInverseRelationship: igniteTupleSnapshot.getEntityKeyMetadata(): %s; ",
-					igniteTupleSnapshot.getEntityKeyMetadata() );
+				igniteTupleSnapshot.getEntityKeyMetadata() );
 		boolean isReadThrough = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( ReadThroughOption.class );
 		boolean isStoreKeepBinary = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( StoreKeepBinaryOption.class );
 		log.debugf( "insertInverseRelationship: supports 'read-through' for entity: %s is %b ",
-					igniteTupleSnapshot.getEntityKeyMetadata().getTable(), isReadThrough );
+				igniteTupleSnapshot.getEntityKeyMetadata().getTable(), isReadThrough );
 		if ( !isReadThrough ) {
 			//not needs to add association info to link non owner entity
 			return;
@@ -613,9 +595,9 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		Object key = igniteTupleSnapshot.getCacheKey();
 		BinaryObject lastEntityVersion = entityCache.get( key );
 		log.debugf( "insertInverseRelationship: lastEntityVersion.type().typeName(): %s; ",
-					lastEntityVersion.type().typeName() );
+				lastEntityVersion.type().typeName() );
 		log.debugf( "insertInverseRelationship: associationKey.getMetadata().getCollectionRole(): %s; ",
-					associationKey.getMetadata().getCollectionRole() );
+				associationKey.getMetadata().getCollectionRole() );
 		String notOwnerLinkFieldName = associationKey.getMetadata().getCollectionRole();
 		BinaryObjectBuilder builder = lastEntityVersion.toBuilder();
 		LinkedHashSet associationIds = new LinkedHashSet();
@@ -624,7 +606,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		}
 		for ( AssociationOperation op : association.getOperations() ) {
 			log.debugf( "insertInverseRelationship: operation type :(): %s; ",
-						op.getType() );
+					op.getType() );
 			if ( op.getType().equals( AssociationOperationType.PUT  ) ) {
 				for ( RowKey rowKey : association.getKeys() ) {
 					//RowKey[memberOf_jug_id=summer_camp, member_id=emmanuel]
@@ -651,23 +633,23 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 
 
 		log.debugf( "insertInverseRelationship: notOwnerField: %s; value:%s ",
-					notOwnerLinkFieldName, associationIds
-		);
+				notOwnerLinkFieldName, associationIds
+				);
 		log.debugf(
 				"insertInverseRelationship: associationKey.getMetadata().getAssociationType(): %s ",
 				associationKey.getMetadata().getAssociationType()
-		);
+				);
 		switch ( associationKey.getMetadata().getAssociationType() ) {
 			case SET:
 				lastEntityVersion = builder.setField( notOwnerLinkFieldName, associationIds ).build();
 				break;
 			case BAG:
 				lastEntityVersion = builder.setField( notOwnerLinkFieldName, new ArrayList<>( associationIds ) )
-						.build();
+				.build();
 				break;
 			default:
 				throw new NotYetImplementedException( "Association Type " + associationKey.getMetadata()
-						.getAssociationType() + " not implemented yet!" );
+				.getAssociationType() + " not implemented yet!" );
 		}
 		entityCache.put( key, lastEntityVersion );
 	}
@@ -722,9 +704,9 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		String indexColumnName = null;
 		if ( associationMetadata.getAssociationType() == AssociationType.SET
 				|| associationMetadata.getAssociationType() == AssociationType.BAG ) {
-//			String cols[] =  associationMetadata.getColumnsWithoutKeyColumns(
-//									Arrays.asList( associationMetadata.getRowKeyColumnNames() )
-//							);
+			//			String cols[] =  associationMetadata.getColumnsWithoutKeyColumns(
+			//									Arrays.asList( associationMetadata.getRowKeyColumnNames() )
+			//							);
 		}
 		else {
 			if ( associationMetadata.getRowKeyIndexColumnNames().length > 1 ) {
@@ -757,8 +739,8 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			Boolean isCollocated = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( CollocatedAssociationOption.class );
 			if ( isCollocated ) {
 				throw new NotYetImplementedException();
-//				hintsBuilder.setAffinityRun( true );
-//				hintsBuilder.setAffinityKey( provider.createKeyObject( key ) );
+				//				hintsBuilder.setAffinityRun( true );
+				//				hintsBuilder.setAffinityKey( provider.createKeyObject( key ) );
 			}
 			QueryHints hints = hintsBuilder.build();
 
@@ -877,9 +859,9 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		if ( backendQuery.getSingleEntityMetadataInformationOrNull() != null ) {
 			cache = provider.getEntityCache( backendQuery.getSingleEntityMetadataInformationOrNull().getEntityKeyMetadata() );
 		}
-//		else if ( backendQuery.getQuery().getQuerySpaces().size() > 0 ) {
-//			cache = provider.getEntityCache( backendQuery.getQuery().getQuerySpaces().iterator().next() );
-//		}
+		//		else if ( backendQuery.getQuery().getQuerySpaces().size() > 0 ) {
+		//			cache = provider.getEntityCache( backendQuery.getQuery().getQuerySpaces().iterator().next() );
+		//		}
 		else {
 			throw new UnsupportedOperationException( "Not implemented. Can't find cache name" );
 		}
@@ -892,20 +874,20 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				backendQuery.getQuery().getSql(),
 				hints,
 				backendQuery.getQuery().getIndexedParameters() != null ? backendQuery.getQuery().getIndexedParameters().toArray() : null
-		);
+				);
 		//@todo incorrect query: "SELECT _KEY, _VAL  FROM Hypothesis _gen_0_". This is invalid convertation from JPA to Native query
 		Iterable<List<?>> result = executeWithHints( cache, sqlQuery, hints );
 
 		if ( backendQuery.getSingleEntityMetadataInformationOrNull() != null ) {
 			return new IgnitePortableFromProjectionResultCursor(
-							result,
-							queryParameters.getRowSelection(),
-							backendQuery.getSingleEntityMetadataInformationOrNull().getEntityKeyMetadata()
-						);
+					result,
+					queryParameters.getRowSelection(),
+					backendQuery.getSingleEntityMetadataInformationOrNull().getEntityKeyMetadata()
+					);
 		}
 		else if ( backendQuery.getQuery().isHasScalar() ) {
 			throw new NotYetImplementedException();
-//			return new IgniteProjectionResultCursor( result, backendQuery.getQuery().getCustomQueryReturns(), queryParameters.getRowSelection() );
+			//			return new IgniteProjectionResultCursor( result, backendQuery.getQuery().getCustomQueryReturns(), queryParameters.getRowSelection() );
 		}
 		else {
 			throw new UnsupportedOperationException( "Not implemented yet" );
