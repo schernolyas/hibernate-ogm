@@ -308,6 +308,8 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 					appendIndex( queryEntity, associationKeyMetadata, context );
 				}
 			}
+			log.debugf( "createEntityCacheConfiguration. full QueryEntity info :%s;",
+						queryEntity.toString() );
 			cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
 		}
 		return cacheConfiguration;
