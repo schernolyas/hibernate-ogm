@@ -12,6 +12,7 @@ import static org.hibernate.ogm.datastore.mongodb.dialect.impl.MongoHelpers.hasF
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -211,6 +212,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		}
 
 		MongoCursor<Document> cursor = this.getObjects( keys[0].getMetadata(), searchObjects, tupleContext );
+
 		try {
 			return tuplesResult( keys, searchObjects, tupleContext, cursor );
 		}
@@ -227,18 +229,18 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	 */
 	private static List<Tuple> tuplesResult(EntityKey[] keys, Object[] searchObjects, TupleContext tupleContext, MongoCursor<Document> cursor) {
 		// The list is initialized with null because some keys might not have a corresponding value in the cursor
-		Tuple[] tuples = new Tuple[searchObjects.length];
-		while ( cursor.hasNext() ) {
-			Document document = cursor.next();
+		List<Tuple> tuples = new ArrayList<>( searchObjects.length );
+		Document document = null;
+		while ( ( document = cursor.tryNext() ) != null ) {
 			for ( int i = 0; i < searchObjects.length; i++ ) {
 				if ( document.get( ID_FIELDNAME ).equals( searchObjects[i] ) ) {
-					tuples[i] = createTuple( keys[i], tupleContext, document );
+					tuples.add( createTuple( keys[i], tupleContext, document ) );
 					// We assume there are no duplicated keys
 					break;
 				}
 			}
 		}
-		return Arrays.asList( tuples );
+		return tuples;
 	}
 
 	private static Tuple createTuple(EntityKey key, OperationContext operationContext, Document found) {
@@ -272,18 +274,18 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		Document embeddingEntityDocument = associationContext.getEntityTuplePointer().getTuple() != null ?
 				( (MongoDBTupleSnapshot) associationContext.getEntityTuplePointer().getTuple().getSnapshot() ).getDbObject() : null;
 
-		if ( embeddingEntityDocument != null ) {
-			return embeddingEntityDocument;
-		}
-		else {
-			ReadPreference readPreference = getReadPreference( associationContext );
+				if ( embeddingEntityDocument != null ) {
+					return embeddingEntityDocument;
+				}
+				else {
+					ReadPreference readPreference = getReadPreference( associationContext );
 
-			MongoCollection<Document> collection = readPreference != null ? getCollection( key.getEntityKey() ).withReadPreference( readPreference ) : getCollection( key.getEntityKey() );
-			Document searchObject = prepareIdObject( key.getEntityKey() );
-			Document projection = getProjection( key, true );
+					MongoCollection<Document> collection = readPreference != null ? getCollection( key.getEntityKey() ).withReadPreference( readPreference ) : getCollection( key.getEntityKey() );
+					Document searchObject = prepareIdObject( key.getEntityKey() );
+					Document projection = getProjection( key, true );
 
-			return collection.find( searchObject ).projection( projection ).first();
-		}
+					return collection.find( searchObject ).projection( projection ).first();
+				}
 	}
 
 	private Document getObject(EntityKey key, OperationContext operationContext) {
@@ -293,7 +295,8 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		Document searchObject = prepareIdObject( key );
 		Document projection = getProjection( operationContext );
 
-		FindIterable<Document> fi = collection.find( searchObject );
+		FindIterable<Document> fi = collection.find( searchObject ).hint( new Document().append( ID_FIELDNAME, 1 ) )
+				.limit( 1 );
 		return fi != null ? fi.projection( projection ).first() : null;
 	}
 
@@ -307,20 +310,23 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 		Document query = new Document();
 		query.put( ID_FIELDNAME, new Document( "$in", Arrays.asList( searchObjects ) ) );
-		return collection.find( query ).projection( projection ).iterator();
+
+		return collection.find( query ).hint( new Document().append( ID_FIELDNAME, 1 ) )
+				.limit( searchObjects.length )
+				.projection( projection ).iterator();
 	}
 
 	private static Document getProjection(OperationContext operationContext) {
 		Set<String> columns = new HashSet<>();
 		columns.addAll( operationContext.getTupleTypeContext().getPolymorphicEntityColumns() );
 		columns.addAll( operationContext.getTupleTypeContext().getSelectableColumns() );
-		return getProjection( new ArrayList<>( columns ) );
+		return getProjection( columns  );
 	}
 
 	/**
 	 * Returns a projection object for specifying the fields to retrieve during a specific find operation.
 	 */
-	private static Document getProjection(List<String> fieldNames) {
+	private static Document getProjection(Collection<String> fieldNames) {
 		Document projection = new Document();
 		for ( String column : fieldNames ) {
 			projection.put( column, 1 );
@@ -487,7 +493,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 					case REMOVE:
 						MongoHelpers.resetValue( dbObject, column );
 						break;
-					}
+				}
 			}
 		}
 		return dbObject;
@@ -506,27 +512,27 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			String column = operation.getColumn();
 			if ( notInIdField( snapshot, column ) ) {
 				switch ( operation.getType() ) {
-				case PUT:
-					addSetToQuery( updateStatement, column, operation.getValue() );
-					break;
-				case PUT_NULL:
-				case REMOVE:
-					// try and find if this column is within an embeddable and if that embeddable is null
-					// if true, unset the full embeddable
-					String nullEmbeddable = embeddableStateFinder.getOuterMostNullEmbeddableIfAny( column );
-					if ( nullEmbeddable != null ) {
-						// we have a null embeddable
-						if ( ! nullEmbeddables.contains( nullEmbeddable ) ) {
-							// we have not processed it yet
-							addUnsetToQuery( updateStatement, nullEmbeddable );
-							nullEmbeddables.add( nullEmbeddable );
+					case PUT:
+						addSetToQuery( updateStatement, column, operation.getValue() );
+						break;
+					case PUT_NULL:
+					case REMOVE:
+						// try and find if this column is within an embeddable and if that embeddable is null
+						// if true, unset the full embeddable
+						String nullEmbeddable = embeddableStateFinder.getOuterMostNullEmbeddableIfAny( column );
+						if ( nullEmbeddable != null ) {
+							// we have a null embeddable
+							if ( ! nullEmbeddables.contains( nullEmbeddable ) ) {
+								// we have not processed it yet
+								addUnsetToQuery( updateStatement, nullEmbeddable );
+								nullEmbeddables.add( nullEmbeddable );
+							}
 						}
-					}
-					else {
-						// simply unset the column
-						addUnsetToQuery( updateStatement, column );
-					}
-					break;
+						else {
+							// simply unset the column
+							addUnsetToQuery( updateStatement, column );
+						}
+						break;
 				}
 			}
 		}
@@ -567,7 +573,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		MongoCollection<Document> associationCollection = ( readPreference != null  ? getAssociationCollection( key, storageStrategy ).withReadPreference( readPreference ) : getAssociationCollection( key, storageStrategy ) );
 
 		FindIterable<Document> fi = associationCollection.find( associationKeyObject );
-		return fi != null ? ( fi.projection( getProjection( key, false ) ).first() ) : null ;
+		return fi != null ? ( fi.limit( 1 ).projection( getProjection( key, false ) ).first() ) : null ;
 	}
 
 	private static Document getProjection(AssociationKey key, boolean embedded) {
@@ -626,17 +632,17 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 		Document document = storageStrategy == AssociationStorageStrategy.IN_ENTITY
 				? getEmbeddingEntity( key, associationContext )
-				: associationKeyToObject( key, storageStrategy );
+						: associationKeyToObject( key, storageStrategy );
 
-		Association association = new Association( new MongoDBAssociationSnapshot( document, key, storageStrategy ) );
-		// in the case of an association stored in the entity structure, we might end up with rows present in the
-		// current snapshot of the entity while we want an empty association here. So, in this case, we clear the
-		// snapshot to be sure the association created is empty.
-		if ( !association.isEmpty() ) {
-			association.clear();
-		}
+				Association association = new Association( new MongoDBAssociationSnapshot( document, key, storageStrategy ) );
+				// in the case of an association stored in the entity structure, we might end up with rows present in the
+				// current snapshot of the entity while we want an empty association here. So, in this case, we clear the
+				// snapshot to be sure the association created is empty.
+				if ( !association.isEmpty() ) {
+					association.clear();
+				}
 
-		return association;
+				return association;
 	}
 
 	/**
@@ -898,7 +904,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	}
 
 	private static ClosableIterator<Tuple> doAggregate(MongoDBQueryDescriptor query, QueryParameters queryParameters, MongoCollection<Document> collection, EntityKeyMetadata entityKeyMetadata) {
-		List<Document> pipeline = new ArrayList<Document>();
+		List<Document> pipeline = new ArrayList<>();
 
 		pipeline.add( stage( "$match", query.getCriteria() ) );
 		pipeline.add( stage( "$project", query.getProjection() ) );
@@ -1154,9 +1160,9 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			theOne = collection.findOneAndDelete(
 					query,
 					new FindOneAndDeleteOptions().sort( sort )
-							.projection( fields )
-							.maxTime( 0, TimeUnit.MILLISECONDS )
-			);
+					.projection( fields )
+					.maxTime( 0, TimeUnit.MILLISECONDS )
+					);
 		}
 		else {
 			FindOneAndUpdateOptions options = new FindOneAndUpdateOptions()
@@ -1361,9 +1367,9 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	public void executeBatch(OperationsQueue queue) {
 		if ( !queue.isClosed() ) {
 			Operation operation = queue.poll();
-			Map<MongoCollection<Document>, BatchInsertionTask> inserts = new HashMap<MongoCollection<Document>, BatchInsertionTask>();
+			Map<MongoCollection<Document>, BatchInsertionTask> inserts = new HashMap<>();
 
-			List<Tuple> insertTuples = new ArrayList<Tuple>();
+			List<Tuple> insertTuples = new ArrayList<>();
 
 			while ( operation != null ) {
 				if ( operation instanceof GroupedChangesToEntityOperation ) {
@@ -1423,7 +1429,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 					insertStatement = objectForInsert( tuple, document );
 
 					getOrCreateBatchInsertionTask( inserts, entityKey.getMetadata(), collection )
-							.put( entityKey, insertStatement );
+					.put( entityKey, insertStatement );
 					insertTuples.add( tuple );
 				}
 				else {
@@ -1766,7 +1772,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 		public BatchInsertionTask(EntityKeyMetadata entityKeyMetadata) {
 			this.entityKeyMetadata = entityKeyMetadata;
-			this.inserts = new HashMap<EntityKey, Document>();
+			this.inserts = new HashMap<>();
 		}
 
 		public EntityKeyMetadata getEntityKeyMetadata() {
@@ -1774,7 +1780,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		}
 
 		public List<Document> getAll() {
-			return new ArrayList<Document>( inserts.values() );
+			return new ArrayList<>( inserts.values() );
 		}
 
 		public boolean containsKey(EntityKey entityKey) {
