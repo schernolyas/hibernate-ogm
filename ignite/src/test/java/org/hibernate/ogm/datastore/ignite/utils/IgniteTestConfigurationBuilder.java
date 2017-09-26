@@ -144,7 +144,7 @@ public class IgniteTestConfigurationBuilder implements IgniteConfigurationBuilde
 						.appendField( "score", Integer.class )
 						.build()
 		);
-// QueryWithParametersTest
+// AddQueryWithParametersTest
 		cacheConfig.add(
 				createCacheConfig( "Movie" )
 						.appendIndex( "id", String.class )

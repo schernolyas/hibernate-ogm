@@ -88,6 +88,7 @@ import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
+import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 
 public class IgniteDialect extends BaseGridDialect implements GridDialect, QueryableGridDialect<IgniteQueryDescriptor>,MultigetGridDialect {
@@ -878,6 +879,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		//@todo incorrect query: "SELECT _KEY, _VAL  FROM Hypothesis _gen_0_". This is invalid convertation from JPA to Native query
 		Iterable<List<?>> result = executeWithHints( cache, sqlQuery, hints );
 
+
 		if ( backendQuery.getSingleEntityMetadataInformationOrNull() != null ) {
 			return new IgnitePortableFromProjectionResultCursor(
 					result,
@@ -906,7 +908,10 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			result = provider.affinityCall( cache.getName(), hints.getAffinityKey(), sqlQuery );
 		}
 		else {
-			result = cache.query( sqlQuery );
+			QueryCursor<List<?>> cursor = cache.query( sqlQuery );
+			List<List<?>> results = cursor.getAll();
+			log.debugf( "executeBackendQuery: size : %s", results.size() );
+			result = results;
 		}
 
 		return result;

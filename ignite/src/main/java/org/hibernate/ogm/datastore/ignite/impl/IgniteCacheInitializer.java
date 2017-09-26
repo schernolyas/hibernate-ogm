@@ -50,6 +50,7 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 
 /**
  * @author Victor Kadachigov
@@ -205,7 +206,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 	}
 
 	private CacheConfiguration createCacheConfiguration(AssociationKeyMetadata associationKeyMetadata, SchemaDefinitionContext context,
-														ConfigurationPropertyReader propertyReader) {
+			ConfigurationPropertyReader propertyReader) {
 
 		CacheConfiguration result = new CacheConfiguration();
 		result.setName( StringHelper.stringBeforePoint( associationKeyMetadata.getTable() ) );
@@ -281,7 +282,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		Boolean writeThroughValue = getWriteThroughOptionValue( optionsService, entityType );
 		Class<?> cacheStoreFactoryValue = getCacheStoreFactoryOptionValue( optionsService, entityType );
 		log.debugf( "readThroughValue:%b;writeThroughValue:%b;",
-					readThroughValue,writeThroughValue );
+				readThroughValue,writeThroughValue );
 
 		CacheConfiguration<?,?> cacheConfiguration = new CacheConfiguration<>();
 		cacheConfiguration.setStoreKeepBinary( true );
@@ -292,14 +293,15 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 
 		cacheConfiguration.setName( StringHelper.stringBeforePoint( entityKeyMetadata.getTable() ) );
 		cacheConfiguration.setAtomicityMode( CacheAtomicityMode.TRANSACTIONAL );
+		cacheConfiguration.setSqlSchema( QueryUtils.DFLT_SCHEMA );//@todo not forget about schemas for entity
 		if ( !( readThroughValue || writeThroughValue ) ) {
-			QueryEntity queryEntity = new QueryEntity();
-			queryEntity.setTableName( entityKeyMetadata.getTable() );
+			QueryEntity queryEntity = new QueryEntity( getEntityIdClassName( entityKeyMetadata.getTable(), context ), entityType );
 			log.debugf( "createEntityCacheConfiguration. create QueryEntity for table:%s;",
-						entityKeyMetadata.getTable() );
-			queryEntity.setKeyType( getEntityIdClassName( entityKeyMetadata.getTable(), context ).getSimpleName() );
-			queryEntity.setValueType( StringHelper.stringAfterPoint( entityKeyMetadata.getTable() ) );
-			addTableInfo( queryEntity,context, entityKeyMetadata.getTable() );
+					entityKeyMetadata.getTable() );
+			//queryEntity.setTableName( entityKeyMetadata.getTable() );
+			// queryEntity.setKeyType( getEntityIdClassName( entityKeyMetadata.getTable(), context ).getSimpleName() );
+			// queryEntity.setValueType( StringHelper.stringAfterPoint( entityKeyMetadata.getTable() ) );
+			addTableInfo( queryEntity, context, entityKeyMetadata.getTable() );
 
 			for ( AssociationKeyMetadata associationKeyMetadata : context.getAllAssociationKeyMetadata() ) {
 				if ( associationKeyMetadata.getAssociationKind() != AssociationKind.EMBEDDED_COLLECTION
@@ -308,8 +310,8 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 					appendIndex( queryEntity, associationKeyMetadata, context );
 				}
 			}
-			log.debugf( "createEntityCacheConfiguration. full QueryEntity info :%s;",
-						queryEntity.toString() );
+			log.infof( "createEntityCacheConfiguration. full QueryEntity info :%s;",
+					queryEntity.toString() );
 			cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
 		}
 		return cacheConfiguration;

@@ -12,11 +12,11 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.List;
-
 import javax.persistence.EntityManager;
 
 import org.hibernate.ogm.utils.PackagingRule;
 import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -181,9 +181,29 @@ public class QueryWithParametersTest extends OgmJpaTestCase {
 		entityManager.close();
 	}
 
+	@Test
+	public void canUseStringParameterForLike() {
+		EntityManager entityManager = getFactory().createEntityManager();
+		entityManager.getTransaction().begin();
+		try {
+			List<Movie> thrillers = entityManager.createQuery(
+					"SELECT m FROM Movie m WHERE m.title like :mask", Movie.class )
+					.setParameter( "mask", "%thatch%" )
+					.getResultList();
+
+			assertThat( thrillers ).onProperty( "title" ).containsOnly( "To thatch a roof" );
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		entityManager.getTransaction().commit();
+		entityManager.close();
+	}
+
 	@Before
 	public void insertTestEntities() throws Exception {
 		EntityManager entityManager = getFactory().createEntityManager();
+		rollbackTransction();
 		entityManager.getTransaction().begin();
 
 		entityManager.persist( new Movie( "movie-1", Genre.COMEDY, "To thatch a roof", true, new GregorianCalendar( 1955, 5, 10 ).getTime(), (byte) 8 ) );
@@ -198,6 +218,9 @@ public class QueryWithParametersTest extends OgmJpaTestCase {
 	@After
 	public void removeTestEntities() {
 		EntityManager entityManager = getFactory().createEntityManager();
+
+		rollbackTransction();
+
 		entityManager.getTransaction().begin();
 
 		entityManager.remove( entityManager.find( Movie.class, "movie-1" ) );
@@ -207,6 +230,13 @@ public class QueryWithParametersTest extends OgmJpaTestCase {
 
 		entityManager.getTransaction().commit();
 		entityManager.close();
+	}
+
+	private void rollbackTransction() {
+		EntityManager entityManager = getFactory().createEntityManager();
+		if ( entityManager.getTransaction().isActive() ) {
+			entityManager.getTransaction().rollback();
+		}
 	}
 
 	@Override
