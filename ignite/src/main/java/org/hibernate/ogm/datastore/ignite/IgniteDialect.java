@@ -142,8 +142,8 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 	@Override
 	public List<Tuple> getTuples(EntityKey[] keys, TupleContext tupleContext) {
 		Map<Object, EntityKey> idKeyMap = Stream.of( keys ).collect(
-				Collectors.toMap( ( EntityKey key ) -> provider.createKeyObject( key ), ( EntityKey key ) -> key ) );
-
+				Collectors.toMap( ( EntityKey key ) -> provider.createKeyObject( key ), ( EntityKey key ) -> key,
+						( entityKey, entityKey2 ) -> entityKey, LinkedHashMap::new ) );
 		// all keys from one cache
 		IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( keys[0].getMetadata() );
 		return entityCache.getAll( idKeyMap.keySet() ).entrySet().stream()
