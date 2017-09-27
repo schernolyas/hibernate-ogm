@@ -11,7 +11,7 @@
     <parent>
         <groupId>org.hibernate.ogm</groupId>
         <artifactId>hibernate-ogm-bom</artifactId>
-        <version>5.2.0-2.1-SNAPSHOT</version>
+        <version>5.2.0-2.1</version>
         <relativePath>bom/pom.xml</relativePath>
     </parent>
 
@@ -856,9 +856,16 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <modules>
+                <module>bom</module>
+                <module>core</module>
                 <module>ignite</module>
             </modules>
             <distributionManagement>
+                <repository>
+                    <id>epam-vtb-dbo</id>
+                    <name>VTB-DBO Snapshots Repository</name>
+                    <url>http://nexus.vtb-dbo.projects.epam.com/repository/hibernate-ogm/</url>
+                </repository>
                 <snapshotRepository>
                     <id>epam-vtb-dbo</id>
                     <name>VTB-DBO Snapshots Repository</name>
