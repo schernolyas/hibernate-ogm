@@ -13,8 +13,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
-import javax.cache.configuration.Factory;
-import javax.cache.configuration.FactoryBuilder;
+import java.util.Set;
 
 import org.hibernate.HibernateException;
 import org.hibernate.boot.model.relational.Namespace;
@@ -25,13 +24,8 @@ import org.hibernate.mapping.Selectable;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
-import org.hibernate.ogm.datastore.ignite.IgniteProperties;
 import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
 import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
-import org.hibernate.ogm.datastore.ignite.options.impl.CacheStoreFactoryOption;
-import org.hibernate.ogm.datastore.ignite.options.impl.ReadThroughOption;
-import org.hibernate.ogm.datastore.ignite.options.impl.StoreKeepBinaryOption;
-import org.hibernate.ogm.datastore.ignite.options.impl.WriteThroughOption;
 import org.hibernate.ogm.datastore.ignite.util.ClassUtil;
 import org.hibernate.ogm.datastore.ignite.util.StringHelper;
 import org.hibernate.ogm.datastore.spi.BaseSchemaDefiner;
@@ -48,7 +42,6 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 
@@ -60,6 +53,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 	private static final long serialVersionUID = -8564869898957031491L;
 	private static final Log log = LoggerFactory.getLogger();
 	private static Map<String, Class<?>> tableEntityTypeMapping;
+	private static Set<EntityKeyMetadata> entityKeyMetadata;
 	private static Map<Class<?>, Class<?>> h2TypeMapping;
 
 	static {
@@ -69,7 +63,13 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		h2TypeMapping = Collections.unmodifiableMap( map );
 	}
 
+	public static Map<String, Class<?>> getTableEntityTypeMapping() {
+		return tableEntityTypeMapping;
+	}
 
+	public static Set<EntityKeyMetadata> getEntityKeyMetadata() {
+		return entityKeyMetadata;
+	}
 
 	@Override
 	public void initializeSchema(SchemaDefinitionContext context) {
@@ -85,6 +85,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 			initializeEntities( context, igniteDatastoreProvider );
 			initializeAssociations( context, igniteDatastoreProvider );
 			initializeIdSources( context, igniteDatastoreProvider );
+			entityKeyMetadata = context.getAllEntityKeyMetadata();
 		}
 		else {
 			log.unexpectedDatastoreProvider( provider.getClass(), IgniteDatastoreProvider.class );
@@ -148,21 +149,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		}
 	}
 
-	private Boolean getReadThroughOptionValue(OptionsService optionsService, Class<?> entityType) {
-		return optionsService.context().getEntityOptions( entityType ).getUnique( ReadThroughOption.class );
-	}
 
-	private Boolean getWriteThroughOptionValue(OptionsService optionsService, Class<?> entityType) {
-		return optionsService.context().getEntityOptions( entityType ).getUnique( WriteThroughOption.class );
-	}
-
-	private Boolean getStoreKeepBinaryOptionValue(OptionsService optionsService, Class<?> entityType) {
-		return optionsService.context().getEntityOptions( entityType ).getUnique( StoreKeepBinaryOption.class );
-	}
-
-	private Class getCacheStoreFactoryOptionValue(OptionsService optionsService, Class<?> entityType) {
-		return optionsService.context().getEntityOptions( entityType ).getUnique( CacheStoreFactoryOption.class );
-	}
 
 	private void initializeIdSources(SchemaDefinitionContext context, IgniteDatastoreProvider igniteDatastoreProvider) {
 		ConfigurationPropertyReader propertyReader = igniteDatastoreProvider.getPropertyReader();
@@ -278,23 +265,17 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		Class<?> entityType = tableEntityTypeMapping.get( entityKeyMetadata.getTable() );
 		log.debugf( "initialize cache for entity class %s",entityType.getName() );
 
-		Boolean readThroughValue = getReadThroughOptionValue( optionsService, entityType );
-		Boolean writeThroughValue = getWriteThroughOptionValue( optionsService, entityType );
-		Class<?> cacheStoreFactoryValue = getCacheStoreFactoryOptionValue( optionsService, entityType );
-		log.debugf( "readThroughValue:%b;writeThroughValue:%b;",
-				readThroughValue,writeThroughValue );
+
 
 		CacheConfiguration<?,?> cacheConfiguration = new CacheConfiguration<>();
 		cacheConfiguration.setStoreKeepBinary( true );
-		if ( readThroughValue || writeThroughValue ) {
-			setCacheStoreFactory( cacheConfiguration, cacheStoreFactoryValue,
-					entityType.getName(), propertyReader, readThroughValue, writeThroughValue );
-		}
+
 
 		cacheConfiguration.setName( StringHelper.stringBeforePoint( entityKeyMetadata.getTable() ) );
 		cacheConfiguration.setAtomicityMode( CacheAtomicityMode.TRANSACTIONAL );
 		cacheConfiguration.setSqlSchema( QueryUtils.DFLT_SCHEMA );//@todo not forget about schemas for entity
-		if ( !( readThroughValue || writeThroughValue ) ) {
+		cacheConfiguration.setBackups( 1 );
+
 			QueryEntity queryEntity = new QueryEntity( getEntityIdClassName( entityKeyMetadata.getTable(), context ), entityType );
 			log.debugf( "createEntityCacheConfiguration. create QueryEntity for table:%s;",
 					entityKeyMetadata.getTable() );
@@ -313,7 +294,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 			log.infof( "createEntityCacheConfiguration. full QueryEntity info :%s;",
 					queryEntity.toString() );
 			cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
-		}
+
 		return cacheConfiguration;
 	}
 
@@ -335,58 +316,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 				}
 			}
 		}
-
 	}
 
-	@SuppressWarnings("unchecked")
-	private void setCacheStoreFactory( CacheConfiguration cacheConfiguration, Class cacheStoreFactoryValue, String entityName,
-			ConfigurationPropertyReader propertyReader,Boolean readThroughValue,Boolean writeThroughValue) {
-		try {
-			log.infof( "set CacheStoreFactory  for Entity %s",  entityName );
-			String factoryName = propertyReader.property( String.format( IgniteProperties.IGNITE_CACHE_STORE_FACTORY_TEMPLATE,
-					entityName ), String.class ).getValue();
-			log.infof( "1. factoryName: %s",  factoryName );
-			if ( factoryName != null ) {
-				// set factory class from properties file
-				log.infof( "set CacheStoreFactory class %s for Entity %s", factoryName, entityName );
-				Class<?> factoryClass = Class.forName( factoryName );
-				cacheConfiguration.setCacheStoreFactory( (Factory<? extends CacheStore>) factoryClass.newInstance() );
-				cacheConfiguration.setReadThrough( readThroughValue );
-				cacheConfiguration.setWriteThrough( writeThroughValue );
-			}
-			else {
-				String adapterClassName = propertyReader.property( String.format(
-						IgniteProperties.IGNITE_CACHE_STORE_CLASS_TEMPLATE, entityName ), String.class )
-						.getValue();
-				log.infof( "2. adapterClassName: %s",  adapterClassName );
-				if ( adapterClassName != null ) {
-					// set adapter class from properties file
-					log.infof( "set CacheStore class %s for Entity %s", adapterClassName, entityName );
-					cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( Class.forName( adapterClassName ) ) );
-					cacheConfiguration.setReadThrough( readThroughValue );
-					cacheConfiguration.setWriteThrough( writeThroughValue );
-					return;
 
-				}
-				log.infof( "3. cacheStoreFactoryValue: %s",  cacheStoreFactoryValue );
-				if ( cacheStoreFactoryValue != null ) {
-					// set adapter class from annotation
-					log.infof( "set CacheStoreFactory class %s from annotation for Entity %s", cacheStoreFactoryValue, entityName );
-					cacheConfiguration.setCacheStoreFactory( FactoryBuilder.factoryOf( cacheStoreFactoryValue ) );
-					cacheConfiguration.setReadThrough( readThroughValue );
-					cacheConfiguration.setWriteThrough( writeThroughValue );
-					return;
-
-				}
-			}
-		}
-		catch (Exception e) {
-			throw log.unableToInitializeCache( entityName, e );
-		}
-	}
-
-	@Deprecated
-	public static String generateIndexName(String entityName, String fieldName) {
-		return entityName + "_" + fieldName + "_inx";
-	}
 }

@@ -12,17 +12,11 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 
 import org.hibernate.ogm.datastore.ignite.options.CacheStoreFactory;
-import org.hibernate.ogm.datastore.ignite.options.ReadThrough;
-import org.hibernate.ogm.datastore.ignite.options.StoreKeepBinary;
-import org.hibernate.ogm.datastore.ignite.options.WriteThrough;
 
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
  */
 @Entity
-@ReadThrough
-@WriteThrough
-@StoreKeepBinary
 @CacheStoreFactory(HallBinaryStore.class)
 public class CacheStoreHall {
 	private String id;

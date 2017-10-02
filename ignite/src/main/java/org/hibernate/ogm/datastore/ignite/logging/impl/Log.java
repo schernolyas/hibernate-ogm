@@ -6,7 +6,10 @@
  */
 package org.hibernate.ogm.datastore.ignite.logging.impl;
 
+import static org.jboss.logging.Logger.Level.WARN;
+
 import org.hibernate.HibernateException;
+import org.hibernate.hql.ast.common.JoinType;
 import org.jboss.logging.Logger.Level;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
@@ -45,4 +48,8 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 
 	@Message(id = 1709, value = "Unable initialize cache '%s'")
 	HibernateException unableToInitializeCache(String cacheName, @Cause Exception cause);
+
+	@LogMessage(level = WARN)
+	@Message(id = 1710, value = "Join type %1$s is not fully supported with Ignite")
+	void joinTypeNotFullySupported(JoinType joinType);
 }

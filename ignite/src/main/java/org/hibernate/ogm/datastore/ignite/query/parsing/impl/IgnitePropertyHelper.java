@@ -9,20 +9,27 @@ package org.hibernate.ogm.datastore.ignite.query.parsing.impl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.hibernate.AssertionFailure;
 import org.hibernate.cfg.NotYetImplementedException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.hql.ast.spi.EntityNamesResolver;
+import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
+import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
 import org.hibernate.ogm.persister.impl.OgmCollectionPersister;
 import org.hibernate.ogm.persister.impl.OgmEntityPersister;
 import org.hibernate.ogm.query.parsing.impl.ParserPropertyHelper;
 import org.hibernate.ogm.util.impl.ArrayHelper;
 import org.hibernate.ogm.util.impl.StringHelper;
+import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.Joinable;
 import org.hibernate.type.AssociationType;
+import org.hibernate.type.EntityType;
 import org.hibernate.type.Type;
 
 /**
@@ -30,10 +37,21 @@ import org.hibernate.type.Type;
  */
 public class IgnitePropertyHelper extends ParserPropertyHelper {
 
+	private static final Log log = LoggerFactory.getLogger();
 	private final Map<String, String> aliasByEntityName = new HashMap<String, String>();
+	private final Map<String, RelationshipAliasTree> relationshipAliases = new HashMap<>();
+	private final SessionFactoryImplementor sessionFactory;
+	private int relationshipCounter = 0;
+	// Contains the aliases that will appear in the OPTIONAL MATCH clause of the query
+	private final Set<String> optionalMatches = new HashSet<>();
 
-	public IgnitePropertyHelper(SessionFactoryImplementor sessionFactory, EntityNamesResolver entityNames) {
+	// Contains the aliases that will appear in the MATCH clause of the query
+	private final Set<String> requiredMatches = new HashSet<>();
+
+	public IgnitePropertyHelper(SessionFactoryImplementor sessionFactory, EntityNamesResolver entityNames ) {
 		super( sessionFactory, entityNames );
+		this.sessionFactory = sessionFactory;
+		log.debugf( "====create new instance!====" );
 	}
 
 	@Override
@@ -52,7 +70,9 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 	 * @param requiredDepth it defines until where the aliases will be considered as required aliases (see {@link IgniteAliasResolver} for more information)
 	 * @return the {@link PropertyIdentifier}
 	 */
-	public PropertyIdentifier getPropertyIdentifier(String entityType, List<String> propertyPath) {
+
+
+	public PropertyIdentifier getPropertyIdentifier(String entityType, List<String> propertyPath, int requiredDepth) {
 		// we analyze the property path to find all the associations/embedded which are in the way and create proper
 		// aliases for them
 		String entityAlias = findAliasForType( entityType );
@@ -65,12 +85,16 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 		List<String> lastAssociationPath = Collections.emptyList();
 		OgmEntityPersister currentPersister = getPersister( entityType );
 
-		int requiredDepth = propertyPath.size();
 		boolean isLastElementAssociation = false;
 		int depth = 1;
 		for ( String property : propertyPath ) {
 			currentPropertyPath.add( property );
 			Type currentPropertyType = getPropertyType( entityType, currentPropertyPath );
+			/*log.infof( "property: %s", property );
+			log.infof( "currentPropertyPath: %s", currentPropertyPath );
+			log.infof( "currentPersister.getTableName(): %s", currentPersister.getTableName() );
+			log.infof( "currentPersister.getDiscriminatorColumnName(): %s", currentPersister.getDiscriminatorColumnName() );
+			log.infof( "currentPersister.getDiscriminatorType(): %s", currentPersister.getDiscriminatorType() ); */
 
 			// determine if the current property path is still part of requiredPropertyMatch
 			boolean optionalMatch = depth > requiredDepth;
@@ -79,28 +103,46 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 				AssociationType associationPropertyType = (AssociationType) currentPropertyType;
 				Joinable associatedJoinable = associationPropertyType.getAssociatedJoinable( getSessionFactory() );
 				if ( associatedJoinable.isCollection()
-						&& ( (OgmCollectionPersister) associatedJoinable ).getType().isComponentType() ) {
+						&& !( (OgmCollectionPersister) associatedJoinable ).getType().isEntityType() ) {
 					// we have a collection of embedded
-					throw new NotYetImplementedException();
-//					propertyAlias = aliasResolver.createAliasForEmbedded( entityAlias, currentPropertyPath, optionalMatch );
+					// propertyAlias = createAliasForEmbedded( entityAlias, currentPropertyPath, optionalMatch );
+					throw new NotYetImplementedException( "Collection of embedded not supported!" );
 				}
 				else {
 					propertyEntityType = associationPropertyType.getAssociatedEntityName( getSessionFactory() );
-					currentPersister = getPersister( propertyEntityType );
+					//log.infof( "propertyEntityType: %s", propertyEntityType );
 					String targetNodeType = currentPersister.getEntityKeyMetadata().getTable();
-
-					throw new NotYetImplementedException();
-//					propertyAlias = aliasResolver.createAliasForAssociation( entityAlias, currentPropertyPath, targetNodeType, optionalMatch );
-//					lastAssociationPath = new ArrayList<>( currentPropertyPath );
-//					isLastElementAssociation = true;
+					OgmEntityPersister associationPersister = getPersister( currentPersister.getEntityKeyMetadata().getTable() );
+					/*log.infof( "targetNodeType: %s", targetNodeType );
+					log.infof( "currentPersister: %s", currentPersister );
+					log.infof( "associationPersister: %s", associationPersister );
+					log.infof( "associationPropertyType: %s", associationPropertyType );
+					log.infof( "associatedJoinable: %s", associatedJoinable );
+					log.infof( "KeyColumnNames: %s", Arrays.asList( associatedJoinable.getKeyColumnNames() ) );
+					log.infof( "associationPropertyType.useLHSPrimaryKey(): %s", associationPropertyType.useLHSPrimaryKey() );
+					log.infof( "associationPropertyType.getLHSPropertyName(): %s", associationPropertyType.getLHSPropertyName() );
+					log.infof( "associationPropertyType.getRHSUniqueKeyPropertyName(): %s", associationPropertyType.getRHSUniqueKeyPropertyName() );
+					log.infof( "associatedJoinable.getKeyColumnNames(): %s", associatedJoinable.getKeyColumnNames() ); */
+					propertyName = property + "_" + associatedJoinable.getKeyColumnNames()[0];
+					//log.infof( "propertyName: %s", propertyName );
+					isLastElementAssociation = true;
+					return new PropertyIdentifier( entityAlias, propertyName );
+					/*
+					 * propertyAlias = createAliasForAssociation( entityAlias, currentPropertyPath, targetNodeType,
+					 * optionalMatch ); log.infof( "propertyAlias: %s",propertyAlias ); lastAssociationPath = new
+					 * ArrayList<>( currentPropertyPath ); log.infof( "lastAssociationPath: %s",lastAssociationPath );
+					 * isLastElementAssociation = true; log.infof(
+					 * "isLastElementAssociation: %s",isLastElementAssociation );
+					 */
 				}
 			}
 			else if ( currentPropertyType.isComponentType()
 					&& !isIdProperty( currentPersister, propertyPath.subList( lastAssociationPath.size(), propertyPath.size() ) ) ) {
 				// we are in the embedded case and the embedded is not the id of the entity (the id is stored as normal
 				// properties)
-				throw new NotYetImplementedException();
-//				propertyAlias = aliasResolver.createAliasForEmbedded( entityAlias, currentPropertyPath, optionalMatch );
+				// propertyAlias = aliasResolver.createAliasForEmbedded( entityAlias, currentPropertyPath, optionalMatch
+				// );
+				throw new NotYetImplementedException( "Embedded not supported!" );
 			}
 			else {
 				isLastElementAssociation = false;
@@ -116,6 +158,65 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 			propertyName = getColumnName( propertyEntityType, propertyPath.subList( lastAssociationPath.size(), propertyPath.size() ) );
 		}
 		return new PropertyIdentifier( propertyAlias, propertyName );
+	}
+
+
+	private boolean isReferenceToPrimaryKey(String propertyName, EntityType owningType) {
+		EntityPersister persister = sessionFactory.getEntityPersister( owningType.getAssociatedEntityName() );
+		if ( persister.getEntityMetamodel().hasNonIdentifierPropertyNamedId() ) {
+			// only the identifier property field name can be a reference to the associated entity's PK...
+			return propertyName.equals( persister.getIdentifierPropertyName() ) && owningType.isReferenceToPrimaryKey();
+		}
+		// here, we have two possibilities:
+		// 1) the property-name matches the explicitly identifier property name
+		// 2) the property-name matches the implicit 'id' property name
+		// the referenced node text is the special 'id'
+		if ( EntityPersister.ENTITY_ID.equals( propertyName ) ) {
+			return owningType.isReferenceToPrimaryKey();
+		}
+		String keyPropertyName = sessionFactory.getIdentifierPropertyName( owningType.getName() );// .getIdentifierOrUniqueKeyPropertyName(
+																									// owningType );
+		return keyPropertyName != null && keyPropertyName.equals( propertyName ) && owningType.isReferenceToPrimaryKey();
+	}
+
+	private String createAliasForAssociation(String entityAlias, List<String> propertyPathWithoutAlias, String targetEntityName,
+			boolean optionalMatch) {
+		log.debugf( "entityAlias:%s; propertyPathWithoutAlias:%s; targetEntityName:%s;",
+				entityAlias, propertyPathWithoutAlias, targetEntityName );
+		RelationshipAliasTree relationshipAlias = relationshipAliases.get( entityAlias );
+		log.debugf( "relationshipAlias:%s; entityAlias: %s", relationshipAlias, entityAlias );
+		if ( relationshipAlias == null ) {
+			relationshipAlias = RelationshipAliasTree.root( entityAlias );
+			relationshipAliases.put( entityAlias, relationshipAlias );
+		}
+		log.infof( "relationshipAlias:%s; entityAlias: %s", relationshipAlias, entityAlias );
+		for ( int i = 0; i < propertyPathWithoutAlias.size(); i++ ) {
+			String name = propertyPathWithoutAlias.get( i );
+			RelationshipAliasTree child = relationshipAlias.findChild( name );
+			if ( child == null ) {
+				if ( i != propertyPathWithoutAlias.size() - 1 ) {
+					throw new AssertionFailure( "The path to " + StringHelper.join( propertyPathWithoutAlias, "." )
+							+ " has not been completely constructed" );
+				}
+
+				relationshipCounter++;
+				String childAlias = "_" + entityAlias + relationshipCounter;
+				child = RelationshipAliasTree.relationship( childAlias, name, targetEntityName );
+				log.infof( "child:%s; ", child );
+				relationshipAlias.addChild( child );
+			}
+			relationshipAlias = child;
+			String alias = relationshipAlias.getAlias();
+			log.infof( "alias:%s; ", alias );
+			if ( optionalMatch && !requiredMatches.contains( alias ) ) {
+				optionalMatches.add( alias );
+			}
+			else {
+				requiredMatches.add( alias );
+				optionalMatches.remove( alias );
+			}
+		}
+		return relationshipAlias.getAlias();
 	}
 
 	public String getColumnName(String entityType, List<String> propertyPathWithoutAlias) {

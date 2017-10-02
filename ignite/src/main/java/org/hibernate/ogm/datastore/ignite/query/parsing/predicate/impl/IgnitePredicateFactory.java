@@ -42,19 +42,19 @@ public class IgnitePredicateFactory implements PredicateFactory<StringBuilder> {
 
 	@Override
 	public ComparisonPredicate<StringBuilder> getComparisonPredicate(String entityType, Type comparisonType, List<String> propertyPath, Object value) {
-		PropertyIdentifier identifier = propertyHelper.getPropertyIdentifier( entityType, propertyPath );
+		PropertyIdentifier identifier = getPropertyIdentifier( entityType, propertyPath );
 		return new IgniteComparisonPredicate( builder, identifier.getAlias(), identifier.getPropertyName(), comparisonType, value );
 	}
 
 	@Override
 	public InPredicate<StringBuilder> getInPredicate(String entityType, List<String> propertyPath, List<Object> typedElements) {
-		PropertyIdentifier identifier = propertyHelper.getPropertyIdentifier( entityType, propertyPath );
+		PropertyIdentifier identifier = getPropertyIdentifier( entityType, propertyPath );
 		return new IgniteInPredicate( builder, identifier.getAlias(), identifier.getPropertyName(), typedElements );
 	}
 
 	@Override
 	public RangePredicate<StringBuilder> getRangePredicate(String entityType, List<String> propertyPath, Object lowerValue, Object upperValue) {
-		PropertyIdentifier identifier = propertyHelper.getPropertyIdentifier( entityType, propertyPath );
+		PropertyIdentifier identifier = getPropertyIdentifier( entityType, propertyPath );
 		return new IgniteRangePredicate( builder, identifier.getAlias(), identifier.getPropertyName(), lowerValue, upperValue );
 	}
 
@@ -75,14 +75,19 @@ public class IgnitePredicateFactory implements PredicateFactory<StringBuilder> {
 
 	@Override
 	public LikePredicate<StringBuilder> getLikePredicate(String entityType, List<String> propertyPath, String patternValue, Character escapeCharacter) {
-		PropertyIdentifier identifier = propertyHelper.getPropertyIdentifier( entityType, propertyPath );
+		PropertyIdentifier identifier = getPropertyIdentifier( entityType, propertyPath );
 		return new IgniteLikePredicate( builder, identifier.getAlias(), identifier.getPropertyName(), patternValue, escapeCharacter );
 	}
 
 	@Override
 	public IsNullPredicate<StringBuilder> getIsNullPredicate(String entityType, List<String> propertyPath) {
-		PropertyIdentifier identifier = propertyHelper.getPropertyIdentifier( entityType, propertyPath );
+		PropertyIdentifier identifier = getPropertyIdentifier( entityType, propertyPath );
 		return new IgniteIsNullPredicate( builder, identifier.getAlias(), identifier.getPropertyName() );
+	}
+
+
+	private PropertyIdentifier getPropertyIdentifier(String entityType, List<String> propertyPath) {
+		return propertyHelper.getPropertyIdentifier( entityType, propertyPath, propertyPath.size() );
 	}
 
 }

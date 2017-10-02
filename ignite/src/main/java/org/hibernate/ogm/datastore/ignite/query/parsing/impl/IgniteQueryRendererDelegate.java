@@ -15,13 +15,18 @@ import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.hql.ast.common.JoinType;
 import org.hibernate.hql.ast.origin.hql.resolve.path.PropertyPath;
 import org.hibernate.hql.ast.spi.EntityNamesResolver;
 import org.hibernate.hql.ast.spi.SingleEntityQueryBuilder;
 import org.hibernate.hql.ast.spi.SingleEntityQueryRendererDelegate;
+import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
+import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.ignite.query.impl.IgniteQueryDescriptor;
 import org.hibernate.ogm.datastore.ignite.query.parsing.predicate.impl.IgnitePredicateFactory;
 import org.hibernate.ogm.persister.impl.OgmEntityPersister;
+
+import org.antlr.runtime.tree.Tree;
 
 /**
  * Parser delegate which creates Ignite SQL queries in form of {@link StringBuilder}s.
@@ -31,12 +36,14 @@ import org.hibernate.ogm.persister.impl.OgmEntityPersister;
 public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelegate<StringBuilder, IgniteQueryParsingResult> {
 
 	private static final List<String> ENTITY_COLUMN_NAMES = Collections.unmodifiableList( Arrays.asList( "_KEY", "_VALUE" ) );
-
+	private static final Log LOG = LoggerFactory.getLogger();
 	private final IgnitePropertyHelper propertyHelper;
 	private final SessionFactoryImplementor sessionFactory;
 	private final Map<String, Object> namedParamsWithValues;
 	private List<Object> indexedParameters;
 	private List<OrderByClause> orderByExpressions;
+
+	private JoinType joinType;
 
 	public IgniteQueryRendererDelegate(SessionFactoryImplementor sessionFactory, IgnitePropertyHelper propertyHelper, EntityNamesResolver entityNamesResolver, Map<String, Object> namedParameters) {
 		super(
@@ -116,10 +123,48 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 		}
 
 		List<String> propertyPathWithoutAlias = resolveAlias( propertyPath );
-		PropertyIdentifier identifier = propertyHelper.getPropertyIdentifier( targetTypeName, propertyPathWithoutAlias );
+		PropertyIdentifier identifier = propertyHelper.getPropertyIdentifier( targetTypeName, propertyPathWithoutAlias, 0 );
 
 		OrderByClause order = new OrderByClause( identifier.getAlias(), identifier.getPropertyName(), isAscending );
 		orderByExpressions.add( order );
+	}
+
+	@Override
+	public void pushFromStrategy(JoinType joinType, Tree associationFetchTree, Tree propertyFetchTree, Tree alias) {
+		super.pushFromStrategy( joinType, associationFetchTree, propertyFetchTree, alias );
+		this.joinType = joinType;
+	}
+
+	@Override
+	public void popStrategy() {
+		super.popStrategy();
+		joinType = null;
+	}
+
+	@Override
+	public void registerJoinAlias(Tree alias, PropertyPath path) {
+		LOG.infof( "alias: %s ; path: %s",alias,path );
+		super.registerJoinAlias( alias, path );
+		List<String> propertyPath = resolveAlias( path );
+
+		int requiredDepth;
+		// For now, we deal with INNER JOIN and LEFT OUTER JOIN, it's not really perfect as you might have issues
+		// with join precedence but it's probably the best we can do for now.
+		if ( JoinType.INNER.equals( joinType ) ) {
+			requiredDepth = propertyPath.size();
+		}
+		else if ( JoinType.LEFT.equals( joinType ) ) {
+			requiredDepth = 0;
+		}
+		else {
+			LOG.joinTypeNotFullySupported( joinType );
+			// defaults to mark the alias as required for now
+			requiredDepth = propertyPath.size();
+		}
+
+		// Even if we don't need the property identifier, it's important to create the aliases for the corresponding
+		// associations/embedded with the correct requiredDepth.
+		propertyHelper.getPropertyIdentifier( targetTypeName, propertyPath, requiredDepth );
 	}
 
 	private void fillIndexedParams(String param) {

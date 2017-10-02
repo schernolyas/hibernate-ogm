@@ -358,9 +358,11 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 		}
 	}
 
+
+
 	public SqlFieldsQuery createSqlFieldsQueryWithLog(String sql, QueryHints hints, Object... args) {
 		String comment = hints != null ? hints.toComment() : "";
-		jdbcServices.getSqlStatementLogger().logStatement( comment + sql );
+		//jdbcServices.getSqlStatementLogger().logStatement( comment + sql );
 
 		SqlFieldsQuery query = new SqlFieldsQuery( sql );
 		if ( args != null ) {

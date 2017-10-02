@@ -1,5 +1,5 @@
 org.hibernate.ogm.backendtck.batchfetching.MultiGetEmbeddedIdTest
-org.hibernate.ogm.backendtck.batchfetching.MultiGetSingleColumnIdTest
+//org.hibernate.ogm.backendtck.batchfetching.MultiGetSingleColumnIdTest
 org.hibernate.ogm.backendtck.batchfetching.MultiGetMultiColumnsIdTest
 
 org.hibernate.ogm.backendtck.queries.SingleTablenheritancePersistTest
@@ -15,7 +15,7 @@ org.hibernate.ogm.backendtck.queries.SimpleQueriesTest
 
 org.hibernate.ogm.backendtck.queries.QueriesWithEmbeddedTest
 org.hibernate.ogm.backendtck.queries.QueriesWithEmbeddedCollectionTest
-org.hibernate.ogm.backendtck.queries.QueriesWithAssociationsTest
+//org.hibernate.ogm.backendtck.queries.QueriesWithAssociationsTest
 org.hibernate.ogm.backendtck.queries.CompositeIdQueriesTest
 org.hibernate.ogm.backendtck.queries.SimpleQueriesWithTablePerClassInheritanceTest
 org.hibernate.ogm.backendtck.queries.SimpleQueriesWithSingleTableInheritanceTest

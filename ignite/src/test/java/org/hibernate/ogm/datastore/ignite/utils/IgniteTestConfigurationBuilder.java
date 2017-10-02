@@ -18,6 +18,7 @@ import java.util.Map;
 import org.hibernate.ogm.datastore.ignite.IgniteConfigurationBuilder;
 
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.binary.BinaryBasicNameMapper;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -59,12 +60,13 @@ public class IgniteTestConfigurationBuilder implements IgniteConfigurationBuilde
 		config.setClientMode( false );
 		//config.setMarshaller( new BinaryMarshaller() ) ;
 		BinaryConfiguration binaryConfiguration = new BinaryConfiguration();
+		binaryConfiguration.setNameMapper( new BinaryBasicNameMapper( true ) );
 		binaryConfiguration.setCompactFooter( false );		// it is necessary only for embedded collections (@ElementCollection)
 		config.setBinaryConfiguration( binaryConfiguration );
 		//config.setGridLogger( new Slf4jLogger() );
 		//config.setPublicThreadPoolSize( 2 );
 		TransactionConfiguration transactionConfiguration = new TransactionConfiguration();
-		transactionConfiguration.setDefaultTxConcurrency( TransactionConcurrency.PESSIMISTIC );
+		transactionConfiguration.setDefaultTxConcurrency( TransactionConcurrency.OPTIMISTIC );
 		transactionConfiguration.setDefaultTxIsolation( TransactionIsolation.READ_COMMITTED );
 		config.setTransactionConfiguration( transactionConfiguration );
 
