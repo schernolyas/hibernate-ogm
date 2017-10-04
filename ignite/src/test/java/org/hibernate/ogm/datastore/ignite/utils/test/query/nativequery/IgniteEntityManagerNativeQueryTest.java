@@ -21,7 +21,8 @@ import org.junit.Test;
 
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
- * @see <a href="https://docs.jboss.org/hibernate/orm/5.1/userguide/html_single/chapters/query/native/Native.html">Native Queries</a>
+ * @see <a href=
+ * "https://docs.jboss.org/hibernate/orm/5.1/userguide/html_single/chapters/query/native/Native.html">Native Queries</a>
  */
 public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 
@@ -58,8 +59,6 @@ public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 		close( em );
 	}
 
-
-
 	@Test
 	public void testSingleResultQuery() throws Exception {
 		begin();
@@ -80,9 +79,9 @@ public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 				.getSingleResult();
 		assertAreEquals( portia, poem );
 
-
 		commit();
 	}
+
 	@Test
 	public void testNamedQueryResultQueryWithParameters() throws Exception {
 		begin();
@@ -93,25 +92,22 @@ public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 		OscarWildePoem poem = (OscarWildePoem) poemQuery.getSingleResult();
 		assertAreEquals( portia, poem );
 
-
 		commit();
 	}
-
 
 	@Test
 	public void testSingleResultQueryWithParameters() throws Exception {
 		begin();
-			String nativeQuery = "select _key,_val from OscarWildePoem  where name=?1 and author=?2";
-			Query poemQuery = em.createNativeQuery( nativeQuery, OscarWildePoem.class );
-			poemQuery.setParameter( 1, "Portia" );
-			poemQuery.setParameter( 2, "Oscar Wilde" );
-			OscarWildePoem poem = (OscarWildePoem) poemQuery.getSingleResult();
+		String nativeQuery = "select _key,_val from OscarWildePoem  where name=?1 and author=?2";
+		Query poemQuery = em.createNativeQuery( nativeQuery, OscarWildePoem.class );
+		poemQuery.setParameter( 1, "Portia" );
+		poemQuery.setParameter( 2, "Oscar Wilde" );
+		OscarWildePoem poem = (OscarWildePoem) poemQuery.getSingleResult();
 
-			assertAreEquals( portia, poem );
+		assertAreEquals( portia, poem );
 
-			commit();
+		commit();
 	}
-
 
 	private void assertAreEquals(OscarWildePoem expectedPoem, OscarWildePoem poem) {
 		assertThat( poem ).isNotNull();
@@ -149,7 +145,7 @@ public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 	}
 
 	private void rollback() throws Exception {
-		if (em.getTransaction().isActive()) {
+		if ( em.getTransaction().isActive() ) {
 			em.getTransaction().rollback();
 		}
 	}
@@ -157,8 +153,9 @@ public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 	private EntityManager createEntityManager() {
 		return getFactory().createEntityManager();
 	}
+
 	@Override
 	public Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { OscarWildePoem.class, LiteratureSociety.class, Poet.class, Critic.class };
+		return new Class<?>[]{ OscarWildePoem.class, LiteratureSociety.class, Poet.class, Critic.class };
 	}
 }
