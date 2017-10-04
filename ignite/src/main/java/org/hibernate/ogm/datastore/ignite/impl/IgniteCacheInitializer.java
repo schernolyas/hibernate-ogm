@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 
@@ -28,10 +29,6 @@ import org.hibernate.mapping.Value;
 import org.hibernate.ogm.datastore.ignite.IgniteProperties;
 import org.hibernate.ogm.datastore.ignite.logging.impl.Log;
 import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
-import org.hibernate.ogm.datastore.ignite.options.impl.CacheStoreFactoryOption;
-import org.hibernate.ogm.datastore.ignite.options.impl.ReadThroughOption;
-import org.hibernate.ogm.datastore.ignite.options.impl.StoreKeepBinaryOption;
-import org.hibernate.ogm.datastore.ignite.options.impl.WriteThroughOption;
 import org.hibernate.ogm.datastore.ignite.util.ClassUtil;
 import org.hibernate.ogm.datastore.ignite.util.StringHelper;
 import org.hibernate.ogm.datastore.spi.BaseSchemaDefiner;
@@ -50,6 +47,7 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 
 /**
  * @author Victor Kadachigov
@@ -59,6 +57,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 	private static final long serialVersionUID = -8564869898957031491L;
 	private static final Log log = LoggerFactory.getLogger();
 	private static Map<String, Class<?>> tableEntityTypeMapping;
+	private static Set<EntityKeyMetadata> entityKeyMetadata;
 	private static Map<Class<?>, Class<?>> h2TypeMapping;
 
 	static {
@@ -68,7 +67,13 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		h2TypeMapping = Collections.unmodifiableMap( map );
 	}
 
+	public static Map<String, Class<?>> getTableEntityTypeMapping() {
+		return tableEntityTypeMapping;
+	}
 
+	public static Set<EntityKeyMetadata> getEntityKeyMetadata() {
+		return entityKeyMetadata;
+	}
 
 	@Override
 	public void initializeSchema(SchemaDefinitionContext context) {
@@ -84,6 +89,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 			initializeEntities( context, igniteDatastoreProvider );
 			initializeAssociations( context, igniteDatastoreProvider );
 			initializeIdSources( context, igniteDatastoreProvider );
+			entityKeyMetadata = context.getAllEntityKeyMetadata();
 		}
 		else {
 			log.unexpectedDatastoreProvider( provider.getClass(), IgniteDatastoreProvider.class );
@@ -147,21 +153,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		}
 	}
 
-	private Boolean getReadThroughOptionValue(OptionsService optionsService, Class<?> entityType) {
-		return optionsService.context().getEntityOptions( entityType ).getUnique( ReadThroughOption.class );
-	}
 
-	private Boolean getWriteThroughOptionValue(OptionsService optionsService, Class<?> entityType) {
-		return optionsService.context().getEntityOptions( entityType ).getUnique( WriteThroughOption.class );
-	}
-
-	private Boolean getStoreKeepBinaryOptionValue(OptionsService optionsService, Class<?> entityType) {
-		return optionsService.context().getEntityOptions( entityType ).getUnique( StoreKeepBinaryOption.class );
-	}
-
-	private Class getCacheStoreFactoryOptionValue(OptionsService optionsService, Class<?> entityType) {
-		return optionsService.context().getEntityOptions( entityType ).getUnique( CacheStoreFactoryOption.class );
-	}
 
 	private void initializeIdSources(SchemaDefinitionContext context, IgniteDatastoreProvider igniteDatastoreProvider) {
 		ConfigurationPropertyReader propertyReader = igniteDatastoreProvider.getPropertyReader();
@@ -277,41 +269,40 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		Class<?> entityType = tableEntityTypeMapping.get( entityKeyMetadata.getTable() );
 		log.debugf( "initialize cache for entity class %s",entityType.getName() );
 
-		Boolean readThroughValue = getReadThroughOptionValue( optionsService, entityType );
-		Boolean writeThroughValue = getWriteThroughOptionValue( optionsService, entityType );
-		Class<?> cacheStoreFactoryValue = getCacheStoreFactoryOptionValue( optionsService, entityType );
-		log.debugf( "readThroughValue:%b;writeThroughValue:%b;",
-					readThroughValue,writeThroughValue );
+
 
 		CacheConfiguration<?,?> cacheConfiguration = new CacheConfiguration<>();
 		cacheConfiguration.setStoreKeepBinary( true );
-		if ( readThroughValue || writeThroughValue ) {
-			setCacheStoreFactory( cacheConfiguration, cacheStoreFactoryValue,
-					entityType.getName(), propertyReader, readThroughValue, writeThroughValue );
-		}
+		cacheConfiguration.setSqlSchema( QueryUtils.DFLT_SCHEMA );
+		cacheConfiguration.setBackups( 1 );
 
 		cacheConfiguration.setName( StringHelper.stringBeforePoint( entityKeyMetadata.getTable() ) );
 		cacheConfiguration.setAtomicityMode( CacheAtomicityMode.TRANSACTIONAL );
-		if ( !( readThroughValue || writeThroughValue ) ) {
-			QueryEntity queryEntity = new QueryEntity();
-			queryEntity.setTableName( entityKeyMetadata.getTable() );
-			log.debugf( "createEntityCacheConfiguration. create QueryEntity for table:%s;",
-						entityKeyMetadata.getTable() );
-			queryEntity.setKeyType( getEntityIdClassName( entityKeyMetadata.getTable(), context ).getSimpleName() );
-			queryEntity.setValueType( StringHelper.stringAfterPoint( entityKeyMetadata.getTable() ) );
-			addTableInfo( queryEntity,context, entityKeyMetadata.getTable() );
 
-			for ( AssociationKeyMetadata associationKeyMetadata : context.getAllAssociationKeyMetadata() ) {
-				if ( associationKeyMetadata.getAssociationKind() != AssociationKind.EMBEDDED_COLLECTION
-						&& associationKeyMetadata.getTable().equals( entityKeyMetadata.getTable() )
-						&& !IgniteAssociationSnapshot.isThirdTableAssociation( associationKeyMetadata ) ) {
-					appendIndex( queryEntity, associationKeyMetadata, context );
-				}
+		QueryEntity queryEntity = new QueryEntity();
+
+		queryEntity.setTableName( entityKeyMetadata.getTable() );
+		log.debugf(
+				"createEntityCacheConfiguration. create QueryEntity for table:%s;",
+				entityKeyMetadata.getTable()
+		);
+		queryEntity.setKeyType( getEntityIdClassName( entityKeyMetadata.getTable(), context ).getSimpleName() );
+		queryEntity.setValueType( StringHelper.stringAfterPoint( entityKeyMetadata.getTable() ) );
+		addTableInfo( queryEntity, context, entityKeyMetadata.getTable() );
+
+		for ( AssociationKeyMetadata associationKeyMetadata : context.getAllAssociationKeyMetadata() ) {
+			if ( associationKeyMetadata.getAssociationKind() != AssociationKind.EMBEDDED_COLLECTION
+					&& associationKeyMetadata.getTable().equals( entityKeyMetadata.getTable() )
+					&& !IgniteAssociationSnapshot.isThirdTableAssociation( associationKeyMetadata ) ) {
+				appendIndex( queryEntity, associationKeyMetadata, context );
 			}
-			log.debugf( "createEntityCacheConfiguration. full QueryEntity info :%s;",
-						queryEntity.toString() );
-			cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
 		}
+		log.debugf(
+				"createEntityCacheConfiguration. full QueryEntity info :%s;",
+				queryEntity.toString()
+		);
+		cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
+
 		return cacheConfiguration;
 	}
 

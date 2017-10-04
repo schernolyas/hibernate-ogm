@@ -7,6 +7,7 @@
 package org.hibernate.ogm.datastore.ignite;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,6 +34,7 @@ import org.hibernate.loader.custom.Return;
 import org.hibernate.loader.custom.ScalarReturn;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteAssociationRowSnapshot;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteAssociationSnapshot;
+import org.hibernate.ogm.datastore.ignite.impl.IgniteCacheInitializer;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteDatastoreProvider;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteEmbeddedAssociationSnapshot;
 import org.hibernate.ogm.datastore.ignite.impl.IgniteTupleSnapshot;
@@ -54,6 +57,7 @@ import org.hibernate.ogm.dialect.query.spi.ParameterMetadataBuilder;
 import org.hibernate.ogm.dialect.query.spi.QueryParameters;
 import org.hibernate.ogm.dialect.query.spi.QueryableGridDialect;
 import org.hibernate.ogm.dialect.query.spi.RowSelection;
+import org.hibernate.ogm.dialect.query.spi.TypedGridValue;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.dialect.spi.AssociationTypeContext;
 import org.hibernate.ogm.dialect.spi.BaseGridDialect;
@@ -84,6 +88,7 @@ import org.hibernate.ogm.util.impl.Contracts;
 import org.hibernate.persister.entity.Lockable;
 import org.hibernate.type.Type;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
@@ -179,7 +184,6 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 
 		Tuple tuple = tuplePointer.getTuple();
 
-		Boolean isReadThrough = tupleContext.getTupleTypeContext().getOptionsContext().getUnique( ReadThroughOption.class );
 		Object keyObject = null;
 		BinaryObjectBuilder builder = null;
 		if ( tuple.getSnapshotType() == SnapshotType.UPDATE ) {
@@ -579,19 +583,9 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				igniteTupleSnapshot.getCacheKey() );
 		log.debugf( "insertInverseRelationship: igniteTupleSnapshot.getEntityKeyMetadata(): %s; ",
 				igniteTupleSnapshot.getEntityKeyMetadata() );
-		boolean isReadThrough = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( ReadThroughOption.class );
-		boolean isStoreKeepBinary = associationContext.getAssociationTypeContext().getOptionsContext().getUnique( StoreKeepBinaryOption.class );
-		log.debugf( "insertInverseRelationship: supports 'read-through' for entity: %s is %b ",
-				igniteTupleSnapshot.getEntityKeyMetadata().getTable(), isReadThrough );
-		if ( !isReadThrough ) {
-			//not needs to add association info to link non owner entity
-			return;
-		}
+
 		//need to add link info
 		IgniteCache<Object, BinaryObject> entityCache = provider.getEntityCache( igniteTupleSnapshot.getEntityKeyMetadata() );
-		if ( isStoreKeepBinary ) {
-			entityCache = entityCache.withKeepBinary();
-		}
 		Object key = igniteTupleSnapshot.getCacheKey();
 		BinaryObject lastEntityVersion = entityCache.get( key );
 		log.debugf( "insertInverseRelationship: lastEntityVersion.type().typeName(): %s; ",
@@ -632,13 +626,6 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		}
 
 
-		log.debugf( "insertInverseRelationship: notOwnerField: %s; value:%s ",
-				notOwnerLinkFieldName, associationIds
-				);
-		log.debugf(
-				"insertInverseRelationship: associationKey.getMetadata().getAssociationType(): %s ",
-				associationKey.getMetadata().getAssociationType()
-				);
 		switch ( associationKey.getMetadata().getAssociationType() ) {
 			case SET:
 				lastEntityVersion = builder.setField( notOwnerLinkFieldName, associationIds ).build();
@@ -852,6 +839,47 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 		throw new UnsupportedOperationException( "executeBackendUpdateQuery() is not implemented" );
 	}
 
+	private boolean isEntity(Object obj) {
+		for ( Map.Entry<String, Class<?>> entry : IgniteCacheInitializer.getTableEntityTypeMapping().entrySet() ) {
+			if ( entry.getValue().getName().equals( obj.getClass().getName() ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private Object getEntityKeyValue(Object entity) throws Exception {
+		Map.Entry<String, Class<?>> tableEntityTypeMapping = null;
+		for ( Map.Entry<String, Class<?>> entry : IgniteCacheInitializer.getTableEntityTypeMapping().entrySet() ) {
+			if ( entry.getValue().getName().equals( entity.getClass().getName() ) ) {
+				tableEntityTypeMapping = entry;
+				break;
+			}
+		}
+		EntityKeyMetadata entityKeyMetadata = null;
+		for ( EntityKeyMetadata m : IgniteCacheInitializer.getEntityKeyMetadata() ) {
+			if ( m.getTable().equals( tableEntityTypeMapping.getKey() ) ) {
+				entityKeyMetadata = m;
+				break;
+			}
+		}
+
+		String keyColumn = null;
+		for ( String column : entityKeyMetadata.getColumnNames() ) {
+			if ( entityKeyMetadata.isKeyColumn( column ) ) {
+				keyColumn = column;
+				break;
+			}
+		}
+
+		Method getter = entity.getClass().getMethod( "get" + StringUtils.capitalize( keyColumn ) );
+		return getter.invoke( entity );
+	}
+
+	private boolean isSimpleType(Object obj) {
+		return obj.getClass().getName().startsWith( "java." );
+	}
+
 	@Override
 	public ClosableIterator<Tuple> executeBackendQuery(BackendQuery<IgniteQueryDescriptor> backendQuery, QueryParameters queryParameters,
 			TupleContext tupleContext) {
@@ -866,28 +894,55 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			throw new UnsupportedOperationException( "Not implemented. Can't find cache name" );
 		}
 
-		log.debugf( "executeBackendQuery: query : %s",backendQuery.getQuery().getSql() );
-		log.debugf( "executeBackendQuery: table : %s",backendQuery.getQuery().getTable() );
+		log.debugf( "queryParameters .getPositionalParameters() : %s", queryParameters.getPositionalParameters() );
+		log.debugf( "queryParameters .getNamedParameters() : %s", queryParameters.getNamedParameters() );
+		log.debugf( "executeBackendQuery: query : %s", backendQuery.getQuery().getSql() );
+		log.debugf( "executeBackendQuery: table : %s", backendQuery.getQuery().getTable() );
+		List queryArgs = null;
+
+		if ( backendQuery.getQuery().getIndexedParameters() != null ) {
+			queryArgs = new ArrayList( backendQuery.getQuery().getIndexedParameters().size() );
+			for ( Object arg : backendQuery.getQuery().getIndexedParameters() ) {
+				if ( isSimpleType( arg ) ) {
+					queryArgs.add( arg );
+				}
+				else if ( isEntity( arg ) ) {
+					try {
+						Object v = getEntityKeyValue( arg );
+						queryArgs.add( v );
+					}
+					catch (Exception e) {
+						throw new HibernateException( "Cannot get value from entity!", e );
+					}
+				}
+			}
+		}
+		if ( queryParameters.getNamedParameters() != null ) {
+			queryArgs = new LinkedList(  );
+			for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
+				log.debugf( "key: %s; value: %s", entry.getKey(), entry.getValue().getValue() );
+				queryArgs.add( entry.getValue().getValue() );
+			}
+		}
 
 		QueryHints hints = ( new QueryHints.Builder( queryParameters.getQueryHints() ) ).build();
 		SqlFieldsQuery sqlQuery = provider.createSqlFieldsQueryWithLog(
 				backendQuery.getQuery().getSql(),
 				hints,
-				backendQuery.getQuery().getIndexedParameters() != null ? backendQuery.getQuery().getIndexedParameters().toArray() : null
-				);
-		//@todo incorrect query: "SELECT _KEY, _VAL  FROM Hypothesis _gen_0_". This is invalid convertation from JPA to Native query
+				queryArgs != null ? queryArgs.toArray() : null );
+		// Native query
 		Iterable<List<?>> result = executeWithHints( cache, sqlQuery, hints );
 
 		if ( backendQuery.getSingleEntityMetadataInformationOrNull() != null ) {
 			return new IgnitePortableFromProjectionResultCursor(
 					result,
 					queryParameters.getRowSelection(),
-					backendQuery.getSingleEntityMetadataInformationOrNull().getEntityKeyMetadata()
-					);
+					backendQuery.getSingleEntityMetadataInformationOrNull().getEntityKeyMetadata() );
 		}
 		else if ( backendQuery.getQuery().isHasScalar() ) {
 			throw new NotYetImplementedException();
-			//			return new IgniteProjectionResultCursor( result, backendQuery.getQuery().getCustomQueryReturns(), queryParameters.getRowSelection() );
+			// return new IgniteProjectionResultCursor( result, backendQuery.getQuery().getCustomQueryReturns(),
+			// queryParameters.getRowSelection() );
 		}
 		else {
 			throw new UnsupportedOperationException( "Not implemented yet" );
