@@ -7,11 +7,11 @@
 package org.hibernate.ogm.utils.jpa;
 
 import java.util.List;
-
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.transaction.TransactionManager;
 
+import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
 import org.hibernate.ogm.jpa.impl.OgmEntityManagerFactory;
@@ -19,6 +19,7 @@ import org.hibernate.ogm.utils.TestEntities;
 import org.hibernate.ogm.utils.TestEntityManagerFactory;
 import org.hibernate.ogm.utils.TestEntityManagerFactoryConfiguration;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
+
 import org.junit.runner.RunWith;
 
 /**
@@ -81,14 +82,20 @@ public abstract class OgmJpaTestCase {
 
 	protected void removeEntities() throws Exception {
 		EntityManager em = getFactory().createEntityManager();
-		em.getTransaction().begin();
 		for ( Class<?> each : getAnnotatedClasses() ) {
-			List<?> entities = em.createQuery( "FROM " + each.getSimpleName() ).getResultList();
-			for ( Object object : entities ) {
-				em.remove( object );
+			try {
+				em.getTransaction().begin();
+				List<?> entities = em.createQuery( "FROM " + each.getSimpleName() ).getResultList();
+				for ( Object object : entities ) {
+					em.remove( object );
+				}
+				em.getTransaction().commit();
+			}
+			catch (Exception e) {
+				em.getTransaction().rollback();
+				throw new HibernateException( "Cannot remove entities!", e );
 			}
 		}
-		em.getTransaction().commit();
 		em.close();
 	}
 

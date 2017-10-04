@@ -78,7 +78,7 @@ public class MultiGetSingleColumnIdTest extends OgmTestCase {
 		}
 	}
 
-	@Test
+	//@Test
 	public void testGetTuplesWithNulls() throws Exception {
 		try ( OgmSession session = openSession() ) {
 			Transaction tx = session.beginTransaction();
@@ -105,7 +105,7 @@ public class MultiGetSingleColumnIdTest extends OgmTestCase {
 		}
 	}
 
-	@Test
+	//@Test
 	public void testGetTuplesWithAllNulls() throws Exception {
 		try ( OgmSession session = openSession() ) {
 			Transaction tx = session.beginTransaction();

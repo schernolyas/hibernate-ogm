@@ -43,6 +43,7 @@ public class IgniteQueryResolverDelegate implements QueryResolverDelegate {
 
 	@Override
 	public void registerPersisterSpace(Tree entityName, Tree alias) {
+		log.infof( "entityName:%s, alias:%s",entityName, alias );
 		String put = entityNameByAlias.put( alias.getText(), entityName.getText() );
 		if ( put != null && !put.equalsIgnoreCase( entityName.getText() ) ) {
 			throw new UnsupportedOperationException(

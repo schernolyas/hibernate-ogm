@@ -7,9 +7,11 @@
 package org.hibernate.ogm.datastore.ignite.query.parsing.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,12 +40,10 @@ import org.hibernate.type.Type;
 public class IgnitePropertyHelper extends ParserPropertyHelper {
 
 	private static final Log log = LoggerFactory.getLogger();
-	private final Map<String, String> aliasByEntityName = new HashMap<String, String>();
+	private final Map<String, String> aliasByEntityName = new LinkedHashMap<String, String>();
 	private final Map<String, RelationshipAliasTree> relationshipAliases = new HashMap<>();
 	private final SessionFactoryImplementor sessionFactory;
 	private int relationshipCounter = 0;
-	// Contains the aliases that will appear in the OPTIONAL MATCH clause of the query
-	private final Set<String> optionalMatches = new HashSet<>();
 
 	// Contains the aliases that will appear in the MATCH clause of the query
 	private final Set<String> requiredMatches = new HashSet<>();
@@ -56,6 +56,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 
 	@Override
 	public Object convertToBackendType(String entityType, List<String> propertyPath, Object value) {
+		log.infof( "entityType:%s; propertyPath:%s; value:%s ",entityType,propertyPath,value );
 		return value == PropertyIdentifier.PARAM_INSTANCE
 					? value : super.convertToBackendType( entityType, propertyPath, value );
 	}
@@ -73,6 +74,8 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 
 
 	public PropertyIdentifier getPropertyIdentifier(String entityType, List<String> propertyPath, int requiredDepth) {
+		log.infof( "entityType:%s ; propertyPath:%s ; requiredDepth:%s",
+				   entityType,propertyPath,requiredDepth );
 		// we analyze the property path to find all the associations/embedded which are in the way and create proper
 		// aliases for them
 		String entityAlias = findAliasForType( entityType );
@@ -87,17 +90,17 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 
 		boolean isLastElementAssociation = false;
 		int depth = 1;
-		for ( String property : propertyPath ) {
-			currentPropertyPath.add( property );
+		for ( String currentProperty : propertyPath ) {
+			currentPropertyPath.add( currentProperty );
 			Type currentPropertyType = getPropertyType( entityType, currentPropertyPath );
-			/*log.infof( "property: %s", property );
+			log.infof( "currentProperty: %s", currentProperty );
 			log.infof( "currentPropertyPath: %s", currentPropertyPath );
 			log.infof( "currentPersister.getTableName(): %s", currentPersister.getTableName() );
 			log.infof( "currentPersister.getDiscriminatorColumnName(): %s", currentPersister.getDiscriminatorColumnName() );
-			log.infof( "currentPersister.getDiscriminatorType(): %s", currentPersister.getDiscriminatorType() ); */
+			log.infof( "currentPersister.getDiscriminatorType(): %s", currentPersister.getDiscriminatorType() );
 
-			// determine if the current property path is still part of requiredPropertyMatch
-			boolean optionalMatch = depth > requiredDepth;
+			// determine if the current currentProperty path is still part of requiredPropertyMatch
+			//boolean optionalMatch = depth > requiredDepth;
 
 			if ( currentPropertyType.isAssociationType() ) {
 				AssociationType associationPropertyType = (AssociationType) currentPropertyType;
@@ -113,7 +116,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 					//log.infof( "propertyEntityType: %s", propertyEntityType );
 					String targetNodeType = currentPersister.getEntityKeyMetadata().getTable();
 					OgmEntityPersister associationPersister = getPersister( currentPersister.getEntityKeyMetadata().getTable() );
-					/*log.infof( "targetNodeType: %s", targetNodeType );
+					log.infof( "targetNodeType: %s", targetNodeType );
 					log.infof( "currentPersister: %s", currentPersister );
 					log.infof( "associationPersister: %s", associationPersister );
 					log.infof( "associationPropertyType: %s", associationPropertyType );
@@ -122,18 +125,38 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 					log.infof( "associationPropertyType.useLHSPrimaryKey(): %s", associationPropertyType.useLHSPrimaryKey() );
 					log.infof( "associationPropertyType.getLHSPropertyName(): %s", associationPropertyType.getLHSPropertyName() );
 					log.infof( "associationPropertyType.getRHSUniqueKeyPropertyName(): %s", associationPropertyType.getRHSUniqueKeyPropertyName() );
-					log.infof( "associatedJoinable.getKeyColumnNames(): %s", associatedJoinable.getKeyColumnNames() ); */
-					propertyName = property + "_" + associatedJoinable.getKeyColumnNames()[0];
-					//log.infof( "propertyName: %s", propertyName );
-					isLastElementAssociation = true;
-					return new PropertyIdentifier( entityAlias, propertyName );
-					/*
-					 * propertyAlias = createAliasForAssociation( entityAlias, currentPropertyPath, targetNodeType,
-					 * optionalMatch ); log.infof( "propertyAlias: %s",propertyAlias ); lastAssociationPath = new
-					 * ArrayList<>( currentPropertyPath ); log.infof( "lastAssociationPath: %s",lastAssociationPath );
-					 * isLastElementAssociation = true; log.infof(
-					 * "isLastElementAssociation: %s",isLastElementAssociation );
-					 */
+					log.infof( "associatedJoinable.getKeyColumnNames(): %s", associatedJoinable.getKeyColumnNames() );
+
+					if ( depth == requiredDepth ) {
+						//this is search by key field
+
+						isLastElementAssociation = true;
+						break;
+					}
+					else {
+						//need go deeper
+						isLastElementAssociation = false;
+						//entityAlias = findAliasForType( associationPropertyType.getAssociatedEntityName( sessionFactory ) );
+						//log.infof( "entityAlias: %s", entityAlias );
+						//propertyAlias = createAliasForAssociation( entityAlias, currentPropertyPath, targetNodeType);
+						log.infof( "propertyAlias: %s", propertyAlias );
+						lastAssociationPath = new ArrayList<>( currentPropertyPath );
+						log.infof( "lastAssociationPath: %s", lastAssociationPath );
+						isLastElementAssociation = false;
+						log.infof( "isLastElementAssociation: %s", isLastElementAssociation );
+						String associatedEntityName = associationPropertyType.getAssociatedEntityName( sessionFactory );
+						//entityAlias = associatedEntityName.toLowerCase();
+						//entityType = associatedEntityName;
+						//propertyEntityType = associatedEntityName;
+						propertyAlias = currentProperty;
+						//currentPersister = getPersister( entityType );
+						registerEntityAlias( associatedEntityName, propertyAlias );
+					}
+
+					//propertyName = currentProperty + "_" + associatedJoinable.getKeyColumnNames()[0];
+
+					//isLastElementAssociation = true;
+					//return new PropertyIdentifier( entityAlias, propertyName );
 				}
 			}
 			else if ( currentPropertyType.isComponentType()
@@ -157,6 +180,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 			// the last element is a property so we can build the test with this property
 			propertyName = getColumnName( propertyEntityType, propertyPath.subList( lastAssociationPath.size(), propertyPath.size() ) );
 		}
+		log.infof( "PropertyIdentifier: %s", new PropertyIdentifier( propertyAlias, propertyName ) );
 		return new PropertyIdentifier( propertyAlias, propertyName );
 	}
 
@@ -179,9 +203,8 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 		return keyPropertyName != null && keyPropertyName.equals( propertyName ) && owningType.isReferenceToPrimaryKey();
 	}
 
-	private String createAliasForAssociation(String entityAlias, List<String> propertyPathWithoutAlias, String targetEntityName,
-			boolean optionalMatch) {
-		log.debugf( "entityAlias:%s; propertyPathWithoutAlias:%s; targetEntityName:%s;",
+	private String createAliasForAssociation(String entityAlias, List<String> propertyPathWithoutAlias, String targetEntityName) {
+		log.debugf( "entityAlias:%s; propertyPathWithoutAlias:%s; targetEntityName:%s; needJoin:%s",
 				entityAlias, propertyPathWithoutAlias, targetEntityName );
 		RelationshipAliasTree relationshipAlias = relationshipAliases.get( entityAlias );
 		log.debugf( "relationshipAlias:%s; entityAlias: %s", relationshipAlias, entityAlias );
@@ -208,13 +231,13 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 			relationshipAlias = child;
 			String alias = relationshipAlias.getAlias();
 			log.infof( "alias:%s; ", alias );
-			if ( optionalMatch && !requiredMatches.contains( alias ) ) {
+		/*	if ( optionalMatch && !requiredMatches.contains( alias ) ) {
 				optionalMatches.add( alias );
 			}
 			else {
 				requiredMatches.add( alias );
 				optionalMatches.remove( alias );
-			}
+			} */
 		}
 		return relationshipAlias.getAlias();
 	}
@@ -297,6 +320,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 	}
 
 	public void registerEntityAlias(String entityName, String alias) {
+		log.infof( "entityName: %s, alias:%s",entityName, alias );
 		StringBuilder sb = new StringBuilder( alias );
 		for ( int i = 0; i < sb.length(); i++ ) {
 			char c = sb.charAt( i );
@@ -310,5 +334,9 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 
 	public String findAliasForType(String entityType) {
 		return aliasByEntityName.get( entityType );
+	}
+
+	public List<String> getTypes() {
+		return new ArrayList<>( aliasByEntityName.keySet() );
 	}
 }

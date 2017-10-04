@@ -7,6 +7,7 @@
 package org.hibernate.ogm.datastore.ignite.query.impl;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ public class IgniteSqlQueryParser {
 
 	protected final String originalQuery;
 	protected ParserContext context;
+	protected Collection<String> cacheNames;
 
 	private Map namedParameters = new HashMap();
 	private long aliasesFound;
@@ -51,14 +53,10 @@ public class IgniteSqlQueryParser {
 		Map getPropertyResultsMapByAlias(String alias);
 	}
 
-	public IgniteSqlQueryParser(String query, ParserContext context) {
-		this.originalQuery = query;
-		this.context = context;
-	}
-
-	public IgniteSqlQueryParser(String query) {
+	public IgniteSqlQueryParser(String query,Collection<String> cacheNames) {
 		this.originalQuery = query;
 		this.context = new DefaultParserContext();
+		this.cacheNames = cacheNames;
 	}
 
 	public Map getNamedParameters() {
@@ -76,7 +74,10 @@ public class IgniteSqlQueryParser {
 	}
 
 	public IgniteQueryDescriptor buildQueryDescriptor() {
-		return new IgniteQueryDescriptor( process(),"==111====", null, true /* SQL queries working only for scalars queries */ );
+
+		String fistCacheName = cacheNames.iterator().next();
+
+		return new IgniteQueryDescriptor( process(),fistCacheName, null, true /* SQL queries working only for scalars queries */,true );
 	}
 
 	private String substituteBrackets(String sqlQuery) throws QueryException {

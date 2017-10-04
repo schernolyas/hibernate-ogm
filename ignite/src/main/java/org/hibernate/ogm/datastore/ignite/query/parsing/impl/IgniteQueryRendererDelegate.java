@@ -6,10 +6,15 @@
  */
 package org.hibernate.ogm.datastore.ignite.query.parsing.impl;
 
+import static org.hibernate.engine.internal.JoinHelper.getLHSColumnNames;
+import static org.hibernate.engine.internal.JoinHelper.getLHSTableName;
+import static org.hibernate.engine.internal.JoinHelper.getRHSColumnNames;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +30,14 @@ import org.hibernate.ogm.datastore.ignite.logging.impl.LoggerFactory;
 import org.hibernate.ogm.datastore.ignite.query.impl.IgniteQueryDescriptor;
 import org.hibernate.ogm.datastore.ignite.query.parsing.predicate.impl.IgnitePredicateFactory;
 import org.hibernate.ogm.persister.impl.OgmEntityPersister;
+import org.hibernate.persister.collection.QueryableCollection;
+import org.hibernate.persister.entity.Joinable;
+import org.hibernate.persister.entity.OuterJoinLoadable;
+import org.hibernate.persister.walking.spi.AssociationKey;
+import org.hibernate.tuple.NonIdentifierAttribute;
+import org.hibernate.tuple.entity.EntityBasedAssociationAttribute;
+import org.hibernate.tuple.entity.EntityMetamodel;
+import org.hibernate.type.ForeignKeyDirection;
 
 import org.antlr.runtime.tree.Tree;
 
@@ -59,13 +72,78 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 
 	@Override
 	public void setPropertyPath(PropertyPath propertyPath) {
+		LOG.infof( "=======propertyPath: %s",propertyPath );
 		this.propertyPath = propertyPath;
 	}
 
 	private void where( StringBuilder queryBuilder ) {
+		boolean needJoin = propertyHelper.getTypes().size()>1;
 		StringBuilder where = builder.build();
 		if ( where != null && where.length() > 0 ) {
 			queryBuilder.append( " WHERE " ).append( where );
+			if ( needJoin ) {
+				queryBuilder.append( " AND " );
+			}
+		}
+		//add join info
+		if ( needJoin ) {
+			// alias corresponds to property
+			OgmEntityPersister targetTypePersister = (OgmEntityPersister) ( sessionFactory ).getEntityPersister( targetTypeName );
+			String targetAlilas = propertyHelper.findAliasForType( targetTypeName );
+			for ( Iterator<String> it = propertyHelper.getTypes().iterator(); it.hasNext(); ) {
+				String currentTypeName = it.next();
+				if ( currentTypeName.equals( targetTypeName ) ) {
+					continue;
+				}
+				OgmEntityPersister currentTypePersister = (OgmEntityPersister) ( sessionFactory ).getEntityPersister( currentTypeName );
+				//we have a join
+				String joinTable = getTableName( currentTypeName );
+				String joinAlias = propertyHelper.findAliasForType( currentTypeName );
+				queryBuilder.append( targetAlilas );
+				EntityMetamodel targetEntityMetamodel = targetTypePersister.getEntityMetamodel();
+				EntityBasedAssociationAttribute targetAssociationAttr = (EntityBasedAssociationAttribute) targetEntityMetamodel.getProperties()[targetEntityMetamodel.getPropertyIndex( joinAlias )];
+				LOG.infof( "=======targetAssociationAttr: %s; class: %s",targetAssociationAttr, targetAssociationAttr.getClass() );
+				LOG.infof( "=======targetAssociationAttr.getAssociationKey: %s",targetAssociationAttr.getAssociationKey() );
+				final Joinable joinable = targetAssociationAttr.getType().getAssociatedJoinable( sessionFactory );
+				LOG.infof( "=======targetAssociationAttr.getType().getForeignKeyDirection(): %s",targetAssociationAttr.getType().getForeignKeyDirection() );
+				if ( targetAssociationAttr.getType().getForeignKeyDirection() == ForeignKeyDirection.FROM_PARENT ) {
+					final String lhsTableName;
+					final String[] lhsColumnNames;
+					LOG.infof( "=======joinable.isCollection(): %s",joinable.isCollection() );
+
+
+					if ( joinable.isCollection() ) {
+						final QueryableCollection collectionPersister = (QueryableCollection) joinable;
+						lhsTableName = collectionPersister.getTableName();
+						lhsColumnNames = collectionPersister.getElementColumnNames();
+						LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%sl index columns: %s",
+								   lhsTableName, lhsColumnNames,collectionPersister.getIndexColumnNames() );
+						queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" );
+					}
+					else {
+						final OuterJoinLoadable entityPersister = (OuterJoinLoadable) targetAssociationAttr.getSource();
+						lhsTableName = getLHSTableName( targetAssociationAttr.getType(), targetEntityMetamodel.getPropertyIndex( joinAlias ), entityPersister );
+						lhsColumnNames = getLHSColumnNames( targetAssociationAttr.getType(), targetEntityMetamodel.getPropertyIndex( joinAlias ), entityPersister, sessionFactory );
+						String[] rhsColumnNames=getRHSColumnNames( targetAssociationAttr.getType(),sessionFactory  );
+						LOG.infof( "=======lhsColumnNames: %s ;rhs: %s",
+								   lhsColumnNames,rhsColumnNames );
+						queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" ).append( joinAlias ).append( "." ).append( rhsColumnNames[0] );
+					}
+					//return new AssociationKey( lhsTableName, lhsColumnNames );
+					//LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%s",lhsTableName, lhsColumnNames );
+					//queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" );
+
+
+				} /*
+				else {
+					LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%s",joinable.getTableName(), getRHSColumnNames( attr.getType(), sessionFactory ) );
+				} */
+
+
+
+				//attr.getType().getName()
+			}
+
 		}
 	}
 
@@ -91,19 +169,33 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 	}
 
 	private void from(StringBuilder queryBuilder) {
+		LOG.infof( "propertyHelper.getTypes():%s",propertyHelper.getTypes() );
+		queryBuilder.append( " FROM " );
+
 		String tableAlias = propertyHelper.findAliasForType( targetTypeName );
-		String tableName = getTableName();
-		queryBuilder.append( " FROM " ).append( tableName ).append( ' ' ).append( tableAlias ).append( ' ' );
+		String tableName = getTableName( targetTypeName );
+		queryBuilder.append( tableName ).append( ' ' ).append( tableAlias ).append( ' ' );
+		for ( String currentTypeName : propertyHelper.getTypes() ) {
+			if ( currentTypeName.equals( targetTypeName ) ) {
+				continue;
+			}
+			//we have a join
+			String joinTable = getTableName( currentTypeName );
+			String joinAlias = propertyHelper.findAliasForType( currentTypeName );
+			queryBuilder.append( " , " ).append( joinTable ).append( ' ' ).append( joinAlias );
+		}
 	}
 
-	private String getTableName() {
-		String tableAlias = propertyHelper.findAliasForType( targetTypeName );
-		OgmEntityPersister persister = (OgmEntityPersister) ( sessionFactory ).getEntityPersister( targetType.getName() );
-		return propertyHelper.getKeyMetaData( targetType.getName() ).getTable();
+	private String getTableName(String typeName) {
+		LOG.infof( "typeName:%s",typeName );
+		String tableAlias = propertyHelper.findAliasForType( typeName );
+		OgmEntityPersister persister = (OgmEntityPersister) ( sessionFactory ).getEntityPersister( typeName );
+		return propertyHelper.getKeyMetaData( typeName ).getTable();
 	}
 
 	@Override
 	public IgniteQueryParsingResult getResult() {
+		LOG.info( "===getResult===" );
 		StringBuilder queryBuilder = new StringBuilder();
 		select( queryBuilder );
 		from( queryBuilder );
@@ -111,13 +203,17 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 		orderBy( queryBuilder );
 
 		boolean hasScalar = false; // no projections for now
-		IgniteQueryDescriptor queryDescriptor = new IgniteQueryDescriptor( queryBuilder.toString(), getTableName(), indexedParameters, hasScalar );
+		IgniteQueryDescriptor queryDescriptor = new IgniteQueryDescriptor( queryBuilder.toString(),
+																		   getTableName( targetTypeName ),
+																		   indexedParameters, hasScalar,(propertyHelper.getTypes().size()>1)
+		);
 
 		return new IgniteQueryParsingResult( queryDescriptor, ENTITY_COLUMN_NAMES );
 	}
 
 	@Override
 	protected void addSortField(PropertyPath propertyPath, String collateName, boolean isAscending) {
+		LOG.infof( "propertyPath: %s,collateName:%s,isAscending:%s",propertyPath,collateName,isAscending );
 		if ( orderByExpressions == null ) {
 			orderByExpressions = new ArrayList<OrderByClause>();
 		}

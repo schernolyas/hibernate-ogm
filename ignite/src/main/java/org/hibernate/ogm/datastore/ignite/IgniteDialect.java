@@ -9,6 +9,7 @@ package org.hibernate.ogm.datastore.ignite;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -744,8 +745,8 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				backendQuery.getQuery().getSql(),
 				hints,
 				queryArgs != null ? queryArgs.toArray() : null );
-		// @todo incorrect query: "SELECT _KEY, _VAL FROM Hypothesis _gen_0_". This is invalid convertation from JPA to
-		// Native query
+		sqlQuery.setDistributedJoins( backendQuery.getQuery().isHasDistributedJoins() );
+
 		Iterable<List<?>> result = executeWithHints( cache, sqlQuery, hints );
 
 		if ( backendQuery.getSingleEntityMetadataInformationOrNull() != null ) {
@@ -792,7 +793,8 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 
 	@Override
 	public IgniteQueryDescriptor parseNativeQuery(String nativeQuery) {
-		IgniteSqlQueryParser parser = new IgniteSqlQueryParser( nativeQuery );
+		Collection<String> cacheNames =  provider.getCacheManager().cacheNames();
+		IgniteSqlQueryParser parser = new IgniteSqlQueryParser( nativeQuery, cacheNames );
 		return parser.buildQueryDescriptor();
 	}
 
