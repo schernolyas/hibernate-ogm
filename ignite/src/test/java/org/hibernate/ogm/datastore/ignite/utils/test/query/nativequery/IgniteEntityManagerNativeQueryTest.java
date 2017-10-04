@@ -9,8 +9,8 @@ package org.hibernate.ogm.datastore.ignite.utils.test.query.nativequery;
 import static org.fest.assertions.Assertions.assertThat;
 
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 
-import org.hibernate.ogm.backendtck.jpa.Poem;
 import org.hibernate.ogm.utils.PackagingRule;
 import org.hibernate.ogm.utils.jpa.OgmJpaTestCase;
 
@@ -21,11 +21,12 @@ import org.junit.Test;
 
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
+ * @see <a href="https://docs.jboss.org/hibernate/orm/5.1/userguide/html_single/chapters/query/native/Native.html">Native Queries</a>
  */
 public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 
 	@Rule
-	public PackagingRule packaging = new PackagingRule( "persistencexml/ogm.xml", Poem.class );
+	public PackagingRule packaging = new PackagingRule( "persistencexml/ogm.xml", org.hibernate.ogm.backendtck.jpa.Poem.class );
 
 	private final OscarWildePoem portia = new OscarWildePoem( 1L, "Portia", "Oscar Wilde" );
 	private final OscarWildePoem athanasia = new OscarWildePoem( 2L, "Athanasia", "Oscar Wilde", (byte) 5 );
@@ -50,6 +51,7 @@ public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 
 	@After
 	public void tearDown() throws Exception {
+		rollback();
 		begin();
 		delete( portia, athanasia, stencilClub, critic );
 		commit();
@@ -68,6 +70,51 @@ public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 		assertAreEquals( portia, poem );
 
 		commit();
+	}
+
+	@Test
+	public void testNamedQueryResultQuery() throws Exception {
+		begin();
+
+		OscarWildePoem poem = em.createNamedQuery( "PortiaOscarWildePoem", OscarWildePoem.class )
+				.getSingleResult();
+		assertAreEquals( portia, poem );
+
+
+		commit();
+	}
+	@Test
+	public void testNamedQueryResultQueryWithParameters() throws Exception {
+		begin();
+
+		Query poemQuery = em.createNamedQuery( "OscarWildePoemWithParameters", OscarWildePoem.class );
+		poemQuery.setParameter( 1, "Portia" );
+		poemQuery.setParameter( 2, "Oscar Wilde" );
+		OscarWildePoem poem = (OscarWildePoem) poemQuery.getSingleResult();
+		assertAreEquals( portia, poem );
+
+
+		commit();
+	}
+
+
+	@Test
+	public void testSingleResultQueryWithParameters() throws Exception {
+		begin();
+		try {
+			String nativeQuery = "select _key,_val from OscarWildePoem  where name=?1 and author=?2";
+			Query poemQuery = em.createNativeQuery( nativeQuery, OscarWildePoem.class );
+			poemQuery.setParameter( 1, "Portia" );
+			poemQuery.setParameter( 2, "Oscar Wilde" );
+			OscarWildePoem poem = (OscarWildePoem) poemQuery.getSingleResult();
+
+			assertAreEquals( portia, poem );
+
+			commit();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 
@@ -107,7 +154,9 @@ public class IgniteEntityManagerNativeQueryTest extends OgmJpaTestCase {
 	}
 
 	private void rollback() throws Exception {
-		em.getTransaction().rollback();
+		if (em.getTransaction().isActive()) {
+			em.getTransaction().rollback();
+		}
 	}
 
 	private EntityManager createEntityManager() {

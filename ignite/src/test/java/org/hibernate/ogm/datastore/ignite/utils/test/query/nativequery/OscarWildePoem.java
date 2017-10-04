@@ -9,42 +9,20 @@ package org.hibernate.ogm.datastore.ignite.utils.test.query.nativequery;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import javax.persistence.ColumnResult;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.EntityResult;
 import javax.persistence.Id;
 import javax.persistence.NamedNativeQueries;
 import javax.persistence.NamedNativeQuery;
-import javax.persistence.SqlResultSetMapping;
-import javax.persistence.SqlResultSetMappings;
-import javax.persistence.Table;
 
 @Entity
 //@todo fix problem with rename cache
 //@Table(name = OscarWildePoem.TABLE_NAME)
-/*
+
+
 @NamedNativeQueries({
-	@NamedNativeQuery(name = "AthanasiaQuery", query = "{ $and: [ { name : 'Athanasia' }, { author : 'Oscar Wilde' } ] }", resultClass = OscarWildePoem.class ),
-	@NamedNativeQuery(name = "AthanasiaQueryWithMapping", query = "{ $and: [ { name : 'Athanasia' }, { author : 'Oscar Wilde' } ] }", resultSetMapping = "poemMapping" ),
-	@NamedNativeQuery(name = "AthanasiaProjectionQuery", query = "db.WILDE_POEM.find({ '$and' : [ { 'name' : 'Athanasia' }, { 'author' : 'Oscar Wilde' } ] })", resultSetMapping = "poemNameMapping" ),
-	@NamedNativeQuery(name = "PoemRatings", query = "db.WILDE_POEM.find({}, { 'rating' : 1 })", resultSetMapping = "ratingMapping" ),
-	@NamedNativeQuery(name = "CountPoems", query = "db.WILDE_POEM.count()", resultSetMapping = "countMapping")
-}) */
-@SqlResultSetMappings({
-	@SqlResultSetMapping(name = "poemNameMapping", columns = @ColumnResult(name = "name")),
-	@SqlResultSetMapping(name = "poemMapping", entities = @EntityResult(entityClass = OscarWildePoem.class)),
-	@SqlResultSetMapping(
-			name = "poemNameAuthorIdMapping",
-			columns = {
-					@ColumnResult(name = "name"),
-					@ColumnResult(name = "author"),
-					@ColumnResult(name = "_id")
-			}
-	),
-	@SqlResultSetMapping(name = "countMapping", columns = @ColumnResult(name = "n")),
-	@SqlResultSetMapping(name = "ratingMapping", columns = @ColumnResult(name = "rating", type = byte.class))
+		@NamedNativeQuery(name = "PortiaOscarWildePoem", query = "select _key,_val from OscarWildePoem  where  name='Portia' and author='Oscar Wilde'", resultClass = OscarWildePoem.class),
+		@NamedNativeQuery(name = "OscarWildePoemWithParameters", query = "select _key,_val from OscarWildePoem  where  name=?1 and author=?2", resultClass = OscarWildePoem.class)
 })
 public class OscarWildePoem {
 

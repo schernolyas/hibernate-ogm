@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,6 +53,7 @@ import org.hibernate.ogm.dialect.query.spi.ParameterMetadataBuilder;
 import org.hibernate.ogm.dialect.query.spi.QueryParameters;
 import org.hibernate.ogm.dialect.query.spi.QueryableGridDialect;
 import org.hibernate.ogm.dialect.query.spi.RowSelection;
+import org.hibernate.ogm.dialect.query.spi.TypedGridValue;
 import org.hibernate.ogm.dialect.spi.AssociationContext;
 import org.hibernate.ogm.dialect.spi.AssociationTypeContext;
 import org.hibernate.ogm.dialect.spi.BaseGridDialect;
@@ -718,9 +720,12 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 			throw new UnsupportedOperationException( "Not implemented. Can't find cache name" );
 		}
 
+		log.debugf( "queryParameters .getPositionalParameters() : %s", queryParameters .getPositionalParameters());
+		log.debugf( "queryParameters .getNamedParameters() : %s", queryParameters .getNamedParameters());
 		log.debugf( "executeBackendQuery: query : %s", backendQuery.getQuery().getSql() );
 		log.debugf( "executeBackendQuery: table : %s", backendQuery.getQuery().getTable() );
 		List queryArgs = null;
+
 		if ( backendQuery.getQuery().getIndexedParameters() != null ) {
 			queryArgs = new ArrayList( backendQuery.getQuery().getIndexedParameters().size() );
 			for ( Object arg : backendQuery.getQuery().getIndexedParameters() ) {
@@ -738,13 +743,19 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				}
 			}
 		}
+		if ( queryParameters.getNamedParameters() != null ) {
+			queryArgs = new LinkedList(  );
+			for ( Map.Entry<String, TypedGridValue> entry : queryParameters.getNamedParameters().entrySet() ) {
+				log.infof( "key: %s; value: %s", entry.getKey(), entry.getValue().getValue() );
+				queryArgs.add( entry.getValue().getValue() );
+			}
+		}
 
 		QueryHints hints = ( new QueryHints.Builder( queryParameters.getQueryHints() ) ).build();
 		SqlFieldsQuery sqlQuery = provider.createSqlFieldsQueryWithLog(
 				backendQuery.getQuery().getSql(),
 				hints,
 				queryArgs != null ? queryArgs.toArray() : null );
-		// @todo incorrect query: "SELECT _KEY, _VAL FROM Hypothesis _gen_0_". This is invalid convertation from JPA to
 		// Native query
 		Iterable<List<?>> result = executeWithHints( cache, sqlQuery, hints );
 

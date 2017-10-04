@@ -25,13 +25,14 @@ public class IgniteQueryDescriptor implements Serializable {
 //	private final List<Return> customQueryReturns;
 //	private final Set<String> querySpaces;
 
-	public IgniteQueryDescriptor(String sql, String table, List<Object> indexedParameters, boolean hasScalar) {
+	public IgniteQueryDescriptor(String sql, String table, @Deprecated  List<Object> indexedParameters, boolean hasScalar) {
 		this.sql = sql;
 		this.indexedParameters = indexedParameters;
 		this.hasScalar = hasScalar;
 		this.table = table;
 	}
 
+	@Deprecated
 	public List<Object> getIndexedParameters() {
 		return indexedParameters;
 	}
