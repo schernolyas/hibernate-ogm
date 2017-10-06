@@ -40,7 +40,7 @@ import org.hibernate.type.Type;
 public class IgnitePropertyHelper extends ParserPropertyHelper {
 
 	private static final Log log = LoggerFactory.getLogger();
-	private final Map<String, String> aliasByEntityName = new LinkedHashMap<String, String>();
+	private final Map<String, String> aliasByEntityName = new LinkedHashMap<>();
 	private final Map<String, RelationshipAliasTree> relationshipAliases = new HashMap<>();
 	private final SessionFactoryImplementor sessionFactory;
 	private int relationshipCounter = 0;
@@ -58,7 +58,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 	public Object convertToBackendType(String entityType, List<String> propertyPath, Object value) {
 		log.infof( "entityType:%s; propertyPath:%s; value:%s ",entityType,propertyPath,value );
 		return value == PropertyIdentifier.PARAM_INSTANCE
-					? value : super.convertToBackendType( entityType, propertyPath, value );
+				? value : super.convertToBackendType( entityType, propertyPath, value );
 	}
 
 	/**
@@ -75,7 +75,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 
 	public PropertyIdentifier getPropertyIdentifier(String entityType, List<String> propertyPath, int requiredDepth) {
 		log.infof( "entityType:%s ; propertyPath:%s ; requiredDepth:%s",
-				   entityType,propertyPath,requiredDepth );
+				entityType,propertyPath,requiredDepth );
 		// we analyze the property path to find all the associations/embedded which are in the way and create proper
 		// aliases for them
 		String entityAlias = findAliasForType( entityType );
@@ -199,7 +199,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 			return owningType.isReferenceToPrimaryKey();
 		}
 		String keyPropertyName = sessionFactory.getIdentifierPropertyName( owningType.getName() );// .getIdentifierOrUniqueKeyPropertyName(
-																									// owningType );
+		// owningType );
 		return keyPropertyName != null && keyPropertyName.equals( propertyName ) && owningType.isReferenceToPrimaryKey();
 	}
 
@@ -219,7 +219,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 			if ( child == null ) {
 				if ( i != propertyPathWithoutAlias.size() - 1 ) {
 					throw new AssertionFailure( "The path to " + StringHelper.join( propertyPathWithoutAlias, "." )
-							+ " has not been completely constructed" );
+					+ " has not been completely constructed" );
 				}
 
 				relationshipCounter++;
@@ -231,7 +231,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 			relationshipAlias = child;
 			String alias = relationshipAlias.getAlias();
 			log.infof( "alias:%s; ", alias );
-		/*	if ( optionalMatch && !requiredMatches.contains( alias ) ) {
+			/*	if ( optionalMatch && !requiredMatches.contains( alias ) ) {
 				optionalMatches.add( alias );
 			}
 			else {

@@ -92,10 +92,12 @@ public class QueriesWithAssociationsTest extends OgmJpaTestCase {
 			Author alma = (Author) em.createQuery( "FROM Author WHERE name = :name" )
 					.setParameter( "name", "alma" )
 					.getSingleResult();
+			assertThat( alma ).isNotNull();
 
 			Author alfred = (Author) em.createQuery( "FROM Author WHERE name = :name" )
 					.setParameter( "name", "alfred" )
 					.getSingleResult();
+			assertThat( alfred ).isNotNull();
 
 			Address garibaldiStreet = em.find( Address.class, 2L );
 

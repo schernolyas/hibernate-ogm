@@ -195,7 +195,8 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 
 
 		for ( String columnName : tuple.getColumnNames() ) {
-			if ( key.getMetadata().isKeyColumn( columnName ) ) {
+			if ( tuple.getSnapshotType() == SnapshotType.UPDATE && key.getMetadata().isKeyColumn( columnName ) ) {
+				// key field is not updatable like _key
 				continue;
 			}
 			Object value = tuple.get( columnName );
@@ -745,7 +746,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				backendQuery.getQuery().getSql(),
 				hints,
 				queryArgs != null ? queryArgs.toArray() : null );
-		sqlQuery.setDistributedJoins( backendQuery.getQuery().isHasDistributedJoins() );
+		sqlQuery.setDistributedJoins( backendQuery.getQuery().hasDistributedJoins() );
 
 		Iterable<List<?>> result = executeWithHints( cache, sqlQuery, hints );
 

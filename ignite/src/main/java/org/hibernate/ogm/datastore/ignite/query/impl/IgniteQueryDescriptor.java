@@ -20,14 +20,14 @@ public class IgniteQueryDescriptor implements Serializable {
 	private final List<Object> indexedParameters;
 	private final String table;
 	private final boolean hasScalar;
-	private final boolean hasDistributedJoins;
+	private final boolean distributedJoins;
 
-	public IgniteQueryDescriptor(String sql, String table, List<Object> indexedParameters, boolean hasScalar,boolean hasDistributedJoins) {
+	public IgniteQueryDescriptor(String sql, String table, List<Object> indexedParameters, boolean hasScalar,boolean distributedJoins) {
 		this.sql = sql;
 		this.indexedParameters = indexedParameters;
 		this.hasScalar = hasScalar;
 		this.table = table;
-		this.hasDistributedJoins = hasDistributedJoins;
+		this.distributedJoins = distributedJoins;
 	}
 
 	public List<Object> getIndexedParameters() {
@@ -46,7 +46,7 @@ public class IgniteQueryDescriptor implements Serializable {
 		return table;
 	}
 
-	public boolean isHasDistributedJoins() {
-		return hasDistributedJoins;
+	public boolean hasDistributedJoins() {
+		return distributedJoins;
 	}
 }

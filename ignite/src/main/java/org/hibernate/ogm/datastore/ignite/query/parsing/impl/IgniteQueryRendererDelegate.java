@@ -33,8 +33,6 @@ import org.hibernate.ogm.persister.impl.OgmEntityPersister;
 import org.hibernate.persister.collection.QueryableCollection;
 import org.hibernate.persister.entity.Joinable;
 import org.hibernate.persister.entity.OuterJoinLoadable;
-import org.hibernate.persister.walking.spi.AssociationKey;
-import org.hibernate.tuple.NonIdentifierAttribute;
 import org.hibernate.tuple.entity.EntityBasedAssociationAttribute;
 import org.hibernate.tuple.entity.EntityMetamodel;
 import org.hibernate.type.ForeignKeyDirection;
@@ -58,12 +56,18 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 
 	private JoinType joinType;
 
-	public IgniteQueryRendererDelegate(SessionFactoryImplementor sessionFactory, IgnitePropertyHelper propertyHelper, EntityNamesResolver entityNamesResolver, Map<String, Object> namedParameters) {
+	public IgniteQueryRendererDelegate(SessionFactoryImplementor sessionFactory,
+			IgnitePropertyHelper propertyHelper,
+			EntityNamesResolver entityNamesResolver,
+			Map<String, Object> namedParameters) {
 		super(
 				propertyHelper,
 				entityNamesResolver,
 				SingleEntityQueryBuilder.getInstance( new IgnitePredicateFactory( propertyHelper ), propertyHelper ),
-				namedParameters != null ? NamedParametersMap.INSTANCE : null /* we put '?' in query instead of parameter value */
+				namedParameters != null ? NamedParametersMap.INSTANCE : null /*
+																				 * we put '?' in query instead of
+																				 * parameter value
+																				 */
 		);
 		this.propertyHelper = propertyHelper;
 		this.sessionFactory = sessionFactory;
@@ -72,12 +76,12 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 
 	@Override
 	public void setPropertyPath(PropertyPath propertyPath) {
-		LOG.infof( "=======propertyPath: %s",propertyPath );
+		LOG.infof( "=======propertyPath: %s", propertyPath );
 		this.propertyPath = propertyPath;
 	}
 
-	private void where( StringBuilder queryBuilder ) {
-		boolean needJoin = propertyHelper.getTypes().size()>1;
+	private void where(StringBuilder queryBuilder) {
+		boolean needJoin = propertyHelper.getTypes().size() > 1;
 		StringBuilder where = builder.build();
 		if ( where != null && where.length() > 0 ) {
 			queryBuilder.append( " WHERE " ).append( where );
@@ -85,7 +89,7 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 				queryBuilder.append( " AND " );
 			}
 		}
-		//add join info
+		// add join info
 		if ( needJoin ) {
 			// alias corresponds to property
 			OgmEntityPersister targetTypePersister = (OgmEntityPersister) ( sessionFactory ).getEntityPersister( targetTypeName );
@@ -96,52 +100,50 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 					continue;
 				}
 				OgmEntityPersister currentTypePersister = (OgmEntityPersister) ( sessionFactory ).getEntityPersister( currentTypeName );
-				//we have a join
+				// we have a join
 				String joinTable = getTableName( currentTypeName );
 				String joinAlias = propertyHelper.findAliasForType( currentTypeName );
 				queryBuilder.append( targetAlilas );
 				EntityMetamodel targetEntityMetamodel = targetTypePersister.getEntityMetamodel();
-				EntityBasedAssociationAttribute targetAssociationAttr = (EntityBasedAssociationAttribute) targetEntityMetamodel.getProperties()[targetEntityMetamodel.getPropertyIndex( joinAlias )];
-				LOG.infof( "=======targetAssociationAttr: %s; class: %s",targetAssociationAttr, targetAssociationAttr.getClass() );
-				LOG.infof( "=======targetAssociationAttr.getAssociationKey: %s",targetAssociationAttr.getAssociationKey() );
+				EntityBasedAssociationAttribute targetAssociationAttr = (EntityBasedAssociationAttribute) targetEntityMetamodel
+						.getProperties()[targetEntityMetamodel.getPropertyIndex( joinAlias )];
+				LOG.infof( "=======targetAssociationAttr: %s; class: %s", targetAssociationAttr, targetAssociationAttr.getClass() );
+				LOG.infof( "=======targetAssociationAttr.getAssociationKey: %s", targetAssociationAttr.getAssociationKey() );
 				final Joinable joinable = targetAssociationAttr.getType().getAssociatedJoinable( sessionFactory );
-				LOG.infof( "=======targetAssociationAttr.getType().getForeignKeyDirection(): %s",targetAssociationAttr.getType().getForeignKeyDirection() );
+				LOG.infof( "=======targetAssociationAttr.getType().getForeignKeyDirection(): %s", targetAssociationAttr.getType().getForeignKeyDirection() );
 				if ( targetAssociationAttr.getType().getForeignKeyDirection() == ForeignKeyDirection.FROM_PARENT ) {
 					final String lhsTableName;
 					final String[] lhsColumnNames;
-					LOG.infof( "=======joinable.isCollection(): %s",joinable.isCollection() );
-
+					LOG.infof( "=======joinable.isCollection(): %s", joinable.isCollection() );
 
 					if ( joinable.isCollection() ) {
 						final QueryableCollection collectionPersister = (QueryableCollection) joinable;
 						lhsTableName = collectionPersister.getTableName();
 						lhsColumnNames = collectionPersister.getElementColumnNames();
 						LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%sl index columns: %s",
-								   lhsTableName, lhsColumnNames,collectionPersister.getIndexColumnNames() );
+								lhsTableName, lhsColumnNames, collectionPersister.getIndexColumnNames() );
 						queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" );
 					}
 					else {
 						final OuterJoinLoadable entityPersister = (OuterJoinLoadable) targetAssociationAttr.getSource();
 						lhsTableName = getLHSTableName( targetAssociationAttr.getType(), targetEntityMetamodel.getPropertyIndex( joinAlias ), entityPersister );
-						lhsColumnNames = getLHSColumnNames( targetAssociationAttr.getType(), targetEntityMetamodel.getPropertyIndex( joinAlias ), entityPersister, sessionFactory );
-						String[] rhsColumnNames=getRHSColumnNames( targetAssociationAttr.getType(),sessionFactory  );
+						lhsColumnNames = getLHSColumnNames( targetAssociationAttr.getType(), targetEntityMetamodel.getPropertyIndex( joinAlias ),
+								entityPersister, sessionFactory );
+						String[] rhsColumnNames = getRHSColumnNames( targetAssociationAttr.getType(), sessionFactory );
 						LOG.infof( "=======lhsColumnNames: %s ;rhs: %s",
-								   lhsColumnNames,rhsColumnNames );
+								lhsColumnNames, rhsColumnNames );
 						queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" ).append( joinAlias ).append( "." ).append( rhsColumnNames[0] );
 					}
-					//return new AssociationKey( lhsTableName, lhsColumnNames );
-					//LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%s",lhsTableName, lhsColumnNames );
-					//queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" );
-
+					// return new AssociationKey( lhsTableName, lhsColumnNames );
+					// LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%s",lhsTableName, lhsColumnNames );
+					// queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" );
 
 				} /*
-				else {
-					LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%s",joinable.getTableName(), getRHSColumnNames( attr.getType(), sessionFactory ) );
-				} */
+					 * else { LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%s",joinable.getTableName(),
+					 * getRHSColumnNames( attr.getType(), sessionFactory ) ); }
+					 */
 
-
-
-				//attr.getType().getName()
+				// attr.getType().getName()
 			}
 
 		}
@@ -169,7 +171,7 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 	}
 
 	private void from(StringBuilder queryBuilder) {
-		LOG.infof( "propertyHelper.getTypes():%s",propertyHelper.getTypes() );
+		LOG.infof( "propertyHelper.getTypes():%s", propertyHelper.getTypes() );
 		queryBuilder.append( " FROM " );
 
 		String tableAlias = propertyHelper.findAliasForType( targetTypeName );
@@ -179,7 +181,7 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 			if ( currentTypeName.equals( targetTypeName ) ) {
 				continue;
 			}
-			//we have a join
+			// we have a join
 			String joinTable = getTableName( currentTypeName );
 			String joinAlias = propertyHelper.findAliasForType( currentTypeName );
 			queryBuilder.append( " , " ).append( joinTable ).append( ' ' ).append( joinAlias );
@@ -187,7 +189,7 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 	}
 
 	private String getTableName(String typeName) {
-		LOG.infof( "typeName:%s",typeName );
+		LOG.infof( "typeName:%s", typeName );
 		String tableAlias = propertyHelper.findAliasForType( typeName );
 		OgmEntityPersister persister = (OgmEntityPersister) ( sessionFactory ).getEntityPersister( typeName );
 		return propertyHelper.getKeyMetaData( typeName ).getTable();
@@ -204,18 +206,17 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 
 		boolean hasScalar = false; // no projections for now
 		IgniteQueryDescriptor queryDescriptor = new IgniteQueryDescriptor( queryBuilder.toString(),
-																		   getTableName( targetTypeName ),
-																		   indexedParameters, hasScalar,(propertyHelper.getTypes().size()>1)
-		);
+				getTableName( targetTypeName ),
+				indexedParameters, hasScalar, ( propertyHelper.getTypes().size() > 1 ) );
 
 		return new IgniteQueryParsingResult( queryDescriptor, ENTITY_COLUMN_NAMES );
 	}
 
 	@Override
 	protected void addSortField(PropertyPath propertyPath, String collateName, boolean isAscending) {
-		LOG.infof( "propertyPath: %s,collateName:%s,isAscending:%s",propertyPath,collateName,isAscending );
+		LOG.infof( "propertyPath: %s,collateName:%s,isAscending:%s", propertyPath, collateName, isAscending );
 		if ( orderByExpressions == null ) {
-			orderByExpressions = new ArrayList<OrderByClause>();
+			orderByExpressions = new ArrayList<>();
 		}
 
 		List<String> propertyPathWithoutAlias = resolveAlias( propertyPath );
@@ -239,7 +240,7 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 
 	@Override
 	public void registerJoinAlias(Tree alias, PropertyPath path) {
-		LOG.infof( "alias: %s ; path: %s",alias,path );
+		LOG.infof( "alias: %s ; path: %s", alias, path );
 		super.registerJoinAlias( alias, path );
 		List<String> propertyPath = resolveAlias( path );
 
@@ -270,8 +271,8 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 			}
 			Object paramValue = namedParamsWithValues.get( param.substring( 1 ) );
 			if ( paramValue != null && paramValue.getClass().isEnum() ) {
-				//vk: for now I work only with @Enumerated(EnumType.ORDINAL) field params
-				//    How to determite corresponding field to this param and check it's annotation?
+				// vk: for now I work only with @Enumerated(EnumType.ORDINAL) field params
+				// How to determite corresponding field to this param and check it's annotation?
 				paramValue = ( (Enum) paramValue ).ordinal();
 			}
 			indexedParameters.add( paramValue );
@@ -343,46 +344,57 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 		public int size() {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public boolean isEmpty() {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public boolean containsKey(Object key) {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public boolean containsValue(Object value) {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public Object get(Object key) {
 			return PropertyIdentifier.PARAM_INSTANCE;
 		}
+
 		@Override
 		public Object put(String key, Object value) {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public Object remove(Object key) {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public void putAll(Map<? extends String, ? extends Object> m) {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public void clear() {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public Set<String> keySet() {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public Collection<Object> values() {
 			throw new UnsupportedOperationException( "Not supported" );
 		}
+
 		@Override
 		public Set<java.util.Map.Entry<String, Object>> entrySet() {
 			throw new UnsupportedOperationException( "Not supported" );
