@@ -746,7 +746,7 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 				backendQuery.getQuery().getSql(),
 				hints,
 				queryArgs != null ? queryArgs.toArray() : null );
-		sqlQuery.setDistributedJoins( backendQuery.getQuery().hasDistributedJoins() );
+		//sqlQuery.setDistributedJoins( backendQuery.getQuery().hasDistributedJoins() );
 
 		Iterable<List<?>> result = executeWithHints( cache, sqlQuery, hints );
 
