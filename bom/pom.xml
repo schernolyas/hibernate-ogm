@@ -94,7 +94,7 @@
         <lettuceCommonsPoolVersion>2.4.2</lettuceCommonsPoolVersion>
         <lettuceGuavaVersion>18.0</lettuceGuavaVersion> <!-- Currently in sync with the version of Wildfly -->
         <!-- Ignite -->
-        <igniteVersion>2.3.0-SNAPSHOT</igniteVersion>
+        <igniteVersion>2.3.0</igniteVersion>
     </properties>
 
     <inceptionYear>2010</inceptionYear>
