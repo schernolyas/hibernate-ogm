@@ -61,6 +61,7 @@ import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.PersistentStoreConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -85,6 +86,7 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 	private IgniteEx cacheManager;
 	private IgniteProviderConfiguration config;
 	private ConfigurationPropertyReader propertyReader;
+	private IgniteConfiguration igniteConfiguration;
 
 	private String instanceName;
 	/** true - if we run inside the server node (for distributed tasks) */
@@ -187,33 +189,31 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 				instanceName = cacheManager.name();
 			}
 			else {
-				IgniteConfiguration conf = createIgniteConfiguration();
-				instanceName = createInstanceName( conf );
+				igniteConfiguration = createIgniteConfiguration();
+				instanceName = createInstanceName( );
 				try {
 					cacheManager = (IgniteEx) Ignition.ignite( instanceName );
 					log.info( "== Instance of Ignite taken ==" );
 				}
 				catch (IgniteIllegalStateException iise) {
 					// not found, then start
-					conf.setIgniteInstanceName( instanceName );
+					igniteConfiguration.setIgniteInstanceName( instanceName );
 
 					Boolean usePersistence = propertyReader.property( IgniteProperties.IGNITE_SUPPORT_PERSISTENCE,Boolean.class )
 							.withDefault( Boolean.FALSE ).getValue();
 
 					if ( usePersistence ) {
-						PersistentStoreConfiguration persistentStoreConfiguration = new PersistentStoreConfiguration();
+						DataStorageConfiguration persistentStoreConfiguration = new DataStorageConfiguration();
 						String workDirectory = propertyReader.property( IgniteProperties.IGNITE_WORK_DIRECTORY,String.class )
 								.required().getValue();
 						log.infof( "workDirectory: %s",workDirectory  );
-						conf.setWorkDirectory( workDirectory );
-
-
-						conf.setPersistentStoreConfiguration( persistentStoreConfiguration );
-						conf.setActiveOnStart( true );
+						igniteConfiguration.setWorkDirectory( workDirectory );
+						igniteConfiguration.setDataStorageConfiguration( persistentStoreConfiguration );
+						igniteConfiguration.setActiveOnStart( true );
 					}
 
 
-					cacheManager = (IgniteEx) Ignition.start( conf );
+					cacheManager = (IgniteEx) Ignition.start( igniteConfiguration );
 					log.info( "== New instance of Ignite started ==" );
 					if ( usePersistence ) {
 						cacheManager.active( true );
@@ -268,13 +268,12 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 		return cacheManager;
 	}
 
-	private String createInstanceName(IgniteConfiguration conf) {
+	private String createInstanceName() {
 		String name = null;
 		if ( StringUtils.isNotEmpty( config.getInstanceName() ) ) {
 			name = config.getInstanceName();
 		}
 		else {
-			IgniteConfiguration igniteConfiguration = createIgniteConfiguration();
 			if ( StringUtils.isNotEmpty( igniteConfiguration.getIgniteInstanceName() ) ) {
 				name = igniteConfiguration.getIgniteInstanceName();
 			}
@@ -362,7 +361,7 @@ implements Startable, Stoppable, ServiceRegistryAwareService, Configurable {
 
 	public SqlFieldsQuery createSqlFieldsQueryWithLog(String sql, QueryHints hints, Object... args) {
 		String comment = hints != null ? hints.toComment() : "";
-		//jdbcServices.getSqlStatementLogger().logStatement( comment + sql );
+		jdbcServices.getSqlStatementLogger().logStatement( comment + sql );
 
 		SqlFieldsQuery query = new SqlFieldsQuery( sql );
 		if ( args != null ) {

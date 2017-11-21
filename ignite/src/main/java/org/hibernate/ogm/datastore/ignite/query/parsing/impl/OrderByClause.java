@@ -30,5 +30,6 @@ class OrderByClause {
 		if ( !isAscending ) {
 			builder.append( " DESC" );
 		}
+		builder.append( " NULLS FIRST " );
 	}
 }

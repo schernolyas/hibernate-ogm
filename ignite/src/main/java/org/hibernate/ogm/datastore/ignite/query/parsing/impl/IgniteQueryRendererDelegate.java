@@ -82,13 +82,12 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 
 	private void where(StringBuilder queryBuilder) {
 		boolean needJoin = propertyHelper.getTypes().size() > 1;
-		StringBuilder where = builder.build();
-		if ( where != null && where.length() > 0 ) {
-			queryBuilder.append( " WHERE " ).append( where );
-			if ( needJoin ) {
-				queryBuilder.append( " AND " );
-			}
+		StringBuilder wherePart = builder.build();
+		if ( wherePart == null && needJoin ) {
+			wherePart = new StringBuilder();
 		}
+		StringBuilder joinPart = new StringBuilder();
+
 		// add join info
 		if ( needJoin ) {
 			// alias corresponds to property
@@ -96,6 +95,7 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 			String targetAlilas = propertyHelper.findAliasForType( targetTypeName );
 			for ( Iterator<String> it = propertyHelper.getTypes().iterator(); it.hasNext(); ) {
 				String currentTypeName = it.next();
+				LOG.infof( "===!====currentTypeName: %s", currentTypeName );
 				if ( currentTypeName.equals( targetTypeName ) ) {
 					continue;
 				}
@@ -103,8 +103,9 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 				// we have a join
 				String joinTable = getTableName( currentTypeName );
 				String joinAlias = propertyHelper.findAliasForType( currentTypeName );
-				queryBuilder.append( targetAlilas );
+				//wherePart.append( targetAlilas );
 				EntityMetamodel targetEntityMetamodel = targetTypePersister.getEntityMetamodel();
+				LOG.infof( "=======targetEntityMetamodel: %s", targetEntityMetamodel );
 				EntityBasedAssociationAttribute targetAssociationAttr = (EntityBasedAssociationAttribute) targetEntityMetamodel
 						.getProperties()[targetEntityMetamodel.getPropertyIndex( joinAlias )];
 				LOG.infof( "=======targetAssociationAttr: %s; class: %s", targetAssociationAttr, targetAssociationAttr.getClass() );
@@ -122,7 +123,7 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 						lhsColumnNames = collectionPersister.getElementColumnNames();
 						LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%sl index columns: %s",
 								lhsTableName, lhsColumnNames, collectionPersister.getIndexColumnNames() );
-						queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" );
+						wherePart.append( targetAlilas ).append( "." ).append( lhsColumnNames[0] ).append( "=" );
 					}
 					else {
 						final OuterJoinLoadable entityPersister = (OuterJoinLoadable) targetAssociationAttr.getSource();
@@ -132,21 +133,36 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 						String[] rhsColumnNames = getRHSColumnNames( targetAssociationAttr.getType(), sessionFactory );
 						LOG.infof( "=======lhsColumnNames: %s ;rhs: %s",
 								lhsColumnNames, rhsColumnNames );
-						queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" ).append( joinAlias ).append( "." ).append( rhsColumnNames[0] );
+						//wherePart.append( "." ).append( lhsColumnNames[0] ).append( "=" ).append( joinAlias ).append( "." ).append( rhsColumnNames[0] );
+						joinPart.append( " LEFT OUTER JOIN " ).append( getTableName( currentTypeName ) ).append( " " ).append(
+								propertyHelper.findAliasForType( currentTypeName ) ).append( " ON " );
+						joinPart.append(targetAlilas).append(".").append( lhsColumnNames[0] ).append( "=" ).append( joinAlias ).append( "." ).append( rhsColumnNames[0] );
 					}
-					// return new AssociationKey( lhsTableName, lhsColumnNames );
-					// LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%s",lhsTableName, lhsColumnNames );
-					// queryBuilder.append( "." ).append( lhsColumnNames[0] ).append( "=" );
-
-				} /*
-					 * else { LOG.infof( "=======lhsTableName: %s, lhsColumnNames:%s",joinable.getTableName(),
-					 * getRHSColumnNames( attr.getType(), sessionFactory ) ); }
-					 */
-
-				// attr.getType().getName()
+				}
+				targetTypePersister = (OgmEntityPersister) ( sessionFactory ).getEntityPersister( currentTypeName );
+				targetAlilas = propertyHelper.findAliasForType( currentTypeName );
+				LOG.infof( "=======targetTypePersister: %s, targetAlilas:%s", targetTypePersister, targetAlilas );
+				if ( it.hasNext() ) {
+					wherePart.append( " AND " );
+				}
+			}
+			if (wherePart.toString().endsWith( " AND " )) {
+				wherePart.setLength( wherePart.length()-(" AND ".length()) );
 			}
 
 		}
+
+		if (joinPart.length()>0) {
+			queryBuilder.append( joinPart );
+		}
+		if ( ( wherePart != null && wherePart.length() > 0 ) ) {
+			queryBuilder.append( " WHERE " );
+			if ( ( wherePart != null && wherePart.length() > 0 ) ) {
+				queryBuilder.append( wherePart );
+			}
+		}
+
+		LOG.infof( "=======joinPart:%s", joinPart );
 	}
 
 	private void orderBy(StringBuilder queryBuilder) {
@@ -177,7 +193,7 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 		String tableAlias = propertyHelper.findAliasForType( targetTypeName );
 		String tableName = getTableName( targetTypeName );
 		queryBuilder.append( tableName ).append( ' ' ).append( tableAlias ).append( ' ' );
-		for ( String currentTypeName : propertyHelper.getTypes() ) {
+		/*for ( String currentTypeName : propertyHelper.getTypes() ) {
 			if ( currentTypeName.equals( targetTypeName ) ) {
 				continue;
 			}
@@ -185,7 +201,7 @@ public class IgniteQueryRendererDelegate extends SingleEntityQueryRendererDelega
 			String joinTable = getTableName( currentTypeName );
 			String joinAlias = propertyHelper.findAliasForType( currentTypeName );
 			queryBuilder.append( " , " ).append( joinTable ).append( ' ' ).append( joinAlias );
-		}
+		} */
 	}
 
 	private String getTableName(String typeName) {

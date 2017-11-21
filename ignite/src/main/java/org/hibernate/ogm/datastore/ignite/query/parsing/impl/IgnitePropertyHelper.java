@@ -131,32 +131,26 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 						//this is search by key field
 
 						isLastElementAssociation = true;
+						if ( requiredDepth == 1 ) {
+							log.info( "==== (requiredDepth == 1)" );
+							propertyName = currentProperty + "_" + associatedJoinable.getKeyColumnNames()[0];
+							log.infof( "1.PropertyIdentifier: %s", new PropertyIdentifier( propertyAlias, propertyName ) );
+							return new PropertyIdentifier( propertyAlias, propertyName );
+						}
 						break;
 					}
 					else {
 						//need go deeper
-						isLastElementAssociation = false;
-						//entityAlias = findAliasForType( associationPropertyType.getAssociatedEntityName( sessionFactory ) );
-						//log.infof( "entityAlias: %s", entityAlias );
-						//propertyAlias = createAliasForAssociation( entityAlias, currentPropertyPath, targetNodeType);
 						log.infof( "propertyAlias: %s", propertyAlias );
 						lastAssociationPath = new ArrayList<>( currentPropertyPath );
 						log.infof( "lastAssociationPath: %s", lastAssociationPath );
 						isLastElementAssociation = false;
 						log.infof( "isLastElementAssociation: %s", isLastElementAssociation );
 						String associatedEntityName = associationPropertyType.getAssociatedEntityName( sessionFactory );
-						//entityAlias = associatedEntityName.toLowerCase();
-						//entityType = associatedEntityName;
-						//propertyEntityType = associatedEntityName;
 						propertyAlias = currentProperty;
-						//currentPersister = getPersister( entityType );
 						registerEntityAlias( associatedEntityName, propertyAlias );
 					}
 
-					//propertyName = currentProperty + "_" + associatedJoinable.getKeyColumnNames()[0];
-
-					//isLastElementAssociation = true;
-					//return new PropertyIdentifier( entityAlias, propertyName );
 				}
 			}
 			else if ( currentPropertyType.isComponentType()
@@ -180,7 +174,7 @@ public class IgnitePropertyHelper extends ParserPropertyHelper {
 			// the last element is a property so we can build the test with this property
 			propertyName = getColumnName( propertyEntityType, propertyPath.subList( lastAssociationPath.size(), propertyPath.size() ) );
 		}
-		log.infof( "PropertyIdentifier: %s", new PropertyIdentifier( propertyAlias, propertyName ) );
+		log.infof( "2.PropertyIdentifier: %s", new PropertyIdentifier( propertyAlias, propertyName ) );
 		return new PropertyIdentifier( propertyAlias, propertyName );
 	}
 

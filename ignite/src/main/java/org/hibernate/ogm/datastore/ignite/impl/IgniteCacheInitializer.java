@@ -7,10 +7,13 @@
 package org.hibernate.ogm.datastore.ignite.impl;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -18,9 +21,8 @@ import java.util.Set;
 import org.hibernate.HibernateException;
 import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.boot.model.relational.Sequence;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.Column;
-import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.Selectable;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
@@ -37,8 +39,11 @@ import org.hibernate.ogm.model.key.spi.IdSourceKeyMetadata;
 import org.hibernate.ogm.options.spi.OptionsService;
 import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 import org.hibernate.persister.entity.EntityPersister;
+import org.hibernate.type.ManyToOneType;
+import org.hibernate.type.Type;
 
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -107,11 +112,8 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 				}
 				catch (HibernateException ex) {
 					log.debugf( "initializeEntities. create schema for entity: %s", entityKeyMetadata.getTable() );
-					CacheConfiguration config = createEntityCacheConfiguration( entityKeyMetadata, context, propertyReader );
+					CacheConfiguration config = createEntityCacheConfiguration( entityKeyMetadata, context );
 					igniteDatastoreProvider.initializeCache( config );
-					/*createReadThroughIndexConfiguration( entityKeyMetadata, context ).forEach( cacheConfiguration -> {
-						igniteDatastoreProvider.initializeCache( cacheConfiguration );
-					} ); */
 				}
 			}
 			catch (Exception ex) {
@@ -201,49 +203,77 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		QueryEntity queryEntity = new QueryEntity();
 		queryEntity.setTableName( associationKeyMetadata.getTable() );
 		queryEntity.setValueType( StringHelper.stringAfterPoint( associationKeyMetadata.getTable() ) );
-		appendIndex( queryEntity, associationKeyMetadata, context );
+		List<CacheKeyConfiguration> cacheKeyConfigurations = new LinkedList<>(  );
+		appendIndex( queryEntity, associationKeyMetadata, context, cacheKeyConfigurations );
 
+
+		log.infof( "createEntityCacheConfiguration. full QueryEntity info :%s;", queryEntity.toString() );
 		result.setQueryEntities( Arrays.asList( queryEntity ) );
+
+		if ( !cacheKeyConfigurations.isEmpty() ) {
+			result.setKeyConfiguration( cacheKeyConfigurations.toArray( new CacheKeyConfiguration[cacheKeyConfigurations.size()] ) );
+		}
 
 		return result;
 	}
 
-	private void appendIndex(QueryEntity queryEntity, AssociationKeyMetadata associationKeyMetadata, SchemaDefinitionContext context) {
+	private List<String> appendIndex(QueryEntity queryEntity, AssociationKeyMetadata associationKeyMetadata, SchemaDefinitionContext context,
+			List<CacheKeyConfiguration> cacheKeyConfigurations) {
+		List<String> affinityFields = Collections.emptyList();
+		SessionFactoryImplementor sessionFactory = context.getSessionFactory();
+		List<QueryIndex> queryIndices = new ArrayList<>( associationKeyMetadata.getRowKeyColumnNames().length );
+		log.debugf( "associationKeyMetadata: %s ", associationKeyMetadata );
+		for ( String idFieldName : associationKeyMetadata.getColumnNames() ) {
+			log.debugf( "idFieldName: %s , %s", idFieldName, generateIndexName( idFieldName ) );
+			log.debugf( "fields : %s", queryEntity.getFields().keySet() );
+			Type associationKeyType = findAssociationKeyType( context, associationKeyMetadata.getTable(), idFieldName );
 
+			if ( associationKeyType instanceof ManyToOneType ) {
+				affinityFields = new LinkedList<>(  );
+				ManyToOneType type = (ManyToOneType) associationKeyType;
+				Type t1 = type.getSemiResolvedType( sessionFactory );
+				queryEntity.addQueryField( generateIndexName( idFieldName ), t1.getReturnedClass().getName(), null );
+				log.debugf( "add field  %s and index for them", idFieldName );
+				queryIndices.add( new QueryIndex( generateIndexName( idFieldName ), QueryIndexType.SORTED ) );
+				affinityFields.add( generateIndexName( idFieldName ) );
+
+				CacheKeyConfiguration cacheKeyConfiguration = new CacheKeyConfiguration(  );
+				cacheKeyConfiguration.setTypeName( queryEntity.getValueType() ).setAffinityKeyFieldName( generateIndexName( idFieldName ) );
+				cacheKeyConfigurations.add( cacheKeyConfiguration );
+			}
+			else {
+				log.debugf( "add index for field %s", idFieldName );
+				queryIndices.add( new QueryIndex( generateIndexName( idFieldName ), QueryIndexType.SORTED ) );
+			}
+
+		}
+		queryEntity.setIndexes( queryIndices );
+		return affinityFields;
+	}
+
+	private Type findAssociationKeyType(SchemaDefinitionContext context, String table, String fieldName) {
 		for ( Iterator<Namespace> nsIt = context.getDatabase().getNamespaces().iterator(); nsIt.hasNext(); ) {
-			Namespace namespace = nsIt.next();
-			log.debugf( "appendIndex. Namespace : %s", namespace.toString() );
-			for ( Table table : namespace.getTables() ) {
-				log.debugf( "appendIndex. Table : %s", table.getName() );
-				for ( Iterator<Column> it = table.getColumnIterator(); it.hasNext(); ) {
-					Column column = it.next();
-					log.debugf( "appendIndex. column name: %s; column value: %s", column.getName(), column.getValue() );
-					if ( column.getValue().getClass() == SimpleValue.class ) {
-						SimpleValue simpleValue = (SimpleValue) column.getValue();
-						log.debugf( "appendIndex. column name: %s; column value type: %s", column.getName(), simpleValue.getType().getReturnedClass() );
-					}
-					else if ( column.getValue().getClass() == DependantValue.class ) {
-						DependantValue dv = (DependantValue) column.getValue();
-						for ( Iterator<Selectable> iterator = dv.getColumnIterator(); iterator.hasNext(); ) {
-							Column column1 = (Column) iterator.next();
-							log.debugf( "appendIndex. column name: %s; column value type: %s", column.getName(), column1.getValue().getType().getReturnedClass() );
+			Namespace currentNamespace = nsIt.next();
+			log.debugf( "n. Namespace : %s", currentNamespace.toString() );
+			for ( Table currentTable : currentNamespace.getTables() ) {
+				log.debugf( "table : %s", currentTable.getName() );
+				if ( currentTable.getName().equals( table ) ) {
+					for ( Iterator<Column> it = currentTable.getColumnIterator(); it.hasNext(); ) {
+						Column column = it.next();
+						if ( column.getName().equals( fieldName ) ) {
+							return column.getValue().getType();
+
 						}
+
 					}
+
 				}
+
 			}
 		}
-
-		Class entityIdClass = getEntityIdClassName( associationKeyMetadata.getEntityKeyMetadata().getTable(), context );
-		for ( Field f : ClassUtil.getDeclaredFields( entityIdClass, true ) ) {
-			log.debugf( "appendIndex. field: name: %s , type : %s", f.getName(),f.getType().getName() );
-		}
-
-		for ( String idFieldName : associationKeyMetadata.getRowKeyColumnNames() ) {
-			log.debugf( "appendIndex. idFieldName: %s , %s",idFieldName, generateIndexName( idFieldName ) );
-			queryEntity.addQueryField( generateIndexName( idFieldName ), String.class.getName(),null );
-			queryEntity.setIndexes( Arrays.asList( new QueryIndex( generateIndexName( idFieldName ), QueryIndexType.SORTED  ) ) );
-		}
+		return null;
 	}
+
 
 	private String generateIndexName(String fieldName) {
 		return fieldName.replace( '.','_' );
@@ -258,7 +288,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		return entityPersister.getIdentifierType().getReturnedClass();
 	}
 
-	private CacheConfiguration<?,?> createEntityCacheConfiguration(EntityKeyMetadata entityKeyMetadata, SchemaDefinitionContext context, ConfigurationPropertyReader propertyReader) {
+	private CacheConfiguration<?,?> createEntityCacheConfiguration(EntityKeyMetadata entityKeyMetadata, SchemaDefinitionContext context) {
 		log.debugf( "entityKeyMetadata: %s", entityKeyMetadata );
 		OptionsService optionsService = context.getSessionFactory().getServiceRegistry().getService( OptionsService.class );
 		//@todo refactor it!
@@ -269,6 +299,7 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 
 		CacheConfiguration<?,?> cacheConfiguration = new CacheConfiguration<>();
 		cacheConfiguration.setStoreKeepBinary( true );
+		List<CacheKeyConfiguration> cacheKeyConfigurations = new LinkedList<>(  );
 
 
 		cacheConfiguration.setName( StringHelper.stringBeforePoint( entityKeyMetadata.getTable() ) );
@@ -276,24 +307,25 @@ public class IgniteCacheInitializer extends BaseSchemaDefiner {
 		cacheConfiguration.setSqlSchema( QueryUtils.DFLT_SCHEMA );//@todo not forget about schemas for entity
 		cacheConfiguration.setBackups( 1 );
 
-			QueryEntity queryEntity = new QueryEntity( getEntityIdClassName( entityKeyMetadata.getTable(), context ), entityType );
-			log.debugf( "createEntityCacheConfiguration. create QueryEntity for table:%s;",
-					entityKeyMetadata.getTable() );
-			//queryEntity.setTableName( entityKeyMetadata.getTable() );
-			// queryEntity.setKeyType( getEntityIdClassName( entityKeyMetadata.getTable(), context ).getSimpleName() );
-			// queryEntity.setValueType( StringHelper.stringAfterPoint( entityKeyMetadata.getTable() ) );
-			addTableInfo( queryEntity, context, entityKeyMetadata.getTable() );
 
-			for ( AssociationKeyMetadata associationKeyMetadata : context.getAllAssociationKeyMetadata() ) {
-				if ( associationKeyMetadata.getAssociationKind() != AssociationKind.EMBEDDED_COLLECTION
-						&& associationKeyMetadata.getTable().equals( entityKeyMetadata.getTable() )
-						&& !IgniteAssociationSnapshot.isThirdTableAssociation( associationKeyMetadata ) ) {
-					appendIndex( queryEntity, associationKeyMetadata, context );
-				}
+		QueryEntity queryEntity = new QueryEntity( getEntityIdClassName( entityKeyMetadata.getTable(), context ), entityType );
+		log.debugf( "createEntityCacheConfiguration. create QueryEntity for table:%s;", entityKeyMetadata.getTable() );
+
+		addTableInfo( queryEntity, context, entityKeyMetadata.getTable() );
+
+		for ( AssociationKeyMetadata associationKeyMetadata : context.getAllAssociationKeyMetadata() ) {
+			if ( associationKeyMetadata.getAssociationKind() != AssociationKind.EMBEDDED_COLLECTION
+					&& associationKeyMetadata.getTable().equals( entityKeyMetadata.getTable() )
+					&& !IgniteAssociationSnapshot.isThirdTableAssociation( associationKeyMetadata ) ) {
+				appendIndex( queryEntity, associationKeyMetadata, context, cacheKeyConfigurations );
+
 			}
-			log.infof( "createEntityCacheConfiguration. full QueryEntity info :%s;",
-					queryEntity.toString() );
-			cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
+		}
+		log.infof( "createEntityCacheConfiguration. full QueryEntity info :%s;", queryEntity.toString() );
+		cacheConfiguration.setQueryEntities( Arrays.asList( queryEntity ) );
+		if ( !cacheKeyConfigurations.isEmpty() ) {
+			cacheConfiguration.setKeyConfiguration( cacheKeyConfigurations.toArray( new CacheKeyConfiguration[cacheKeyConfigurations.size()] ) );
+		}
 
 		return cacheConfiguration;
 	}

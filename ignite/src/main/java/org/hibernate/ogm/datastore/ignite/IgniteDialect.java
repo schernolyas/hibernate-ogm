@@ -756,11 +756,6 @@ public class IgniteDialect extends BaseGridDialect implements GridDialect, Query
 					queryParameters.getRowSelection(),
 					backendQuery.getSingleEntityMetadataInformationOrNull().getEntityKeyMetadata() );
 		}
-		else if ( backendQuery.getQuery().isHasScalar() ) {
-			throw new NotYetImplementedException();
-			// return new IgniteProjectionResultCursor( result, backendQuery.getQuery().getCustomQueryReturns(),
-			// queryParameters.getRowSelection() );
-		}
 		else {
 			throw new UnsupportedOperationException( "Not implemented yet" );
 		}
