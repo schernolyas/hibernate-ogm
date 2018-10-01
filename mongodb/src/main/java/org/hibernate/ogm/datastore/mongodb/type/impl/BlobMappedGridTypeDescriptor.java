@@ -6,8 +6,6 @@
  */
 package org.hibernate.ogm.datastore.mongodb.type.impl;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -17,7 +15,6 @@ import java.sql.Blob;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.jdbc.BinaryStream;
 import org.hibernate.engine.jdbc.BlobProxy;
-import org.hibernate.ogm.datastore.mongodb.dialect.impl.MongoDBTupleSnapshot;
 import org.hibernate.ogm.datastore.mongodb.logging.impl.Log;
 import org.hibernate.ogm.datastore.mongodb.logging.impl.LoggerFactory;
 import org.hibernate.ogm.model.spi.Tuple;
@@ -27,6 +24,8 @@ import org.hibernate.ogm.type.descriptor.impl.GridValueBinder;
 import org.hibernate.ogm.type.descriptor.impl.GridValueExtractor;
 import org.hibernate.type.descriptor.WrapperOptions;
 import org.hibernate.type.descriptor.java.JavaTypeDescriptor;
+
+import com.mongodb.client.gridfs.GridFSDownloadStream;
 
 /**
  * @author Sergey Chernolyas &amp;sergey_chernolyas@gmail.com&amp;
@@ -76,10 +75,9 @@ public class BlobMappedGridTypeDescriptor implements GridTypeDescriptor {
 
 			@Override
 			public X extract(Tuple tuple, String name) {
-				MongoDBTupleSnapshot snapshot = (MongoDBTupleSnapshot) tuple.getSnapshot();
-				final ByteArrayOutputStream binaryStream = (ByteArrayOutputStream) tuple.get( name );
-				ByteArrayInputStream blobStream = new ByteArrayInputStream( binaryStream.toByteArray() );
-				Blob blob = BlobProxy.generateProxy( blobStream, binaryStream.size() );
+				final GridFSDownloadStream binaryStream = (GridFSDownloadStream) tuple.get( name );
+				long fileSize  = binaryStream.getGridFSFile().getLength();
+				Blob blob = BlobProxy.generateProxy( binaryStream, fileSize );
 				return (X) blob;
 			}
 		};
