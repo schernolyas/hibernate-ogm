@@ -10,6 +10,10 @@ import static java.lang.Boolean.FALSE;
 import static org.hibernate.ogm.datastore.document.impl.DotPatternMapHelpers.getColumnSharedPrefixOfAssociatedEntityLink;
 import static org.hibernate.ogm.datastore.mongodb.dialect.impl.MongoHelpers.hasField;
 
+import java.lang.invoke.MethodHandles;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -24,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.hibernate.AssertionFailure;
@@ -35,6 +40,7 @@ import org.hibernate.ogm.datastore.document.options.AssociationStorageType;
 import org.hibernate.ogm.datastore.document.options.MapStorageType;
 import org.hibernate.ogm.datastore.document.options.spi.AssociationStorageOption;
 import org.hibernate.ogm.datastore.map.impl.MapTupleSnapshot;
+import org.hibernate.ogm.datastore.mongodb.binarystorage.GridFSStorageManager;
 import org.hibernate.ogm.datastore.mongodb.configuration.impl.MongoDBConfiguration;
 import org.hibernate.ogm.datastore.mongodb.dialect.impl.AssociationStorageStrategy;
 import org.hibernate.ogm.datastore.mongodb.dialect.impl.MongoDBAssociationSnapshot;
@@ -43,15 +49,31 @@ import org.hibernate.ogm.datastore.mongodb.dialect.impl.MongoHelpers;
 import org.hibernate.ogm.datastore.mongodb.impl.MongoDBDatastoreProvider;
 import org.hibernate.ogm.datastore.mongodb.logging.impl.Log;
 import org.hibernate.ogm.datastore.mongodb.logging.impl.LoggerFactory;
-import java.lang.invoke.MethodHandles;
 import org.hibernate.ogm.datastore.mongodb.options.AssociationDocumentStorageType;
 import org.hibernate.ogm.datastore.mongodb.options.impl.AssociationDocumentStorageOption;
+import org.hibernate.ogm.datastore.mongodb.options.impl.ReadConcernOption;
 import org.hibernate.ogm.datastore.mongodb.options.impl.ReadPreferenceOption;
 import org.hibernate.ogm.datastore.mongodb.options.impl.WriteConcernOption;
 import org.hibernate.ogm.datastore.mongodb.query.impl.MongoDBQueryDescriptor;
 import org.hibernate.ogm.datastore.mongodb.query.parsing.nativequery.impl.MongoDBQueryDescriptorBuilder;
 import org.hibernate.ogm.datastore.mongodb.query.parsing.nativequery.impl.NativeQueryParser;
+import org.hibernate.ogm.datastore.mongodb.type.GeoCollection;
+import org.hibernate.ogm.datastore.mongodb.type.GeoLineString;
+import org.hibernate.ogm.datastore.mongodb.type.GeoMultiLineString;
+import org.hibernate.ogm.datastore.mongodb.type.GeoMultiPoint;
+import org.hibernate.ogm.datastore.mongodb.type.GeoMultiPolygon;
+import org.hibernate.ogm.datastore.mongodb.type.GeoPoint;
+import org.hibernate.ogm.datastore.mongodb.type.GeoPolygon;
 import org.hibernate.ogm.datastore.mongodb.type.impl.BinaryAsBsonBinaryGridType;
+import org.hibernate.ogm.datastore.mongodb.type.impl.GeoCollectionGridType;
+import org.hibernate.ogm.datastore.mongodb.type.impl.GeoLineStringGridType;
+import org.hibernate.ogm.datastore.mongodb.type.impl.GeoMultiLineStringGridType;
+import org.hibernate.ogm.datastore.mongodb.type.impl.GeoMultiPointGridType;
+import org.hibernate.ogm.datastore.mongodb.type.impl.GeoMultiPolygonGridType;
+import org.hibernate.ogm.datastore.mongodb.type.impl.GeoPointGridType;
+import org.hibernate.ogm.datastore.mongodb.type.impl.GeoPolygonGridType;
+import org.hibernate.ogm.datastore.mongodb.type.impl.GridFSGridType;
+import org.hibernate.ogm.datastore.mongodb.type.impl.GridFSType;
 import org.hibernate.ogm.datastore.mongodb.type.impl.ObjectIdGridType;
 import org.hibernate.ogm.datastore.mongodb.type.impl.SerializableAsBinaryGridType;
 import org.hibernate.ogm.datastore.mongodb.type.impl.StringAsObjectIdGridType;
@@ -86,6 +108,7 @@ import org.hibernate.ogm.dialect.spi.TupleAlreadyExistsException;
 import org.hibernate.ogm.dialect.spi.TupleContext;
 import org.hibernate.ogm.dialect.spi.TupleTypeContext;
 import org.hibernate.ogm.dialect.spi.TuplesSupplier;
+import org.hibernate.ogm.dialect.storedprocedure.spi.StoredProcedureAwareGridDialect;
 import org.hibernate.ogm.entityentry.impl.TuplePointer;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
 import org.hibernate.ogm.model.key.spi.AssociationKeyMetadata;
@@ -99,11 +122,18 @@ import org.hibernate.ogm.model.spi.Association;
 import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.model.spi.Tuple.SnapshotType;
 import org.hibernate.ogm.model.spi.TupleOperation;
+import org.hibernate.ogm.options.spi.OptionsContext;
+import org.hibernate.ogm.storedprocedure.ProcedureQueryParameters;
 import org.hibernate.ogm.type.impl.ByteStringType;
 import org.hibernate.ogm.type.impl.CharacterStringType;
+import org.hibernate.ogm.type.impl.LocalDateAsStringType;
+import org.hibernate.ogm.type.impl.LocalDateTimeAsStringType;
+import org.hibernate.ogm.type.impl.LocalTimeAsStringType;
 import org.hibernate.ogm.type.impl.StringCalendarDateType;
+import org.hibernate.ogm.type.impl.TimestampAsDateType;
 import org.hibernate.ogm.type.spi.GridType;
 import org.hibernate.ogm.util.impl.CollectionHelper;
+import org.hibernate.ogm.util.impl.StringHelper;
 import org.hibernate.type.MaterializedBlobType;
 import org.hibernate.type.SerializableToBlobType;
 import org.hibernate.type.StandardBasicTypes;
@@ -115,6 +145,8 @@ import org.parboiled.support.ParsingResult;
 
 import com.mongodb.DuplicateKeyException;
 import com.mongodb.MongoBulkWriteException;
+import com.mongodb.MongoCommandException;
+import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
 import com.mongodb.WriteConcern;
 import com.mongodb.bulk.BulkWriteResult;
@@ -135,6 +167,7 @@ import com.mongodb.client.model.FindOneAndDeleteOptions;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.InsertOneModel;
 import com.mongodb.client.model.MapReduceAction;
+import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.ReturnDocument;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
@@ -166,8 +199,10 @@ import com.mongodb.client.result.UpdateResult;
  * @author Emmanuel Bernard &lt;emmanuel@hibernate.org&gt;
  * @author Thorsten Möller &lt;thorsten.moeller@sbi.ch&gt;
  * @author Guillaume Smet
+ * @author Aleksandr Mylnikov
  */
-public class MongoDBDialect extends BaseGridDialect implements QueryableGridDialect<MongoDBQueryDescriptor>, BatchableGridDialect, IdentityColumnAwareGridDialect, MultigetGridDialect, OptimisticLockingAwareGridDialect {
+public class MongoDBDialect extends BaseGridDialect implements QueryableGridDialect<MongoDBQueryDescriptor>, BatchableGridDialect, IdentityColumnAwareGridDialect, MultigetGridDialect, OptimisticLockingAwareGridDialect,
+		StoredProcedureAwareGridDialect {
 
 	public static final String ID_FIELDNAME = "_id";
 	public static final String PROPERTY_SEPARATOR = ".";
@@ -177,7 +212,15 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 	private static final Log log = LoggerFactory.make( MethodHandles.lookup() );
 
+	/**
+	 * This is not Threadsafe!
+	 */
+	private static final NativeQueryParser NATIVE_QUERY_PARSER = Parboiled.createParser( NativeQueryParser.class );
+
 	private static final List<String> ROWS_FIELDNAME_LIST = Collections.singletonList( ROWS_FIELDNAME );
+
+	// match a number with optional '-' and decimal
+	private static final Pattern NUMBER_PATTERN = Pattern.compile( "\\d+(\\.\\d+)?" );
 
 	/**
 	 * Pattern used to recognize a constraint violation on the primary key.
@@ -277,9 +320,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			return embeddingEntityDocument;
 		}
 		else {
-			ReadPreference readPreference = getReadPreference( associationContext );
-
-			MongoCollection<Document> collection = readPreference != null ? getCollection( key.getEntityKey() ).withReadPreference( readPreference ) : getCollection( key.getEntityKey() );
+			MongoCollection<Document> collection = getCollection( key.getEntityKey(), associationContext.getAssociationTypeContext().getOptionsContext() );
 			Document searchObject = prepareIdObject( key.getEntityKey() );
 			Document projection = getProjection( key, true );
 
@@ -288,21 +329,21 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	}
 
 	private Document getObject(EntityKey key, OperationContext operationContext) {
-		ReadPreference readPreference = getReadPreference( operationContext );
-
-		MongoCollection<Document> collection = readPreference != null ? getCollection( key ).withReadPreference( readPreference ) : getCollection( key ) ;
+		MongoCollection<Document> collection = getCollection( key, operationContext.getTupleTypeContext().getOptionsContext() );
 		Document searchObject = prepareIdObject( key );
 		Document projection = getProjection( operationContext );
 
 		FindIterable<Document> fi = collection.find( searchObject );
-		return fi != null ? fi.projection( projection ).first() : null;
+		Document targetDocument = fi != null ? fi.projection( projection ).first() : null;
+
+		provider.getBinaryStorageManager().loadContentFromBinaryStorage( targetDocument, key.getMetadata() );
+		return targetDocument;
 	}
 
 	private MongoCursor<Document> getObjects(EntityKeyMetadata entityKeyMetadata, Object[] searchObjects, TupleContext
 			tupleContext) {
-		ReadPreference readPreference = getReadPreference( tupleContext );
 
-		MongoCollection<Document> collection = readPreference != null ? getCollection( entityKeyMetadata ).withReadPreference( readPreference ) : getCollection( entityKeyMetadata );
+		MongoCollection<Document> collection = getCollection( entityKeyMetadata.getTable(), tupleContext.getTupleTypeContext().getOptionsContext() );
 
 		Document projection = getProjection( tupleContext );
 
@@ -383,24 +424,60 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		}
 	}
 
-	private MongoCollection<Document> getCollection(String table) {
-		return currentDB.getCollection( table );
+	private MongoCollection<Document> getCollection(String table, OptionsContext context) {
+		MongoCollection<Document> collection = currentDB.getCollection( table );
+		if ( context != null ) {
+			return withOptions( collection, context );
+		}
+		return collection;
 	}
 
-	private MongoCollection<Document> getCollection( EntityKey key ) {
-		return getCollection( key.getTable() );
+	private MongoCollection<Document> getCollection( EntityKey key) {
+		return getCollection( key.getTable(), null );
 	}
 
-	private MongoCollection<Document> getCollection(EntityKeyMetadata entityKeyMetadata) {
-		return getCollection( entityKeyMetadata.getTable() );
+	private MongoCollection<Document> getCollection( EntityKey key, OptionsContext context ) {
+		return getCollection( key.getTable(), context );
 	}
 
-	private MongoCollection<Document> getAssociationCollection(AssociationKey key, AssociationStorageStrategy storageStrategy) {
+	private MongoCollection<Document> withOptions(MongoCollection<Document> collection, OptionsContext context) {
+		MongoCollection<Document> newCollection = collection;
+		newCollection = withReadPreference( context, newCollection );
+		newCollection = withReadConcern( context, newCollection );
+		newCollection = withWriteConcern( context, newCollection );
+		return newCollection;
+	}
+
+	private MongoCollection<Document> withReadConcern(OptionsContext context, MongoCollection<Document> newCollection) {
+		ReadConcern readConcern = context.getUnique( ReadConcernOption.class );
+		if ( readConcern != null ) {
+			newCollection = newCollection.withReadConcern( readConcern );
+		}
+		return newCollection;
+	}
+
+	private MongoCollection<Document> withReadPreference(OptionsContext context, MongoCollection<Document> newCollection) {
+		ReadPreference readPreference = context.getUnique( ReadPreferenceOption.class );
+		if ( readPreference != null ) {
+			return newCollection.withReadPreference( readPreference );
+		}
+		return newCollection;
+	}
+
+	private MongoCollection<Document> withWriteConcern(OptionsContext context, MongoCollection<Document> newCollection) {
+		WriteConcern writeConcern = context.getUnique( WriteConcernOption.class );
+		if ( writeConcern != null ) {
+			return newCollection.withWriteConcern( writeConcern );
+		}
+		return newCollection;
+	}
+
+	private MongoCollection<Document> getAssociationCollection(AssociationKey key, AssociationStorageStrategy storageStrategy, AssociationContext associationContext) {
 		if ( storageStrategy == AssociationStorageStrategy.GLOBAL_COLLECTION ) {
-			return getCollection( MongoDBConfiguration.DEFAULT_ASSOCIATION_STORE );
+			return getCollection( MongoDBConfiguration.DEFAULT_ASSOCIATION_STORE, associationContext.getAssociationTypeContext().getOptionsContext() );
 		}
 		else {
-			return getCollection( ASSOCIATIONS_COLLECTION_PREFIX + key.getTable() );
+			return getCollection( ASSOCIATIONS_COLLECTION_PREFIX + key.getTable(), associationContext.getAssociationTypeContext().getOptionsContext() );
 		}
 	}
 
@@ -457,8 +534,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 	@Override
 	public void insertTuple(EntityKeyMetadata entityKeyMetadata, Tuple tuple, TupleContext tupleContext) {
-		WriteConcern writeConcern = getWriteConcern( tupleContext );
-		Document objectWithId = insertDocument( entityKeyMetadata, tuple, writeConcern );
+		Document objectWithId = insertDocument( entityKeyMetadata, tuple, tupleContext );
 		String idColumnName = entityKeyMetadata.getColumnNames()[0];
 		tuple.put( idColumnName, objectWithId.get( ID_FIELDNAME ) );
 	}
@@ -466,9 +542,9 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	/*
 	 * InsertOne the tuple and return an object containing the id in the field ID_FIELDNAME
 	 */
-	private Document insertDocument(EntityKeyMetadata entityKeyMetadata, Tuple tuple, WriteConcern writeConcern) {
+	private Document insertDocument(EntityKeyMetadata entityKeyMetadata, Tuple tuple, TupleContext tupleContext ) {
 		Document dbObject = objectForInsert( tuple, ( (MongoDBTupleSnapshot) tuple.getSnapshot() ).getDbObject() );
-		getCollection( entityKeyMetadata ).withWriteConcern( writeConcern ).insertOne( dbObject );
+		getCollection( entityKeyMetadata.getTable(), tupleContext.getTupleTypeContext().getOptionsContext() ).insertOne( dbObject );
 		return dbObject;
 	}
 
@@ -544,7 +620,10 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		Document toDelete = prepareIdObject( key );
 		WriteConcern writeConcern = getWriteConcern( tupleContext );
 		MongoCollection<Document> collection = getCollection( key ).withWriteConcern( writeConcern );
-		collection.deleteMany( toDelete );
+		Document deleted = collection.findOneAndDelete( toDelete );
+		if ( deleted != null ) {
+			provider.getBinaryStorageManager().removeEntityFromBinaryStorage( deleted, key.getMetadata() );
+		}
 	}
 
 	@Override
@@ -563,9 +642,8 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 	//not for embedded
 	private Document findAssociation(AssociationKey key, AssociationContext associationContext, AssociationStorageStrategy storageStrategy) {
-		ReadPreference readPreference = getReadPreference( associationContext );
 		final Document associationKeyObject = associationKeyToObject( key, storageStrategy );
-		MongoCollection<Document> associationCollection = ( readPreference != null  ? getAssociationCollection( key, storageStrategy ).withReadPreference( readPreference ) : getAssociationCollection( key, storageStrategy ) );
+		MongoCollection<Document> associationCollection = getAssociationCollection( key, storageStrategy, associationContext );
 
 		FindIterable<Document> fi = associationCollection.find( associationKeyObject );
 		return fi != null ? ( fi.projection( getProjection( key, false ) ).first() ) : null ;
@@ -731,7 +809,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	@Override
 	public Number nextValue(NextValueRequest request) {
 		String valueColumnName = request.getKey().getMetadata().getValueColumnName();
-		MongoCollection<Document> sequenceCollection = getCollection( request.getKey().getTable() );
+		MongoCollection<Document> sequenceCollection = getCollection( request.getKey().getTable(), null );
 
 		Document sequenceId = prepareIdObject( request.getKey() );
 
@@ -770,6 +848,9 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		if ( type == StandardBasicTypes.CALENDAR || type == StandardBasicTypes.CALENDAR_DATE ) {
 			return StringCalendarDateType.INSTANCE;
 		}
+		else if ( type == StandardBasicTypes.TIMESTAMP ) {
+			return TimestampAsDateType.INSTANCE;
+		}
 		else if ( type == StandardBasicTypes.BINARY ) {
 			return BinaryAsBsonBinaryGridType.INSTANCE;
 		}
@@ -785,6 +866,9 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		else if ( type instanceof StringAsObjectIdType ) {
 			return StringAsObjectIdGridType.INSTANCE;
 		}
+		else if ( type == GridFSType.INSTANCE ) {
+			return GridFSGridType.INSTANCE;
+		}
 		else if ( type instanceof SerializableToBlobType ) {
 			SerializableToBlobType<?> exposedType = (SerializableToBlobType<?>) type;
 			return new SerializableAsBinaryGridType<>( exposedType.getJavaTypeDescriptor() );
@@ -793,27 +877,61 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			MaterializedBlobType exposedType = (MaterializedBlobType) type;
 			return new SerializableAsBinaryGridType<>( exposedType.getJavaTypeDescriptor() );
 		}
+		else if ( type.getReturnedClass() == GeoPoint.class ) {
+			return GeoPointGridType.INSTANCE;
+		}
+		else if ( type.getReturnedClass() == GeoMultiPoint.class ) {
+			return GeoMultiPointGridType.INSTANCE;
+		}
+		else if ( type.getReturnedClass() == GeoLineString.class ) {
+			return GeoLineStringGridType.INSTANCE;
+		}
+		else if ( type.getReturnedClass() == GeoMultiLineString.class ) {
+			return GeoMultiLineStringGridType.INSTANCE;
+		}
+		else if ( type.getReturnedClass() == GeoPolygon.class ) {
+			return GeoPolygonGridType.INSTANCE;
+		}
+		else if ( type.getReturnedClass() == GeoMultiPolygon.class ) {
+			return GeoMultiPolygonGridType.INSTANCE;
+		}
+		else if ( type.getReturnedClass() == GeoCollection.class ) {
+			return GeoCollectionGridType.INSTANCE;
+		}
+		else if ( type.getReturnedClass().equals( LocalDate.class ) ) {
+			return LocalDateAsStringType.INSTANCE;
+		}
+		else if ( type.getReturnedClass().equals( LocalDateTime.class ) ) {
+			return LocalDateTimeAsStringType.INSTANCE;
+		}
+		else if ( type.getReturnedClass().equals( LocalTime.class ) ) {
+			return LocalTimeAsStringType.INSTANCE;
+		}
 		return null; // all other types handled as in hibernate-ogm-core
 	}
 
 	@Override
 	public void forEachTuple(ModelConsumer consumer, TupleTypeContext tupleTypeContext, EntityKeyMetadata entityKeyMetadata) {
-		MongoDatabase db = provider.getDatabase();
-		MongoCollection<Document> collection = db.getCollection( entityKeyMetadata.getTable() );
-		consumer.consume( new MongoDBTuplesSupplier( collection, entityKeyMetadata ) );
+		MongoCollection<Document> collection = getCollection( entityKeyMetadata.getTable(), tupleTypeContext.getOptionsContext() );
+		consumer.consume( new MongoDBTuplesSupplier( collection, entityKeyMetadata, provider.getBinaryStorageManager() ) );
 	}
 
 	@Override
 	public ClosableIterator<Tuple> executeBackendQuery(BackendQuery<MongoDBQueryDescriptor> backendQuery, QueryParameters queryParameters, TupleContext tupleContext) {
 		MongoDBQueryDescriptor queryDescriptor = backendQuery.getQuery();
 
-		EntityKeyMetadata entityKeyMetadata =
-				backendQuery.getSingleEntityMetadataInformationOrNull() == null ? null :
-					backendQuery.getSingleEntityMetadataInformationOrNull().getEntityKeyMetadata();
+		EntityKeyMetadata entityKeyMetadata = backendQuery.getSingleEntityMetadataInformationOrNull() == null
+				? null
+				: backendQuery.getSingleEntityMetadataInformationOrNull().getEntityKeyMetadata();
+
+		// Projections and addEntities are not allowed in the same query at the same time
+		if ( entityKeyMetadata != null && queryDescriptor.getProjection() != null ) {
+			throw log.addEntityNotAllowedInNativeQueriesUsingProjection( entityKeyMetadata.getTable(), backendQuery.toString() );
+		}
 
 		String collectionName = getCollectionName( backendQuery, queryDescriptor, entityKeyMetadata );
-		MongoCollection<Document> collection = provider.getDatabase().getCollection( collectionName );
-
+		OptionsContext typeContext = entityKeyMetadata == null ? null : getOptionsContext( tupleContext );
+		MongoCollection<Document> collection = getCollection( collectionName, typeContext );
 		if ( !queryParameters.getPositionalParameters().isEmpty() ) { // TODO Implement binding positional parameters.
 			throw new UnsupportedOperationException( "Positional parameters are not yet supported for MongoDB native queries." );
 		}
@@ -881,6 +999,8 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			case UPDATEONE:
 			case UPDATEMANY:
 				return doUpdate( queryDescriptor, collection, queryDescriptor.getOperation() );
+			case DROP:
+				return doDrop( collection );
 			case FIND:
 			case FINDONE:
 			case FINDANDMODIFY:
@@ -896,8 +1016,8 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 	@Override
 	public MongoDBQueryDescriptor parseNativeQuery(String nativeQuery) {
-		NativeQueryParser parser = Parboiled.createParser( NativeQueryParser.class );
-		ParsingResult<MongoDBQueryDescriptorBuilder> parseResult = new RecoveringParseRunner<MongoDBQueryDescriptorBuilder>( parser.Query() )
+		NativeQueryParser localParser = NATIVE_QUERY_PARSER.newInstance();
+		ParsingResult<MongoDBQueryDescriptorBuilder> parseResult = new RecoveringParseRunner<MongoDBQueryDescriptorBuilder>( localParser.Query() )
 				.run( nativeQuery );
 		if ( parseResult.hasErrors() ) {
 			throw new IllegalArgumentException( "Unsupported native query: " + ErrorUtils.printParseErrors( parseResult.parseErrors ) );
@@ -915,7 +1035,14 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		List<Document> pipeline = new ArrayList<Document>();
 
 		pipeline.add( stage( "$match", query.getCriteria() ) );
-		pipeline.add( stage( "$project", query.getProjection() ) );
+
+		if ( query.getAggregation() != null ) {
+			pipeline.addAll( query.getAggregation().asDocumentPipeline() );
+		}
+
+		if ( query.getProjection() != null ) {
+			pipeline.add( stage( "$project", query.getProjection() ) );
+		}
 
 		if ( query.getUnwinds() != null && !query.getUnwinds().isEmpty() ) {
 			for ( String field : query.getUnwinds() ) {
@@ -935,6 +1062,10 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		return new MongoDBAggregationOutput( output, entityKeyMetadata );
 	}
 
+	private static final OptionsContext getOptionsContext(TupleContext tupleContext) {
+		return tupleContext.getTupleTypeContext().getOptionsContext();
+	}
+
 	private static void applyMaxResults(QueryParameters queryParameters, List<Document> pipeline) {
 		if ( queryParameters.getRowSelection().getMaxRows() != null ) {
 			pipeline.add( stage( "$limit", queryParameters.getRowSelection().getMaxRows() ) );
@@ -948,7 +1079,10 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	}
 
 	private static ClosableIterator<Tuple> doAggregatePipeline(MongoDBQueryDescriptor query, QueryParameters queryParameters, MongoCollection<Document> collection, EntityKeyMetadata entityKeyMetadata) {
-		List<Document> pipeline = query.getPipeline();
+
+		// create a pipeline that could be modified by this request adding pagination parameters
+		List<Document> pipeline = new ArrayList<>( query.getPipeline() );
+
 		applyFirstResult( queryParameters, pipeline );
 		applyMaxResults( queryParameters, pipeline );
 		AggregateIterable<Document> output = collection.aggregate( pipeline );
@@ -1082,7 +1216,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		return collation;
 	}
 
-	private static ClosableIterator<Tuple> doFind(MongoDBQueryDescriptor query, QueryParameters queryParameters, MongoCollection<Document> collection,
+	private ClosableIterator<Tuple> doFind(MongoDBQueryDescriptor query, QueryParameters queryParameters, MongoCollection<Document> collection,
 			EntityKeyMetadata entityKeyMetadata) {
 		Document criteria = query.getCriteria();
 		Document orderby = query.getOrderBy();
@@ -1125,7 +1259,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		}
 
 		MongoCursor<Document> iterator = prepareFind.iterator();
-		return new MongoDBResultsCursor( iterator, entityKeyMetadata );
+		return new MongoDBResultsCursor( iterator, entityKeyMetadata, provider.getBinaryStorageManager() );
 	}
 
 	private static void addModifier(Document modifiers, Document criteria, String key) {
@@ -1312,11 +1446,11 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			collation = ( col != null ) ? getCollation( col ) : null;
 		}
 
-		final UpdateOptions updateOptions = new UpdateOptions().upsert( upsert ).collation( collation );
+		final ReplaceOptions replaceOptions = new ReplaceOptions().upsert( upsert ).collation( collation );
 
 		final UpdateResult result = collection
 				.withWriteConcern( ( writeConcern != null ? writeConcern : collection.getWriteConcern() ) )
-				.replaceOne( query, update, updateOptions );
+				.replaceOne( query, update, replaceOptions );
 
 		if ( result.wasAcknowledged() ) {
 			return (int) result.getModifiedCount();
@@ -1326,9 +1460,22 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 	}
 
 	private static ClosableIterator<Tuple> doCount(MongoDBQueryDescriptor query, MongoCollection<Document> collection) {
-		long count = collection.count( query.getCriteria() );
+		long count = collection.countDocuments( query.getCriteria() );
 		MapTupleSnapshot snapshot = new MapTupleSnapshot( Collections.<String, Object>singletonMap( "n", count ) );
 		return CollectionHelper.newClosableIterator( Collections.singletonList( new Tuple( snapshot, SnapshotType.UNKNOWN ) ) );
+	}
+
+	/**
+	 * do 'Drop' operation.
+	 * <p>
+	 * At the moment, this method always returns 1 because the underlying driver doesn't return any value
+	 * after the execution of the command.
+	 *
+	 * @see <a href ="https://docs.mongodb.com/manual/reference/method/db.collection.drop/">Drop Collection</a>
+	 */
+	private static int doDrop(MongoCollection<Document> collection) {
+		collection.drop();
+		return 1;
 	}
 
 	/**
@@ -1446,7 +1593,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 				operation = queue.poll();
 			}
 
-			flushInserts( inserts );
+			flushInserts( provider, inserts );
 			for ( Tuple insertTuple : insertTuples ) {
 				insertTuple.setSnapshotType( SnapshotType.UPDATE );
 			}
@@ -1457,7 +1604,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 	private void executeBatchRemove(Map<MongoCollection<Document>, BatchInsertionTask> inserts, RemoveTupleOperation tupleOperation) {
 		EntityKey entityKey = tupleOperation.getEntityKey();
-		MongoCollection<Document> collection = getCollection( entityKey );
+		MongoCollection<Document> collection = getCollection( entityKey, tupleOperation.getTupleContext().getTupleTypeContext().getOptionsContext() );
 		BatchInsertionTask batchedInserts = inserts.get( collection );
 
 		if ( batchedInserts != null && batchedInserts.containsKey( entityKey ) ) {
@@ -1527,10 +1674,10 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 				}
 				else {
 					MongoDBAssociationSnapshot associationSnapshot = (MongoDBAssociationSnapshot) association.getSnapshot();
-					MongoCollection<Document> associationCollection = getAssociationCollection( associationKey, storageStrategy );
+					MongoCollection<Document> associationCollection = getAssociationCollection( associationKey, storageStrategy, associationContext );
 					Document query = associationSnapshot.getQueryObject();
 					Document update = new Document( "$set", new Document( ROWS_FIELDNAME, toStore ) );
-					associationCollection.withWriteConcern( getWriteConcern( associationContext ) ).updateOne( query, update, updateOptions );
+					associationCollection.updateOne( query, update, updateOptions );
 				}
 			}
 			else if ( operation instanceof RemoveAssociationOperation ) {
@@ -1555,7 +1702,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 					addUnsetToQuery( updateStatement, collectionRole );
 				}
 				else {
-					MongoCollection<Document> associationCollection = getAssociationCollection( associationKey, storageStrategy ).withWriteConcern( getWriteConcern( associationContext ) );
+					MongoCollection<Document> associationCollection = getAssociationCollection( associationKey, storageStrategy, associationContext ).withWriteConcern( getWriteConcern( associationContext ) );
 					Document query = associationKeyToObject( associationKey, storageStrategy );
 					DeleteResult result = associationCollection.deleteMany( query );
 					long nAffected = -1;
@@ -1571,7 +1718,15 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		}
 
 		if ( updateStatement != null && !updateStatement.isEmpty() ) {
-			collection. withWriteConcern( writeConcern ).updateOne( prepareIdObject( entityKey ), updateStatement , updateOptions );
+			Document documentId = prepareIdObject( entityKey );
+
+			Document fieldsToUpdate = updateStatement.get( "$set", Document.class );
+			provider.getBinaryStorageManager().storeContentToBinaryStorage( fieldsToUpdate, entityKey.getMetadata(), documentId.get( "_id" ) );
+
+			Document fieldsToDelete = updateStatement.get( "$unset", Document.class );
+			provider.getBinaryStorageManager().removeFieldsFromBinaryStorage( fieldsToDelete, entityKey.getMetadata(), documentId.get( "_id" ) );
+
+			collection. withWriteConcern( writeConcern ).updateOne( documentId, updateStatement, updateOptions );
 		}
 	}
 
@@ -1606,7 +1761,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		return insertsForCollection;
 	}
 
-	private static void flushInserts(Map<MongoCollection<Document>, BatchInsertionTask> inserts) {
+	private static void flushInserts(MongoDBDatastoreProvider provider, Map<MongoCollection<Document>, BatchInsertionTask> inserts) {
 		for ( Map.Entry<MongoCollection<Document>, BatchInsertionTask> entry : inserts.entrySet() ) {
 			MongoCollection<Document> collection = entry.getKey();
 			if ( entry.getValue().isEmpty() ) {
@@ -1615,6 +1770,10 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 			}
 
 			try {
+				for ( Document documentToInsert : entry.getValue().getAll() ) {
+					Object documentId = documentToInsert.get( "_id" );
+					provider.getBinaryStorageManager().storeContentToBinaryStorage( documentToInsert, entry.getValue().entityKeyMetadata, documentId );
+				}
 				collection.insertMany( entry.getValue().getAll() );
 			}
 			catch ( DuplicateKeyException | MongoBulkWriteException dke ) {
@@ -1694,12 +1853,112 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		}
 	}
 
-	private static ReadPreference getReadPreference(OperationContext operationContext) {
-		return operationContext.getTupleTypeContext().getOptionsContext().getUnique( ReadPreferenceOption.class );
+	/**
+	 * In MongoDB the equivalent of a stored procedure is a stored Javascript.
+	 *
+	 * @param storedProcedureName name of stored procedure
+	 * @param params query parameters
+	 * @param tupleContext the tuple context
+	 *
+	 * @return the result as a {@link ClosableIterator}
+	 */
+	@Override
+	public ClosableIterator<Tuple> callStoredProcedure(String storedProcedureName, ProcedureQueryParameters params, TupleContext tupleContext) {
+		validate( params );
+		StringBuilder commandLine = createCallStoreProcedureCommand( storedProcedureName, params );
+		Document result = callStoredProcedure( commandLine );
+		Object resultValue = result.get( "retval" );
+		List<Tuple> resultTuples = extractTuples( storedProcedureName, resultValue );
+		return CollectionHelper.newClosableIterator( resultTuples );
 	}
 
-	private static ReadPreference getReadPreference(AssociationContext associationContext) {
-		return associationContext.getAssociationTypeContext().getOptionsContext().getUnique( ReadPreferenceOption.class );
+	private void validate(ProcedureQueryParameters params) {
+		if ( !params.getNamedParameters().isEmpty() ) {
+			throw log.dialectDoesNotSupportNamedParametersForStoredProcedures( getClass() );
+		}
+	}
+
+	private List<Tuple> extractTuples(String storedProcedureName, Object retvalObj) {
+		if ( retvalObj instanceof Document ) {
+			Document retval = (Document) retvalObj;
+			if ( retval.size() > 1 ) {
+				throw log.multipleDocumentReturnedByStoredProcedure( storedProcedureName, retval.size() );
+			}
+			String firstRetValTag = retval.keySet().iterator().next();
+			Object firstRetVal = retval.get( firstRetValTag );
+			@SuppressWarnings("unchecked")
+			Iterable<Document> documents = (Iterable<Document>) firstRetVal;
+			List<Tuple> resultTuples = new ArrayList<>();
+			for ( Document doc : documents ) {
+				resultTuples.add( convert( doc ) );
+			}
+			return resultTuples;
+		}
+		else {
+			Tuple tuple = new Tuple();
+			tuple.put( "result", retvalObj );
+			return Collections.singletonList( tuple );
+		}
+	}
+
+	private Document callStoredProcedure(StringBuilder commandLine) {
+		try {
+			Document result = provider.getDatabase().runCommand( new Document( "$eval", commandLine.toString() ) );
+			return result;
+		}
+		catch (MongoCommandException mce) {
+			BsonDocument response = mce.getResponse();
+			throw log.unableToExecuteCommand( commandLine.toString(), response.getString( "errmsg" ).getValue(),
+					response.getString( "codeName" ).getValue(), mce );
+		}
+	}
+
+	private StringBuilder createCallStoreProcedureCommand(String storedProcedureName, ProcedureQueryParameters params) {
+		StringBuilder commandLine = new StringBuilder( storedProcedureName ).append( "(" );
+		List<Object> positionalParameters = params.getPositionalParameters();
+		for ( Object paramValue : positionalParameters ) {
+			appendStoredProcedureParamValue( storedProcedureName, commandLine, paramValue );
+			commandLine.append( "," );
+		}
+		commandLine.setLength( commandLine.length() - 1 );
+		commandLine.append( ")" );
+		return commandLine;
+	}
+
+	private void appendStoredProcedureParamValue(String storedProcedureName, StringBuilder commandLine, Object paramValue) {
+		if ( paramValue == null ) {
+			// I don't think this can happen but, just in case, null should be a valid JSON value
+			commandLine.append( "null" );
+		}
+		else {
+			if ( requiresQuotes( paramValue ) ) {
+				// be sure to escape the double quotes
+				String escapedValue = StringHelper.escapeDoubleQuotesForJson( paramValue.toString() );
+				commandLine.append( '"' ).append( escapedValue ).append( '"' );
+			}
+			else {
+				commandLine.append( paramValue );
+			}
+		}
+	}
+
+	private boolean requiresQuotes(Object value) {
+		return value instanceof String
+				|| isNotNumeric( value.toString() );
+	}
+
+	private boolean isNotNumeric(String value) {
+		return !NUMBER_PATTERN.matcher( value ).matches();
+	}
+
+	private Tuple convert(Document document) {
+		Tuple tuple = new Tuple();
+		if ( document != null ) {
+			for ( Map.Entry<String, Object> entry : document.entrySet() ) {
+				tuple.put( entry.getKey(), entry.getValue() );
+			}
+		}
+		return tuple;
 	}
 
 	private static class MongoDBAggregationOutput implements ClosableIterator<Tuple> {
@@ -1738,15 +1997,17 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 		private final MongoCollection<Document> collection;
 		private final EntityKeyMetadata entityKeyMetadata;
+		private final GridFSStorageManager binaryStorageManager;
 
-		public MongoDBTuplesSupplier(MongoCollection<Document> collection, EntityKeyMetadata entityKeyMetadata) {
+		public MongoDBTuplesSupplier(MongoCollection<Document> collection, EntityKeyMetadata entityKeyMetadata, GridFSStorageManager binaryStorageManager) {
 			this.collection = collection;
 			this.entityKeyMetadata = entityKeyMetadata;
+			this.binaryStorageManager = binaryStorageManager;
 		}
 
 		@Override
 		public ClosableIterator<Tuple> get(TransactionContext transactionContext) {
-			return new MongoDBResultsCursor( collection.find().iterator(), entityKeyMetadata );
+			return new MongoDBResultsCursor( collection.find().iterator(), entityKeyMetadata, binaryStorageManager );
 		}
 	}
 
@@ -1754,10 +2015,12 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 
 		private final MongoCursor<Document> cursor;
 		private final EntityKeyMetadata metadata;
+		private final GridFSStorageManager binaryStorageManager;
 
-		public MongoDBResultsCursor(MongoCursor<Document> cursor, EntityKeyMetadata metadata) {
+		public MongoDBResultsCursor(MongoCursor<Document> cursor, EntityKeyMetadata metadata, GridFSStorageManager binaryStorageManager) {
 			this.cursor = cursor;
 			this.metadata = metadata;
+			this.binaryStorageManager = binaryStorageManager;
 		}
 
 		@Override
@@ -1768,6 +2031,7 @@ public class MongoDBDialect extends BaseGridDialect implements QueryableGridDial
 		@Override
 		public Tuple next() {
 			Document dbObject = cursor.next();
+			binaryStorageManager.loadContentFromBinaryStorage( dbObject, metadata );
 			return new Tuple( new MongoDBTupleSnapshot( dbObject, metadata ), SnapshotType.UPDATE );
 		}
 

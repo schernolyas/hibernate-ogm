@@ -6,12 +6,14 @@
  */
 package org.hibernate.ogm.options.navigation.impl;
 
-import java.lang.annotation.ElementType;
-import java.lang.reflect.Method;
+import static net.bytebuddy.implementation.MethodDelegation.to;
+import static net.bytebuddy.matcher.ElementMatchers.named;
+import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
+import static org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState.resolveClassLoadingStrategy;
 
-import javassist.util.proxy.MethodFilter;
-import javassist.util.proxy.MethodHandler;
-import javassist.util.proxy.ProxyFactory;
+import java.lang.annotation.ElementType;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.InvocationTargetException;
 
 import org.hibernate.ogm.options.navigation.EntityContext;
 import org.hibernate.ogm.options.navigation.GlobalContext;
@@ -21,8 +23,12 @@ import org.hibernate.ogm.options.navigation.spi.ConfigurationContext;
 import org.hibernate.ogm.options.spi.Option;
 import org.hibernate.ogm.util.impl.Log;
 import org.hibernate.ogm.util.impl.LoggerFactory;
-import java.lang.invoke.MethodHandles;
 import org.hibernate.ogm.util.impl.ReflectionHelper;
+
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+import net.bytebuddy.matcher.ElementMatcher;
 
 /**
  * Keeps track of the entities and properties configured using the fluent configuration API. There is one instance of
@@ -32,10 +38,14 @@ import org.hibernate.ogm.util.impl.ReflectionHelper;
  *
  * @author Davide D'Alto &lt;davide@hibernate.org&gt;
  * @author Gunnar Morling
+ * @author Fabio Massimo Ercoli
  */
 public class ConfigurationContextImpl implements ConfigurationContext {
 
 	private static final Log log = LoggerFactory.make( MethodHandles.lookup() );
+
+	private static final String ENTITY_METHOD_NAME = "entity";
+	private static final String PROPERTY_METHOD_NAME = "property";
 
 	/**
 	 * Contains all options configured via this and other configuration contexts.
@@ -94,105 +104,99 @@ public class ConfigurationContextImpl implements ConfigurationContext {
 	 * @param globalContextImplType the provider-specific global context implementation type
 	 * @param entityContextImplType the provider-specific entity context implementation type
 	 * @param propertyContextImplType the provider-specific property context implementation type
+	 *
 	 * @return a new {@link GlobalContext} object based on the given context implementation types
 	 */
 	@Override
-	@SuppressWarnings("unchecked")
 	public <G extends GlobalContext<?, ?>> G createGlobalContext(Class<? extends G> globalContextImplType,
 			final Class<? extends EntityContext<?, ?>> entityContextImplType, Class<? extends PropertyContext<?, ?>> propertyContextImplType) {
 
-		ProxyFactory proxyFactory = new ProxyFactory();
-		proxyFactory.setSuperclass( globalContextImplType );
-		proxyFactory.setFilter( new EntityMethodFilter() );
+		// ByteBuddyState#resolveClassLoadingStrategy static method is an Hibernate ORM internal,
+		// please remove its use here as soon the issue HHH-13014 has been closed.
+		// url https://hibernate.atlassian.net/browse/HHH-13014.
+		Class<? extends G> globalContextType = new ByteBuddy()
+				.subclass( globalContextImplType )
+				.method( filterEntityMethod() )
+				.intercept( to( new EntityOrPropertyMethodInterceptor( entityContextImplType, propertyContextImplType ) ) )
+				.make().load( globalContextImplType.getClassLoader(), resolveClassLoadingStrategy( globalContextImplType ) ).getLoaded();
 
 		try {
-			return (G) proxyFactory.create(
-					new Class<?>[] { ConfigurationContext.class },
-					new Object[] { this },
-					new EntityOrPropertyMethodHandler( entityContextImplType, propertyContextImplType ) );
+			return globalContextType.getConstructor( ConfigurationContext.class ).newInstance( this );
 		}
-		catch (Exception e) {
+		catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
 			throw log.cannotCreateGlobalContextProxy( globalContextImplType, e );
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	private <E extends EntityContext<?, ?>> E createEntityMappingContext(Class<? extends E> entityContextImplType,
 			Class<? extends PropertyContext<?, ?>> propertyContextImplType) {
 
-		ProxyFactory proxyFactory = new ProxyFactory();
-		proxyFactory.setSuperclass( entityContextImplType );
-		proxyFactory.setFilter( new EntityOrPropertyMethodFilter() );
+		// ByteBuddyState#resolveClassLoadingStrategy static method is an Hibernate ORM internal,
+		// please remove its use here as soon the issue HHH-13014 has been closed.
+		// url https://hibernate.atlassian.net/browse/HHH-13014.
+		Class<? extends E> entityContextType = new ByteBuddy()
+				.subclass( entityContextImplType )
+				.method( filterEntityMethod().or( filterPropertyMethod() ) )
+				.intercept( to( new EntityOrPropertyMethodInterceptor( entityContextImplType, propertyContextImplType ) ) )
+				.make().load( entityContextImplType.getClassLoader(), resolveClassLoadingStrategy( entityContextImplType ) ).getLoaded();
 
 		try {
-			return (E) proxyFactory.create(
-					new Class<?>[] { ConfigurationContext.class },
-					new Object[] { this },
-					new EntityOrPropertyMethodHandler( entityContextImplType, propertyContextImplType ) );
+			return entityContextType.getConstructor( ConfigurationContext.class ).newInstance( this );
 		}
-		catch (Exception e) {
-			throw log.cannotCreateEntityContextProxy( entityContextImplType, e );
+		catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+			throw log.cannotCreateEntityContextProxy( entityContextType, e );
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	private <P extends PropertyContext<?, ?>> P createPropertyMappingContext(Class<? extends EntityContext<?, ?>> entityContextImplType,
 			Class<? extends P> propertyContextImplType) {
 
-		ProxyFactory proxyFactory = new ProxyFactory();
-		proxyFactory.setSuperclass( propertyContextImplType );
-		proxyFactory.setFilter( new EntityOrPropertyMethodFilter() );
+		// ByteBuddyState#resolveClassLoadingStrategy static method is an Hibernate ORM internal,
+		// please remove its use here as soon the issue HHH-13014 has been closed.
+		// url https://hibernate.atlassian.net/browse/HHH-13014.
+		Class<? extends P> propertyContextType = new ByteBuddy()
+				.subclass( propertyContextImplType )
+				.method( filterEntityMethod().or( filterPropertyMethod() ) )
+				.intercept( to( new EntityOrPropertyMethodInterceptor( entityContextImplType, propertyContextImplType ) ) )
+				.make().load( propertyContextImplType.getClassLoader(), resolveClassLoadingStrategy( entityContextImplType ) ).getLoaded();
 
 		try {
-			return (P) proxyFactory.create(
-					new Class<?>[] { ConfigurationContext.class },
-					new Object[] { this },
-					new EntityOrPropertyMethodHandler( entityContextImplType, propertyContextImplType ) );
+			return propertyContextType.getConstructor( ConfigurationContext.class ).newInstance( this );
 		}
-		catch (Exception e) {
-			throw log.cannotCreateEntityContextProxy( propertyContextImplType, e );
+		catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+			throw log.cannotCreatePropertyContextProxy( propertyContextType, e );
 		}
 	}
 
-	private final class EntityOrPropertyMethodHandler implements MethodHandler {
+	private ElementMatcher.Junction<MethodDescription> filterEntityMethod() {
+		return named( ENTITY_METHOD_NAME ).and( takesArguments( Class.class ) );
+	}
+
+	private ElementMatcher.Junction<MethodDescription> filterPropertyMethod() {
+		return named( PROPERTY_METHOD_NAME ).and( takesArguments( String.class, ElementType.class ) );
+	}
+
+	public final class EntityOrPropertyMethodInterceptor {
 
 		private final Class<? extends EntityContext<?, ?>> entityContextImplType;
 		private final Class<? extends PropertyContext<?, ?>> propertyContextImplType;
 
-		private EntityOrPropertyMethodHandler(Class<? extends EntityContext<?, ?>> entityContextImplType,
+		public EntityOrPropertyMethodInterceptor(Class<? extends EntityContext<?, ?>> entityContextImplType,
 				Class<? extends PropertyContext<?, ?>> propertyContextImplType) {
 			this.entityContextImplType = entityContextImplType;
 			this.propertyContextImplType = propertyContextImplType;
 		}
 
-		@Override
-		public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
-			if ( thisMethod.getName().equals( "entity" ) ) {
-				configureEntity( (Class<?>) args[0] );
-				return createEntityMappingContext( entityContextImplType, propertyContextImplType );
-			}
-			else {
-				configureProperty( (String) args[0], (ElementType) args[1] );
-				return createPropertyMappingContext( entityContextImplType, propertyContextImplType );
-			}
+		@RuntimeType
+		public EntityContext entity(Class<?> type) {
+			configureEntity( type );
+			return createEntityMappingContext( entityContextImplType, propertyContextImplType );
 		}
-	}
 
-	private final class EntityMethodFilter implements MethodFilter {
-
-		@Override
-		public boolean isHandled(Method m) {
-			return m.getName().equals( "entity" ) && m.getParameterTypes().length == 1 && m.getParameterTypes()[0] == Class.class;
-		}
-	}
-
-	private final class EntityOrPropertyMethodFilter implements MethodFilter {
-
-		@Override
-		public boolean isHandled(Method m) {
-			return ( m.getName().equals( "entity" ) && m.getParameterTypes().length == 1 && m.getParameterTypes()[0] == Class.class )
-					|| ( m.getName().equals( "property" ) && m.getParameterTypes().length == 2 && m.getParameterTypes()[0] == String.class && m
-							.getParameterTypes()[1] == ElementType.class );
+		@RuntimeType
+		public PropertyContext property(String propertyName, ElementType target) {
+			configureProperty( propertyName, target );
+			return createPropertyMappingContext( entityContextImplType, propertyContextImplType );
 		}
 	}
 }

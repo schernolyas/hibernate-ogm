@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.AssertionFailure;
+import org.hibernate.HibernateException;
 import org.hibernate.ogm.datastore.neo4j.embedded.dialect.impl.EmbeddedNeo4jAssociationQueries;
 import org.hibernate.ogm.datastore.neo4j.embedded.dialect.impl.EmbeddedNeo4jAssociationSnapshot;
 import org.hibernate.ogm.datastore.neo4j.embedded.dialect.impl.EmbeddedNeo4jBackendQueryResultIterator;
@@ -45,6 +46,7 @@ import org.hibernate.ogm.dialect.spi.TupleAlreadyExistsException;
 import org.hibernate.ogm.dialect.spi.TupleContext;
 import org.hibernate.ogm.dialect.spi.TupleTypeContext;
 import org.hibernate.ogm.dialect.spi.TuplesSupplier;
+import org.hibernate.ogm.dialect.storedprocedure.spi.StoredProcedureAwareGridDialect;
 import org.hibernate.ogm.entityentry.impl.TuplePointer;
 import org.hibernate.ogm.model.key.spi.AssociatedEntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
@@ -58,6 +60,7 @@ import org.hibernate.ogm.model.spi.EntityMetadataInformation;
 import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.model.spi.Tuple.SnapshotType;
 import org.hibernate.ogm.model.spi.TupleOperation;
+import org.hibernate.ogm.storedprocedure.ProcedureQueryParameters;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -66,7 +69,7 @@ import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
-import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 
 /**
  * Abstracts Hibernate OGM from Neo4j.
@@ -80,7 +83,7 @@ import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationExcep
  *
  * @author Davide D'Alto &lt;davide@hibernate.org&gt;
  */
-public class EmbeddedNeo4jDialect extends BaseNeo4jDialect<EmbeddedNeo4jEntityQueries, EmbeddedNeo4jAssociationQueries> {
+public class EmbeddedNeo4jDialect extends BaseNeo4jDialect<EmbeddedNeo4jEntityQueries, EmbeddedNeo4jAssociationQueries> implements StoredProcedureAwareGridDialect {
 
 	private static final Log log = LoggerFactory.make( MethodHandles.lookup() );
 
@@ -206,7 +209,7 @@ public class EmbeddedNeo4jDialect extends BaseNeo4jDialect<EmbeddedNeo4jEntityQu
 		catch (QueryExecutionException qee) {
 			if ( CONSTRAINT_VIOLATION_CODE.equals( qee.getStatusCode() ) ) {
 				Throwable cause = findRecognizableCause( qee );
-				if ( cause instanceof UniquePropertyValueValidationException ) {
+				if ( cause instanceof IndexEntryConflictException ) {
 					throw new TupleAlreadyExistsException( key, qee );
 				}
 			}
@@ -531,6 +534,27 @@ public class EmbeddedNeo4jDialect extends BaseNeo4jDialect<EmbeddedNeo4jEntityQu
 	public void forEachTuple(ModelConsumer consumer, TupleTypeContext tupleTypeContext, EntityKeyMetadata entityKeyMetadata) {
 		ResourceIterator<Node> queryNodes = getEntityQueries( entityKeyMetadata, tupleTypeContext ).findEntities( dataBase );
 		consumer.consume( new EmbeddedNeo4jTuplesSupplier( queryNodes, tupleTypeContext, entityKeyMetadata ) );
+	}
+
+	@Override
+	public ClosableIterator<Tuple> callStoredProcedure(String storedProcedureName,
+			ProcedureQueryParameters queryParameters, TupleContext tupleContext) {
+		Map.Entry<String, Map<String, Object>> queryAndParams = buildProcedureQueryWithParams(
+				storedProcedureName, queryParameters );
+		try {
+			Result result = dataBase.execute( queryAndParams.getKey(), queryAndParams.getValue() );
+			return new EmbeddedNeo4jBackendQueryResultIterator( result, null, tupleContext );
+		}
+		catch (QueryExecutionException e) {
+			switch ( e.getStatusCode() ) {
+				case BaseNeo4jDialect.PROCEDURE_CALL_FAILED_CODE:
+					throw log.cannotExecuteStoredProcedure( storedProcedureName, e );
+				case BaseNeo4jDialect.PROCEDURE_NOT_FOUND_CODE:
+					throw log.procedureWithResolvedNameDoesNotExist( storedProcedureName, e );
+				default:
+					throw new HibernateException( e.getMessage() );
+			}
+		}
 	}
 
 	private static class EmbeddedNeo4jTuplesSupplier implements TuplesSupplier {

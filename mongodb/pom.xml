@@ -3,7 +3,7 @@
     <parent>
         <artifactId>hibernate-ogm-parent</artifactId>
         <groupId>org.hibernate.ogm</groupId>
-        <version>5.2.0-SNAPSHOT</version>
+        <version>5.4.2-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
 
@@ -168,71 +168,12 @@
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.codehaus.gmaven</groupId>
-                        <artifactId>gmaven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>log-info</id>
-                                <phase>generate-test-resources</phase>
-                                <goals>
-                                    <goal>execute</goal>
-                                </goals>
-                                <configuration>
-                                    <source>
-                                        def mongoDir = project.properties['embeddedMongoDbTempDir'].replace('\\','/');
-                                        println "[INFO] ------------------------------------------------------------------------";
-                                        println "[INFO] MONGO DB BUILD INFO                                                     ";
-                                        println "[INFO] ------------------------------------------------------------------------";
-                                        println "[INFO] Extracting MongoDB distribution to ${mongoDir} and        ";
-                                        println "[INFO] launching MongoDB process on port ${embeddedMongoDbPort}. The properties";
-                                        println "[INFO] 'embeddedMongoDbTempDir' and 'embeddedMongoDbPort' can be used to       ";
-                                        println "[INFO] specify another directory and/or port like this:                        ";
-                                        println "[INFO]                                                                         ";
-                                        println "[INFO]     mvn test -DembeddedMongoDbTempDir=%dir% -DembeddedMongoDbPort=%port%";
-                                        println "[INFO]                                                                         ";
-                                        println "[INFO] To use an external Mongo DB instance instead, specify the               ";
-                                        println "[INFO] 'useExternalMongoDb' property:                                          ";
-                                        println "[INFO]                                                                         ";
-                                        println "[INFO]     mvn test -DuseExternalMongoDb                                       ";
-                                        println "[INFO]                                                                         ";
-                                        println "[INFO] In this case, host and port are retrieved from the environment          ";
-                                        println "[INFO] variables MONGODB_HOSTNAME and MONGODB_PORT, respectively.              ";
-                                        println "[INFO] ------------------------------------------------------------------------";
-                                    </source>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>prepare-mongodb-directories</id>
-                                <phase>generate-test-resources</phase>
-                                <goals>
-                                    <goal>execute</goal>
-                                </goals>
-                                <configuration>
-                                    <source>
-                                        def mongoDir = project.properties['embeddedMongoDbTempDir'].replace('\\','/');
-                                        def mongoLogDir = project.properties['embeddedMongoDbLogDir'].replace('\\','/');
-
-                                        def tempDir = new File(mongoDir);
-                                        ant.delete(dir : tempDir);
-                                        ant.mkdir(dir : tempDir);
-
-                                        def logDir = new File(mongoLogDir);
-                                        ant.delete(dir : logDir);
-                                        ant.mkdir(dir : logDir);
-
-                                        System.setProperty( "de.flapdoodle.embed.io.tmpdir", "${mongoDir}" );
-                                    </source>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <environmentVariables>
-                                <MONGODB_PORT>${embeddedMongoDbPort}</MONGODB_PORT>
-                                <MONGODB_HOSTNAME>${embeddedMongoDbBindIp}</MONGODB_HOSTNAME>
+                                <MONGODB_PORT>${mongodb.embedded.port}</MONGODB_PORT>
+                                <MONGODB_HOSTNAME>${mongodb.embedded.bind-ip}</MONGODB_HOSTNAME>
                             </environmentVariables>
                             <forkMode>once</forkMode>
                         </configuration>

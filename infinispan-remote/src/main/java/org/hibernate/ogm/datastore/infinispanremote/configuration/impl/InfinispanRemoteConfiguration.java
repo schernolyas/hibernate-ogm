@@ -13,6 +13,7 @@ import static org.infinispan.client.hotrod.impl.ConfigurationProperties.MARSHALL
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -25,10 +26,14 @@ import org.hibernate.ogm.datastore.infinispanremote.impl.protostream.OgmProtoStr
 import org.hibernate.ogm.datastore.infinispanremote.logging.impl.Log;
 import org.hibernate.ogm.datastore.infinispanremote.logging.impl.LoggerFactory;
 import java.lang.invoke.MethodHandles;
+import java.util.stream.Collectors;
+
 import org.hibernate.ogm.datastore.infinispanremote.schema.spi.SchemaCapture;
 import org.hibernate.ogm.datastore.infinispanremote.schema.spi.SchemaOverride;
 import org.hibernate.ogm.util.configurationreader.spi.ConfigurationPropertyReader;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
+
+import org.infinispan.client.hotrod.configuration.TransactionMode;
 import org.infinispan.client.hotrod.impl.ConfigurationProperties;
 
 /**
@@ -100,11 +105,19 @@ public class InfinispanRemoteConfiguration {
 
 	private SchemaOverride schemaOverrideService;
 
+	private URL schemaOverrideResource;
+
 	private String schemaPackageName;
+
+	private String schemaFileName;
 
 	private Properties clientProperties;
 
 	private boolean createCachesEnabled;
+
+	private String cacheConfiguration;
+
+	private TransactionMode transactionMode;
 
 	/**
 	 * The location of the configuration file.
@@ -133,12 +146,34 @@ public class InfinispanRemoteConfiguration {
 		return schemaOverrideService;
 	}
 
+	/**
+	 * The location of custom Protobuf schema file.
+	 *
+	 * @see InfinispanRemoteProperties#SCHEMA_OVERRIDE_RESOURCE
+	 * @return might be the name of the file (too look it up in the class path) or an URL to a file.
+	 */
+	public URL getSchemaOverrideResource() {
+		return schemaOverrideResource;
+	}
+
 	public String getSchemaPackageName() {
 		return schemaPackageName;
 	}
 
+	public String getSchemaFileName() {
+		return schemaFileName;
+	}
+
 	public boolean isCreateCachesEnabled() {
 		return createCachesEnabled;
+	}
+
+	public String getCacheConfiguration() {
+		return cacheConfiguration;
+	}
+
+	public TransactionMode getTransactionMode() {
+		return transactionMode;
 	}
 
 	/**
@@ -154,6 +189,7 @@ public class InfinispanRemoteConfiguration {
 
 		this.configurationResource = propertyReader
 				.property( InfinispanRemoteProperties.CONFIGURATION_RESOURCE_NAME, URL.class )
+				.withDefaultStringValue( InfinispanRemoteProperties.DEFAULT_CONFIGURATION_RESOURCE_NAME )
 				.getValue();
 
 		this.clientProperties = getHotRodConfiguration( configurationMap, propertyReader, this.configurationResource );
@@ -168,9 +204,19 @@ public class InfinispanRemoteConfiguration {
 				.instantiate()
 				.getValue();
 
+		this.schemaOverrideResource = propertyReader
+				.property( InfinispanRemoteProperties.SCHEMA_OVERRIDE_RESOURCE, URL.class )
+				.getValue();
+
 		this.schemaPackageName = propertyReader
 				.property( InfinispanRemoteProperties.SCHEMA_PACKAGE_NAME, String.class )
 				.withDefault( InfinispanRemoteProperties.DEFAULT_SCHEMA_PACKAGE_NAME )
+				.getValue();
+
+		this.schemaFileName = propertyReader
+				.property( InfinispanRemoteProperties.SCHEMA_FILE_NAME, String.class )
+				.withDefault( InfinispanRemoteProperties.DEFAULT_SCHEMA_FILE_NAME )
+				.withValidator( InfinispanRemoteValidators.SCHEMA_FILE_NAME )
 				.getValue();
 
 		this.createCachesEnabled = propertyReader
@@ -178,7 +224,34 @@ public class InfinispanRemoteConfiguration {
 				.withDefault( false )
 				.getValue();
 
+		this.cacheConfiguration = propertyReader
+				.property( InfinispanRemoteProperties.CACHE_CONFIGURATION, String.class )
+				.withDefault( null )
+				.getValue();
+
+		String transactionModeString = propertyReader
+				.property( InfinispanRemoteProperties.TRANSACTION_MODE, String.class )
+				.withDefault( InfinispanRemoteProperties.DEFAULT_TRANSACTION_MODE )
+				.getValue();
+
+		this.transactionMode = extractTransactionMode( transactionModeString );
+
 		log.tracef( "Initializing Infinispan Hot Rod client from configuration file at '%1$s'", configurationResource );
+	}
+
+	private TransactionMode extractTransactionMode(String transactionModeString) {
+		try {
+			return TransactionMode.valueOf( transactionModeString );
+		}
+		catch (IllegalArgumentException iae) {
+			throw log.invalidConfigurationValue( InfinispanRemoteProperties.TRANSACTION_MODE, transactionModePossibleValues(), transactionModeString );
+		}
+	}
+
+	private String transactionModePossibleValues() {
+		return Arrays.stream( TransactionMode.values() )
+				.map( transactionMode -> transactionMode.toString() )
+				.collect( Collectors.joining( "," ) );
 	}
 
 	/**

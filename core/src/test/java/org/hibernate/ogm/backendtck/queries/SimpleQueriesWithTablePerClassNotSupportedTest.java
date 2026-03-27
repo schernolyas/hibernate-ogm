@@ -9,12 +9,12 @@ package org.hibernate.ogm.backendtck.queries;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.hibernate.ogm.utils.GridDialectType.HASHMAP;
 import static org.hibernate.ogm.utils.GridDialectType.INFINISPAN;
-import static org.hibernate.ogm.utils.GridDialectType.INFINISPAN_REMOTE;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.PersistenceException;
 import javax.persistence.Table;
 
 import org.fest.assertions.Fail;
@@ -24,7 +24,7 @@ import org.hibernate.Transaction;
 import org.hibernate.ogm.utils.OgmTestCase;
 import org.hibernate.ogm.utils.SkipByGridDialect;
 import org.hibernate.ogm.utils.TestForIssue;
-import org.hibernate.resource.transaction.spi.TransactionStatus;
+
 import org.hibernate.search.annotations.Analyze;
 import org.hibernate.search.annotations.Field;
 import org.hibernate.search.annotations.Indexed;
@@ -40,7 +40,7 @@ import org.junit.rules.ExpectedException;
  *
  * @author Davide D'Alto
  */
-@SkipByGridDialect({ HASHMAP, INFINISPAN, INFINISPAN_REMOTE })
+@SkipByGridDialect({ HASHMAP, INFINISPAN })
 public class SimpleQueriesWithTablePerClassNotSupportedTest extends OgmTestCase {
 
 	@Rule
@@ -95,12 +95,12 @@ public class SimpleQueriesWithTablePerClassNotSupportedTest extends OgmTestCase 
 				tx.commit();
 				Fail.fail( "Expected exception for query: [" + queryString + "]" );
 			}
-			catch ( HibernateException e) {
-				assertThat( e ).isInstanceOf( HibernateException.class );
-				assertThat( e.getMessage() ).startsWith( "OGM000089: " );
+			catch ( PersistenceException e) {
+				assertThat( e.getCause() ).isInstanceOf( HibernateException.class );
+				assertThat( e.getCause().getMessage() ).startsWith( "OGM000089: " );
 			}
 			finally {
-				if ( tx != null && tx.getStatus() == TransactionStatus.ACTIVE ) {
+				if ( tx != null && tx.isActive() ) {
 					tx.rollback();
 				}
 			}
@@ -195,14 +195,6 @@ public class SimpleQueriesWithTablePerClassNotSupportedTest extends OgmTestCase 
 
 		public void setProject(String project) {
 			this.project = project;
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + ( ( project == null ) ? 0 : project.hashCode() );
-			return result;
 		}
 	}
 

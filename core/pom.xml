@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.hibernate.ogm</groupId>
         <artifactId>hibernate-ogm-parent</artifactId>
-        <version>5.2.0-SNAPSHOT</version>
+        <version>5.4.2-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -26,10 +26,6 @@
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-entitymanager</artifactId>
         </dependency>
         <dependency>
             <groupId>org.hibernate.common</groupId>
@@ -62,10 +58,6 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml</groupId>
             <artifactId>classmate</artifactId>
         </dependency>
@@ -85,6 +77,11 @@
         <dependency>
             <groupId>org.jboss.narayana.jta</groupId>
             <artifactId>narayana-jta</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss</groupId>
+            <artifactId>jboss-transaction-spi</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -135,7 +132,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <forkMode>once</forkMode>
-                    <skipExec>${skipUnitTests}</skipExec>
                     <!-- Apache Lucene uses assertions which currently fail on JDK9: -->
                     <!-- not sure yet how that is going to be resolved, but it's not an OGM problem. -->
                     <enableAssertions>false</enableAssertions>
@@ -173,5 +169,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

@@ -13,6 +13,8 @@ import static org.hibernate.ogm.util.impl.EmbeddedHelper.isPartOfEmbedded;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.AbstractMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
@@ -48,6 +50,7 @@ import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
 import org.hibernate.ogm.persister.impl.OgmCollectionPersister;
 import org.hibernate.ogm.persister.impl.OgmEntityPersister;
+import org.hibernate.ogm.storedprocedure.ProcedureQueryParameters;
 import org.hibernate.ogm.type.spi.GridType;
 import org.hibernate.ogm.util.impl.ArrayHelper;
 import org.hibernate.persister.collection.CollectionPersister;
@@ -63,6 +66,10 @@ public abstract class BaseNeo4jDialect<E extends BaseNeo4jEntityQueries, A exten
 		implements QueryableGridDialect<String>, ServiceRegistryAwareService, SessionFactoryLifecycleAwareDialect, MultigetGridDialect {
 
 	public static final String CONSTRAINT_VIOLATION_CODE = "Neo.ClientError.Schema.ConstraintValidationFailed";
+
+	public static final String PROCEDURE_CALL_FAILED_CODE = "Neo.ClientError.Procedure.ProcedureCallFailed";
+
+	public static final String PROCEDURE_NOT_FOUND_CODE = "Neo.ClientError.Procedure.ProcedureNotFound";
 
 	protected static final Pattern TUPLE_ALREADY_EXISTS_EXCEPTION_PATTERN = Pattern.compile( ".*Node(\\(| )\\d+\\)? already exists with label.*" );
 
@@ -247,7 +254,7 @@ public abstract class BaseNeo4jDialect<E extends BaseNeo4jEntityQueries, A exten
 
 	private Map<EntityKeyMetadata, E> initializeEntityWithEmbeddedQueries(SessionFactoryImplementor sessionFactoryImplementor) {
 		Map<EntityKeyMetadata, E> entityQueries = initializeEntityQueries( sessionFactoryImplementor );
-		Collection<CollectionPersister> collectionPersisters = sessionFactoryImplementor.getCollectionPersisters().values();
+		Collection<CollectionPersister> collectionPersisters = sessionFactoryImplementor.getMetamodel().collectionPersisters().values();
 		for ( CollectionPersister collectionPersister : collectionPersisters ) {
 			if ( collectionPersister instanceof OgmCollectionPersister ) {
 				OgmCollectionPersister ogmCollectionPersister = (OgmCollectionPersister) collectionPersister;
@@ -266,7 +273,7 @@ public abstract class BaseNeo4jDialect<E extends BaseNeo4jEntityQueries, A exten
 
 	private  Map<EntityKeyMetadata, E> initializeEntityQueries(SessionFactoryImplementor sessionFactoryImplementor) {
 		Map<EntityKeyMetadata, E> queryMap = new HashMap<EntityKeyMetadata, E>();
-		Collection<EntityPersister> entityPersisters = sessionFactoryImplementor.getEntityPersisters().values();
+		Collection<EntityPersister> entityPersisters = sessionFactoryImplementor.getMetamodel().entityPersisters().values();
 		for ( EntityPersister entityPersister : entityPersisters ) {
 			if ( entityPersister instanceof OgmEntityPersister ) {
 				OgmEntityPersister ogmEntityPersister = (OgmEntityPersister) entityPersister;
@@ -281,7 +288,7 @@ public abstract class BaseNeo4jDialect<E extends BaseNeo4jEntityQueries, A exten
 
 	protected Map<AssociationKeyMetadata, A> initializeAssociationQueries( SessionFactoryImplementor sessionFactoryImplementor) {
 		Map<AssociationKeyMetadata, A> queryMap = new HashMap<AssociationKeyMetadata, A>();
-		Collection<CollectionPersister> collectionPersisters = sessionFactoryImplementor.getCollectionPersisters().values();
+		Collection<CollectionPersister> collectionPersisters = sessionFactoryImplementor.getMetamodel().collectionPersisters().values();
 		for ( CollectionPersister collectionPersister : collectionPersisters ) {
 			if ( collectionPersister instanceof OgmCollectionPersister ) {
 				OgmCollectionPersister ogmCollectionPersister = (OgmCollectionPersister) collectionPersister;
@@ -297,4 +304,28 @@ public abstract class BaseNeo4jDialect<E extends BaseNeo4jEntityQueries, A exten
 	}
 
 	protected abstract A createNeo4jAssociationQueries(EntityKeyMetadata ownerEntityKeyMetadata, AssociationKeyMetadata associationKeyMetadata);
+
+	protected Map.Entry<String, Map<String, Object>> buildProcedureQueryWithParams(String storedProcedureName,
+			ProcedureQueryParameters queryParameters) {
+		StringBuilder queryBuilder = new StringBuilder();
+		queryBuilder.append( "CALL " ).append( storedProcedureName ).append( "(" );
+		Map<String, Object> namedParams;
+		if ( queryParameters.getPositionalParameters() != null && queryParameters.getPositionalParameters()
+				.size() > 0 ) {
+			namedParams = new HashMap<>();
+			List parameters = queryParameters.getPositionalParameters();
+			for ( int i = 0; i < parameters.size(); i++ ) {
+				queryBuilder.append( "{" ).append( i ).append( "}," );
+				namedParams.put( String.valueOf( i ), parameters.get( i ) );
+			}
+		}
+		else {
+			namedParams = queryParameters.getNamedParameters();
+			for ( String namedParameter : namedParams.keySet() ) {
+				queryBuilder.append( "{" ).append( namedParameter ).append( "}," );
+			}
+		}
+		queryBuilder.replace( queryBuilder.lastIndexOf( "," ), queryBuilder.length(), ")" );
+		return new AbstractMap.SimpleEntry<>( queryBuilder.toString(), namedParams );
+	}
 }

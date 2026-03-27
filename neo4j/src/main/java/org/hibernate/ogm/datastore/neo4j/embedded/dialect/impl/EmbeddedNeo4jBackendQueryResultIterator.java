@@ -6,9 +6,14 @@
  */
 package org.hibernate.ogm.datastore.neo4j.embedded.dialect.impl;
 
+import java.lang.invoke.MethodHandles;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.hibernate.ogm.datastore.map.impl.MapTupleSnapshot;
+import org.hibernate.ogm.datastore.neo4j.logging.impl.Log;
+import org.hibernate.ogm.datastore.neo4j.logging.impl.LoggerFactory;
 import org.hibernate.ogm.dialect.spi.TupleContext;
 import org.hibernate.ogm.dialect.spi.TupleTypeContext;
 import org.hibernate.ogm.model.key.spi.EntityKeyMetadata;
@@ -28,11 +33,15 @@ import org.neo4j.graphdb.Result;
  */
 public class EmbeddedNeo4jBackendQueryResultIterator extends EmbeddedNeo4jTupleIterator<Map<String, Object>> {
 
+	private static final Log log = LoggerFactory.make( MethodHandles.lookup() );
+
 	private final EntityKeyMetadata entityKeyMetadata;
 	private final TupleTypeContext tupleTypeContext;
+	private final List<String> columns;
 
 	public EmbeddedNeo4jBackendQueryResultIterator(Result result, EntityMetadataInformation info, TupleContext tupleContext) {
 		super( result );
+		this.columns = result != null ? result.columns() : null;
 		this.entityKeyMetadata = info != null ? info.getEntityKeyMetadata() : null;
 		this.tupleTypeContext = info != null ? tupleContext.getTupleTypeContext() : null;
 	}
@@ -47,15 +56,35 @@ public class EmbeddedNeo4jBackendQueryResultIterator extends EmbeddedNeo4jTupleI
 		if ( entityKeyMetadata == null ) {
 			return mapSnapshot( next );
 		}
-		else {
-			return nodeSnapshot( (Node) next.values().iterator().next() );
+
+		Object value = next.values().iterator().next();
+		if ( value instanceof Node ) {
+			return nodeSnapshot( (Node) value );
 		}
+
+		// Projections and addEntities are not allowed in the same query at the same time
+		throw log.addEntityNotAllowedInNativeQueriesUsingProjection( entityKeyMetadata.getTable(), "" );
 	}
 
 	private TupleSnapshot mapSnapshot(Map<String, Object> next) {
-		TupleSnapshot snapshot;
-		snapshot = new MapTupleSnapshot( (Map<String, Object>) next );
+		Map<String, Object> sortedColumns = sortColumns( next );
+		TupleSnapshot snapshot = new MapTupleSnapshot( sortedColumns );
 		return snapshot;
+	}
+
+	/**
+	 * The map represents a single row of the results returned by Neo4j but the columns might
+	 * not be ordered in the same way as {@link Result#columns()}.
+	 * If the user runs a native query, we need to make sure that the results are in the right order.
+	 */
+	private Map<String, Object> sortColumns(Map<String, Object> next) {
+		Map<String, Object> sortedColumns = new LinkedHashMap<>();
+		if ( this.columns != null ) {
+			for ( String column : this.columns ) {
+				sortedColumns.put( column, next.get( column ) );
+			}
+		}
+		return sortedColumns;
 	}
 
 	private TupleSnapshot nodeSnapshot(Node node) {

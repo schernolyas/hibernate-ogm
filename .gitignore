@@ -36,3 +36,6 @@ work/
 test-output/
 transaction.log
 infinispan.log
+
+# Infinispan embedded clustered counter generated file
+counters.xml

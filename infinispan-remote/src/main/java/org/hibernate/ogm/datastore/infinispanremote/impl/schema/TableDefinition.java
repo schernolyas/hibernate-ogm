@@ -6,14 +6,13 @@
  */
 package org.hibernate.ogm.datastore.infinispanremote.impl.schema;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.hibernate.mapping.Column;
 import org.hibernate.ogm.datastore.infinispanremote.impl.protobuf.CompositeProtobufCoDec;
 import org.hibernate.ogm.datastore.infinispanremote.impl.protobuf.ProtofieldAccessorSet;
-import org.hibernate.ogm.datastore.infinispanremote.impl.protobuf.SchemaDefinitions;
+import org.hibernate.ogm.datastore.infinispanremote.impl.protobuf.schema.SchemaDefinitions;
 import org.hibernate.ogm.datastore.infinispanremote.impl.protobuf.TypeDeclarationsCollector;
 import org.hibernate.ogm.datastore.infinispanremote.impl.protostream.OgmProtoStreamMarshaller;
 import org.hibernate.ogm.datastore.infinispanremote.impl.protostream.ProtoDataMapper;
@@ -25,7 +24,8 @@ import org.hibernate.ogm.type.spi.GridType;
 import org.hibernate.type.Type;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.protostream.DescriptorParserException;
-import org.infinispan.protostream.SerializationContext;
+import org.infinispan.protostream.descriptors.Descriptor;
+import org.infinispan.protostream.descriptors.FileDescriptor;
 
 public final class TableDefinition implements ProtobufTypeExporter, ProtobufEntryExporter {
 
@@ -35,15 +35,17 @@ public final class TableDefinition implements ProtobufTypeExporter, ProtobufEntr
 	private final String protobufTypeName;
 	private final String protobufIdTypeName;
 	private final String protobufPackageName;
+	private final String cacheConfiguration;
 	private final ProtofieldAccessorSet keyComponents = new ProtofieldAccessorSet();
 	private final ProtofieldAccessorSet valueComponents = new ProtofieldAccessorSet();
 	private final Set<String> pkColumnNames = new HashSet<>();
 
-	public TableDefinition(String name, String protobufPackageName) {
+	public TableDefinition(String name, String protobufPackageName, String cacheConfiguration) {
 		this.tableName = name;
 		this.protobufTypeName = SanitationUtils.convertNameSafely( name );
 		this.protobufIdTypeName = SanitationUtils.toProtobufIdName( protobufTypeName );
 		this.protobufPackageName = protobufPackageName;
+		this.cacheConfiguration = cacheConfiguration;
 	}
 
 	public void addColumnnDefinition(Column column, GridType gridType, Type ormType) {
@@ -79,13 +81,13 @@ public final class TableDefinition implements ProtobufTypeExporter, ProtobufEntr
 	public ProtoDataMapper createProtoDataMapper(RemoteCache remoteCache,
 			SchemaDefinitions sd, OgmProtoStreamMarshaller marshaller) {
 		try {
-			CompositeProtobufCoDec codec = new CompositeProtobufCoDec( tableName,
+			CompositeProtobufCoDec codec = new CompositeProtobufCoDec(
 					qualify( protobufTypeName ), qualify( protobufIdTypeName ),
 					keyComponents, valueComponents, remoteCache, sd );
-			SerializationContext serializationContext = ProtostreamSerializerSetup.buildSerializationContext( sd, codec );
-			return new ProtoDataMapper( codec, serializationContext, marshaller );
+			ProtostreamSerializerSetup.registerEntityMarshaller( codec, marshaller );
+			return new ProtoDataMapper( codec );
 		}
-		catch (DescriptorParserException | IOException e) {
+		catch (DescriptorParserException e) {
 			throw new RuntimeException( e );
 		}
 	}
@@ -112,4 +114,36 @@ public final class TableDefinition implements ProtobufTypeExporter, ProtobufEntr
 		}
 	}
 
+	public String getCacheConfiguration() {
+		return cacheConfiguration;
+	}
+
+	public boolean isDescribedIn(FileDescriptor fileDescriptor) {
+		boolean typeIsDescribed = false;
+		boolean idTypeIsDescribed = false;
+
+		for ( Descriptor descriptor : fileDescriptor.getMessageTypes() ) {
+			if ( descriptor.getName().equals( protobufIdTypeName ) ) {
+				if ( idTypeIsDescribedIn( descriptor ) ) {
+					idTypeIsDescribed = true;
+				}
+			}
+			if ( descriptor.getName().equals( protobufTypeName ) ) {
+				if ( typeIsDescribedIn( descriptor ) ) {
+					typeIsDescribed = true;
+				}
+			}
+		}
+
+		// both key and value types must be described
+		return typeIsDescribed && idTypeIsDescribed;
+	}
+
+	private boolean idTypeIsDescribedIn(Descriptor descriptor) {
+		return keyComponents.isDescribedIn( descriptor );
+	}
+
+	private boolean typeIsDescribedIn(Descriptor descriptor) {
+		return valueComponents.isDescribedIn( descriptor );
+	}
 }

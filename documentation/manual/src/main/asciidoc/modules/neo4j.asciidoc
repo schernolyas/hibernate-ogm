@@ -104,6 +104,11 @@ The authentication username for the remote server.
 Hibernate OGM will try to authenticate only if this property is set.
 hibernate.ogm.datastore.password (optional)::
 The password to use when connecting remotely.
+hibernate.ogm.neo4j.client.connection_pool_size (optional)::
+The size of the client connection pool when using the http protocol.
+Default value is 10.
+hibernate.connection.resource::
+If you use Bolt interface you can lookup datastore client. See <<integration-with-wildfly-nosql>>.
 
 [NOTE]
 ====
@@ -433,7 +438,7 @@ which store foreign column keys. This means that annotation like `@JoinColumn` w
 [source, JAVA]
 ----
 @Entity
-public class Vehicule {
+public class Vehicle {
 
     @Id
     private String id;
@@ -452,7 +457,7 @@ public class Wheel {
     private double diameter;
 
     @OneToOne
-    private Vehicule vehicule;
+    private Vehicle vehicle;
 
     // getters, setters ...
 }
@@ -719,6 +724,26 @@ public class BankAccount {
 image::neo4j-bi-many-to-many-example.png[align="center", depth="", scalefit="1"]
 ====
 
+.Bidirectional one-to-one, one-to-many (Mapping to the same Entity)
+====
+[source, JAVA]
+----
+@Entity
+public class Person {
+
+	@Id
+	private String name;
+	@OneToOne
+	private Person spouse;
+	@OneToMany
+	private List<Person> children;
+
+    // getters, setters ...
+}
+----
+
+image::neo4j-bi-one-to-one-many-to-many-same-entity-example.png[align="center", depth="", scalefit="0.75"]
+====
 ==== Auto-generated Values
 
 Hibernate OGM supports the table generation strategy as well as the sequence generation strategy with Neo4j.

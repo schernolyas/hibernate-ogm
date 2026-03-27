@@ -7,14 +7,15 @@
 package org.hibernate.ogm.utils.jpa;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
 import javax.transaction.TransactionManager;
 
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
-import org.hibernate.ogm.jpa.impl.OgmEntityManagerFactory;
 import org.hibernate.ogm.utils.TestEntities;
 import org.hibernate.ogm.utils.TestEntityManagerFactory;
 import org.hibernate.ogm.utils.TestEntityManagerFactoryConfiguration;
@@ -25,6 +26,7 @@ import org.junit.runner.RunWith;
  * @author Emmanuel Bernard &lt;emmanuel@hibernate.org&gt;
  * @author Sanne Grinovero &lt;sanne@hibernate.org&gt;
  * @author Guillaume Smet
+ * @author Fabio Massimo Ercoli
  */
 @RunWith(OgmJpaTestRunner.class)
 public abstract class OgmJpaTestCase {
@@ -73,8 +75,7 @@ public abstract class OgmJpaTestCase {
 	}
 
 	protected ServiceRegistryImplementor getServiceRegistry() {
-		OgmEntityManagerFactory emFactory = ( (OgmEntityManagerFactory) getFactory() );
-		SessionFactoryImplementor sessionFactory = emFactory.getSessionFactory();
+		SessionFactoryImplementor sessionFactory = (SessionFactoryImplementor) getFactory();
 		ServiceRegistryImplementor serviceRegistry = sessionFactory.getServiceRegistry();
 		return serviceRegistry;
 	}
@@ -92,4 +93,38 @@ public abstract class OgmJpaTestCase {
 		em.close();
 	}
 
+	public void inTransaction(Consumer<EntityManager> consumer) {
+		EntityManager em = getFactory().createEntityManager();
+		try {
+			EntityTransaction transaction = em.getTransaction();
+			transaction.begin();
+
+			try {
+				consumer.accept( em );
+				transaction.commit();
+			}
+			catch (Throwable t) {
+				if ( transaction.isActive() ) {
+					transaction.rollback();
+				}
+				throw t;
+			}
+		}
+		finally {
+			em.close();
+		}
+	}
+
+	protected void removeAll(Object... entities) {
+		inTransaction( em -> {
+			for ( Object entity : entities ) {
+				if ( entity == null ) {
+					continue;
+				}
+
+				em.refresh( entity );
+				em.remove( entity );
+			}
+		} );
+	}
 }

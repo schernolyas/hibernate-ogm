@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.hibernate.ogm</groupId>
         <artifactId>hibernate-ogm-parent</artifactId>
-        <version>5.2.0-SNAPSHOT</version>
+        <version>5.4.2-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -23,10 +23,11 @@
     <description>Persist objects in Infinispan over Hot Rod, the remote client protocol of Infinispan</description>
 
     <properties>
-        <jdkTargetForProcessor>1.8</jdkTargetForProcessor>
-        <!-- Skipping enforcer plug-in as WildFly / Infinispan Server artifact
+        <!-- Skipping enforcer dependency convergence check as WildFly / Infinispan Server artifact
              causes several dependency convergence issues which are beyond our control -->
-        <enforcer.skip>true</enforcer.skip>
+        <enforcer.dependencyconvergence.skip>true</enforcer.dependencyconvergence.skip>
+        <infinispan-server.name>infinispan-server</infinispan-server.name>
+        <infinispan-server.home>${project.build.directory}/${infinispan-server.name}</infinispan-server.home>
     </properties>
 
     <dependencies>
@@ -39,10 +40,6 @@
             <artifactId>jboss-logging-processor</artifactId>
             <!-- "provided" is used as "compile-only" here; It's NOT needed at runtime -->
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-entitymanager</artifactId>
         </dependency>
         <dependency>
             <groupId>org.infinispan</groupId>
@@ -72,6 +69,12 @@
             <artifactId>infinispan-core</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>jboss-transaction-api_1.1_spec</artifactId>
+                    <groupId>org.jboss.spec.javax.transaction</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.hibernate.hql</groupId>
@@ -148,7 +151,7 @@
         <dependency>
             <groupId>org.infinispan.server</groupId>
             <artifactId>infinispan-server-build</artifactId>
-            <version>${infinispanVersion}</version>
+            <version>${version.org.infinispan}</version>
             <type>zip</type>
             <scope>test</scope>
             <exclusions>
@@ -157,6 +160,12 @@
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.infinispan</groupId>
+            <artifactId>infinispan-tasks-api</artifactId>
+            <version>${version.org.infinispan}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.wildfly.core</groupId>
@@ -176,34 +185,44 @@
             <version>2.0.10.Final</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.jboss.narayana.jta</groupId>
+            <artifactId>narayana-jta</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.spec.javax.transaction</groupId>
+            <artifactId>jboss-transaction-api_1.2_spec</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Infinispan uses XA transactions so the JTA package isn't enough -->
+        <dependency>
+            <groupId>org.jboss</groupId>
+            <artifactId>jboss-transaction-spi</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-dependency-plugin</artifactId>
-            <executions>
-               <execution>
-                  <id>unpack-infinispan-server</id>
-                  <phase>process-test-resources</phase>
-                  <goals>
-                     <goal>unpack</goal>
-                  </goals>
-                  <configuration>
-                     <artifactItems>
-                        <artifactItem>
-                           <groupId>org.infinispan.server</groupId>
-                           <artifactId>infinispan-server-build</artifactId>
-                           <version>${infinispanVersion}</version>
-                           <type>zip</type>
-                           <outputDirectory>${project.build.directory}/node1</outputDirectory>
-                        </artifactItem>
-                     </artifactItems>
-                  </configuration>
-               </execution>
-            </executions>
-         </plugin>
+            <plugin>
+                <groupId>org.wildfly.build</groupId>
+                <artifactId>wildfly-server-provisioning-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>infinispan-server-provisioning</id>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                        <phase>compile</phase>
+                        <configuration>
+                            <config-file>infinispan-server-provisioning.xml</config-file>
+                            <server-name>${infinispan-server.name}</server-name>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
          <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-resources-plugin</artifactId>
@@ -216,7 +235,7 @@
                         <goal>copy-resources</goal>
                     </goals>
                     <configuration>
-                        <outputDirectory>${project.build.directory}/node1/infinispan-server-${infinispanVersion}/standalone/configuration</outputDirectory>
+                        <outputDirectory>${infinispan-server.home}/standalone/configuration</outputDirectory>
                         <overwrite>true</overwrite>
                         <resources>
                           <resource>
@@ -255,7 +274,6 @@
                           to speed tests and avoid FLUSH issue
                            -->
                     <argLine>-Djgroups.bind_addr=${jgroups.bind_addr} -Dhibernate.test.validatefailureexpected=true -Djava.net.preferIPv4Stack=true -Djgroups.ping.timeout=500 -Djgroups.ping.num_initial_members=1 -Djgroups.udp.enable_bundling=false</argLine>
-                    <skipExec>${skipUnitTests}</skipExec>
                     <!-- Apache Lucene uses assertions which currently fail on JDK9: -->
                     <!-- not sure yet how that is going to be resolved, but it's not an OGM problem. -->
                     <enableAssertions>false</enableAssertions>
@@ -318,16 +336,4 @@
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>test</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <skipUnitTests>false</skipUnitTests>
-            </properties>
-        </profile>
-     </profiles>
 </project>

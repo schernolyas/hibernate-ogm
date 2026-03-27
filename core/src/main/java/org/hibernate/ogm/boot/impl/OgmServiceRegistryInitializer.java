@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.cfg.Environment;
 import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.cfg.impl.HibernateSearchIntegration;
 import org.hibernate.ogm.datastore.impl.DatastoreProviderInitiator;
@@ -20,6 +21,7 @@ import org.hibernate.ogm.dialect.impl.MultigetGridDialectInitiator;
 import org.hibernate.ogm.dialect.impl.OgmDialectFactoryInitiator;
 import org.hibernate.ogm.dialect.impl.OptimisticLockingAwareGridDialectInitiator;
 import org.hibernate.ogm.dialect.impl.QueryableGridDialectInitiator;
+import org.hibernate.ogm.dialect.impl.StoredProcedureGridDialectInitiator;
 import org.hibernate.ogm.jdbc.impl.OgmConnectionProviderInitiator;
 import org.hibernate.ogm.jpa.impl.OgmMutableIdentifierGeneratorFactoryInitiator;
 import org.hibernate.ogm.jpa.impl.OgmPersisterClassResolverInitiator;
@@ -81,12 +83,41 @@ public class OgmServiceRegistryInitializer implements ServiceContributor {
 		serviceRegistryBuilder.addInitiator( IdentityColumnAwareGridDialectInitiator.INSTANCE );
 		serviceRegistryBuilder.addInitiator( OptimisticLockingAwareGridDialectInitiator.INSTANCE );
 		serviceRegistryBuilder.addInitiator( MultigetGridDialectInitiator.INSTANCE );
+		serviceRegistryBuilder.addInitiator( StoredProcedureGridDialectInitiator.INSTANCE );
 	}
 
 	private boolean isOgmEnabled(Map<?, ?> settings) {
-		return new ConfigurationPropertyReader( settings )
-			.property( OgmProperties.ENABLED, boolean.class )
-			.withDefault( false )
+		Boolean ogmEnabled = new ConfigurationPropertyReader( settings )
+			.property( OgmProperties.ENABLED, Boolean.class )
 			.getValue();
+
+		if ( ogmEnabled == null ) {
+			return isOgmImplicitEnabled( settings );
+		}
+		return ogmEnabled;
+	}
+
+	/**
+	 * Decides if we need to start OGM when {@link OgmProperties#ENABLED} is not set.
+	 * At the moment, if a dialect class is not declared, Hibernate ORM requires a datasource or a JDBC connector when a dialect is not declared.
+	 * If none of those properties are declared, we assume the user wants to start Hibernate OGM.
+	 *
+	 * @param settings
+	 * @return {@code true} if we have to start OGM, {@code false} otherwise
+	 */
+	private boolean isOgmImplicitEnabled(Map<?, ?> settings) {
+		String jdbcUrl = new ConfigurationPropertyReader( settings )
+				.property( Environment.URL, String.class )
+				.getValue();
+
+		String jndiDatasource = new ConfigurationPropertyReader( settings )
+				.property( Environment.DATASOURCE, String.class )
+				.getValue();
+
+		String dialect = new ConfigurationPropertyReader( settings )
+				.property( Environment.DIALECT, String.class )
+				.getValue();
+
+		return jdbcUrl == null && jndiDatasource == null && dialect == null;
 	}
 }

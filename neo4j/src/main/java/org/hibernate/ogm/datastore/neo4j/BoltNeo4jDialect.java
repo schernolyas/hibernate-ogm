@@ -48,6 +48,7 @@ import org.hibernate.ogm.dialect.spi.TupleAlreadyExistsException;
 import org.hibernate.ogm.dialect.spi.TupleContext;
 import org.hibernate.ogm.dialect.spi.TupleTypeContext;
 import org.hibernate.ogm.dialect.spi.TuplesSupplier;
+import org.hibernate.ogm.dialect.storedprocedure.spi.StoredProcedureAwareGridDialect;
 import org.hibernate.ogm.entityentry.impl.TuplePointer;
 import org.hibernate.ogm.model.key.spi.AssociatedEntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
@@ -61,11 +62,14 @@ import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.model.spi.Tuple.SnapshotType;
 import org.hibernate.ogm.model.spi.TupleOperation;
 import org.hibernate.ogm.model.spi.TupleSnapshot;
+import org.hibernate.ogm.storedprocedure.ProcedureQueryParameters;
+import org.neo4j.driver.internal.types.InternalTypeSystem;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.Statement;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.driver.v1.Transaction;
+import org.neo4j.driver.v1.Value;
 import org.neo4j.driver.v1.exceptions.ClientException;
 import org.neo4j.driver.v1.summary.ResultSummary;
 import org.neo4j.driver.v1.types.Node;
@@ -83,7 +87,7 @@ import org.neo4j.driver.v1.types.Relationship;
  *
  * @author Davide D'Alto &lt;davide@hibernate.org&gt;
  */
-public class BoltNeo4jDialect extends BaseNeo4jDialect<BoltNeo4jEntityQueries, BoltNeo4jAssociationQueries> implements RemoteNeo4jDialect {
+public class BoltNeo4jDialect extends BaseNeo4jDialect<BoltNeo4jEntityQueries, BoltNeo4jAssociationQueries> implements RemoteNeo4jDialect, StoredProcedureAwareGridDialect {
 
 	public static final Log log = LoggerFactory.make( MethodHandles.lookup() );
 
@@ -118,7 +122,14 @@ public class BoltNeo4jDialect extends BaseNeo4jDialect<BoltNeo4jEntityQueries, B
 				List<EntityKey> entityKeys = new ArrayList<>();
 				while ( result.hasNext() ) {
 					Record record = result.next();
-					Map<String, Object> recordAsMap = record.get( 0 ).asMap();
+					Value value = record.get( 0 );
+
+					if ( isProjection( value ) ) {
+						// Projections and addEntities are not allowed in the same query at the same time
+						throw log.addEntityNotAllowedInNativeQueriesUsingProjection( entityKeyMetadata.getTable(), backendQuery.getQuery() );
+					}
+
+					Map<String, Object> recordAsMap = value.asMap();
 					Object[] columnValues = columnValues( recordAsMap, entityKeyMetadata );
 					entityKeys.add( new EntityKey( entityKeyMetadata, columnValues ) );
 				}
@@ -132,6 +143,10 @@ public class BoltNeo4jDialect extends BaseNeo4jDialect<BoltNeo4jEntityQueries, B
 			validateNativeQuery( statementResult );
 			return new BoltNeo4jMapsTupleIterator( statementResult );
 		}
+	}
+
+	private boolean isProjection(Value value) {
+		return !( InternalTypeSystem.TYPE_SYSTEM.NODE().equals( value.type() ) );
 	}
 
 	@Override
@@ -574,6 +589,28 @@ public class BoltNeo4jDialect extends BaseNeo4jDialect<BoltNeo4jEntityQueries, B
 		BoltNeo4jClient client = neo4jProvider.getClient();
 		BoltTuplesSupplier tupleSupplier = new BoltTuplesSupplier( getEntityQueries( entityKeyMetadata, tupleTypeContext ), entityKeyMetadata, tupleTypeContext, client );
 		consumer.consume( tupleSupplier );
+	}
+
+	@Override
+	public ClosableIterator<Tuple> callStoredProcedure(
+			String storedProcedureName, ProcedureQueryParameters queryParameters, TupleContext tupleContext) {
+		Map.Entry<String, Map<String, Object>> queryAndParams = buildProcedureQueryWithParams(
+				storedProcedureName, queryParameters );
+		Transaction transaction = transaction( tupleContext );
+		StatementResult result = transaction.run( queryAndParams.getKey(), queryAndParams.getValue() );
+		try {
+			return new BoltNeo4jMapsTupleIterator( result );
+		}
+		catch (ClientException e) {
+			switch ( e.code() ) {
+				case BaseNeo4jDialect.PROCEDURE_CALL_FAILED_CODE:
+					throw log.cannotExecuteStoredProcedure( storedProcedureName, e );
+				case BaseNeo4jDialect.PROCEDURE_NOT_FOUND_CODE:
+					throw log.procedureWithResolvedNameDoesNotExist( storedProcedureName, e );
+				default:
+					throw new HibernateException( e.getMessage() );
+			}
+		}
 	}
 
 	private static class BoltTuplesSupplier implements TuplesSupplier {

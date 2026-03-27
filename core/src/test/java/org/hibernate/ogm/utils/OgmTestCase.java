@@ -10,16 +10,20 @@ import static org.fest.assertions.Assertions.assertThat;
 import static org.hibernate.ogm.utils.TestHelper.getNumberOfAssociations;
 import static org.hibernate.ogm.utils.TestHelper.getNumberOfEntities;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import javax.persistence.EntityNotFoundException;
 
+import org.hibernate.ObjectNotFoundException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.ogm.OgmSession;
 import org.hibernate.ogm.OgmSessionFactory;
 import org.hibernate.ogm.engine.spi.OgmSessionFactoryImplementor;
-import org.hibernate.resource.transaction.spi.TransactionStatus;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
@@ -30,6 +34,7 @@ import org.junit.runner.RunWith;
  * session factory.
  *
  * @author Gunnar Morling
+ * @author Fabio Massimo Ercoli
  */
 @RunWith(OgmTestRunner.class)
 public abstract class OgmTestCase {
@@ -87,7 +92,7 @@ public abstract class OgmTestCase {
 		for ( Session session : openedSessions ) {
 			if ( session.isOpen() ) {
 				Transaction transaction = session.getTransaction();
-				if ( transaction != null && transaction.getStatus() == TransactionStatus.ACTIVE ) {
+				if ( transaction != null && transaction.isActive() ) {
 					transaction.rollback();
 				}
 				session.close();
@@ -102,5 +107,58 @@ public abstract class OgmTestCase {
 	protected void checkCleanCache() {
 		assertThat( getNumberOfEntities( sessionFactory ) ).as( "Entity cache should be empty" ).isEqualTo( 0 );
 		assertThat( getNumberOfAssociations( sessionFactory ) ).as( "Association cache should be empty" ).isEqualTo( 0 );
+	}
+
+	public void inTransaction(Consumer<Session> consumer) {
+		try ( OgmSession session = openSession() ) {
+			Transaction transaction = session.beginTransaction();
+
+			try {
+				consumer.accept( session );
+				transaction.commit();
+			}
+			catch (Throwable t) {
+				if ( transaction.isActive() ) {
+					transaction.rollback();
+				}
+				throw t;
+			}
+		}
+	}
+
+	protected <T> void deleteAll(Class<T> entity, Serializable... ids) {
+		try ( OgmSession session = openSession() ) {
+			for ( Serializable id : ids ) {
+				Transaction transaction = session.beginTransaction();
+				try {
+					try {
+						T loadedObject = session.load( entity, id );
+						if ( loadedObject != null ) {
+							session.delete( loadedObject );
+						}
+						transaction.commit();
+					}
+					// expected so I do not have to rethrow
+					catch (ObjectNotFoundException | EntityNotFoundException ex) {
+						if ( transaction.isActive() ) {
+							transaction.rollback();
+						}
+					}
+				}
+				// unexpected so I have to rethrow
+				catch (Throwable t) {
+					if ( transaction.isActive() ) {
+						transaction.rollback();
+					}
+					throw t;
+				}
+			}
+		}
+	}
+
+	protected void persistAll(Session session, Object... entities) {
+		for ( Object entity : entities ) {
+			session.persist( entity );
+		}
 	}
 }

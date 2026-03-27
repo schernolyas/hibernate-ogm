@@ -10,6 +10,7 @@ import static org.jboss.logging.Logger.Level.INFO;
 import static org.jboss.logging.Logger.Level.WARN;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.Set;
 
 import org.hibernate.HibernateException;
@@ -52,9 +53,6 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 	@Message(id = 1708, value = "Error during parse of Protobuf schema")
 	HibernateException errorAtProtobufParsing(@Cause Exception e);
 
-	@Message(id = 1709, value = "The remote cache '%s' was expected to exist but is not defined on the server")
-	HibernateException expectedCacheNotDefined(String cacheName);
-
 	@Message(id = 1710, value = "The remote caches '%s' were expected to exist but are not defined on the server")
 	HibernateException expectedCachesNotDefined(@FormatWith(StringSetFormatter.class) Set<String> cacheNames);
 
@@ -80,4 +78,30 @@ public interface Log extends org.hibernate.ogm.util.impl.Log {
 	@Message(id = 1716, value = "Error deploying Protobuf schema '%s' to the server: '%s'")
 	HibernateException errorAtSchemaDeploy(String generatedProtobufName, String remoteErrorMessage);
 
+	@Message(id = 1717, value = "Invalid Proto file name <%s>. Proto file name should match the pattern: *.proto")
+	HibernateException invalidProtoFileName(String protoFileName);
+
+	@Message(id = 1718, value = "The remote cache configurations '%s' were expected to exist but are not defined on the server")
+	HibernateException expectedCacheConfiguratiosNotDefined(@FormatWith(StringSetFormatter.class) Set<String> cacheConfigurationNames);
+
+	@Message(id = 1719, value = "Error during caches start phase")
+	HibernateException errorAtCachesStart(@Cause Exception cause);
+
+	@Message(id = 1720, value = "Missing from clause in native query: <%s>")
+	HibernateException missingFromClauseInNativeQuery(String nativeQuery);
+
+	@Message(id = 1721, value = "Infinispan queries can only target a single entity type. Found %s for query: %s")
+	HibernateException multipleEntitiesInFromClause(String[] split, String nativeQuery);
+
+	@Message(id = 1722, value = "Error on loading schema override resource file: %s")
+	HibernateException errorLoadingSchemaOverrideResourceFile(URL resource);
+
+	@Message(id = 1723, value = "Provided ProtoBuf schema has an illegal format. %s on [%s]")
+	HibernateException providedSchemaHasAnIllegalFormat(String detailMessage, String protoSchema);
+
+	@Message(id = 1724, value = "Provided ProtoBuf schema has an invalid package name: Required: [%s]. Actual: [%s]")
+	HibernateException providedSchemaHasAnInvalidPackageName(String required, String actual);
+
+	@Message(id = 1725, value = "Provided ProtoBuf schema has an invalid cache definition: %s")
+	HibernateException providedSchemaHasAnInvalidCacheDefinition(String tableName);
 }

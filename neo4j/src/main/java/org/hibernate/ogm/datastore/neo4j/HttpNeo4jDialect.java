@@ -54,6 +54,7 @@ import org.hibernate.ogm.dialect.spi.TupleAlreadyExistsException;
 import org.hibernate.ogm.dialect.spi.TupleContext;
 import org.hibernate.ogm.dialect.spi.TupleTypeContext;
 import org.hibernate.ogm.dialect.spi.TuplesSupplier;
+import org.hibernate.ogm.dialect.storedprocedure.spi.StoredProcedureAwareGridDialect;
 import org.hibernate.ogm.entityentry.impl.TuplePointer;
 import org.hibernate.ogm.model.key.spi.AssociatedEntityKeyMetadata;
 import org.hibernate.ogm.model.key.spi.AssociationKey;
@@ -66,6 +67,7 @@ import org.hibernate.ogm.model.spi.AssociationOperation;
 import org.hibernate.ogm.model.spi.Tuple;
 import org.hibernate.ogm.model.spi.Tuple.SnapshotType;
 import org.hibernate.ogm.model.spi.TupleOperation;
+import org.hibernate.ogm.storedprocedure.ProcedureQueryParameters;
 
 /**
  * Abstracts Hibernate OGM from Neo4j.
@@ -79,7 +81,7 @@ import org.hibernate.ogm.model.spi.TupleOperation;
  *
  * @author Davide D'Alto &lt;davide@hibernate.org&gt;
  */
-public class HttpNeo4jDialect extends BaseNeo4jDialect<HttpNeo4jEntityQueries, HttpNeo4jAssociationQueries> implements RemoteNeo4jDialect {
+public class HttpNeo4jDialect extends BaseNeo4jDialect<HttpNeo4jEntityQueries, HttpNeo4jAssociationQueries> implements RemoteNeo4jDialect, StoredProcedureAwareGridDialect {
 
 	private static final Log log = LoggerFactory.make( MethodHandles.lookup() );
 
@@ -254,8 +256,9 @@ public class HttpNeo4jDialect extends BaseNeo4jDialect<HttpNeo4jEntityQueries, H
 	 * <p>
 	 * the first time with the information related to the owner of the association and the {@link RowKey},
 	 * the second time using the same {@link RowKey} but with the {@link AssociationKey} referring to the other side of the association.
-	 * @param associatedEntityKeyMetadata
+	 * @param associationKey
 	 * @param action
+	 * @param associationContext
 	 */
 	private void putAssociationOperation(AssociationKey associationKey, AssociationOperation action, AssociationContext associationContext) {
 		switch ( associationKey.getMetadata().getAssociationKind() ) {
@@ -485,6 +488,31 @@ public class HttpNeo4jDialect extends BaseNeo4jDialect<HttpNeo4jEntityQueries, H
 		consumer.consume( tupleSupplier );
 	}
 
+	@Override
+	public ClosableIterator<Tuple> callStoredProcedure(String storedProcedureName,
+			ProcedureQueryParameters queryParameters, TupleContext tupleContext) {
+		Map.Entry<String, Map<String, Object>> queryAndParams = buildProcedureQueryWithParams(
+				storedProcedureName, queryParameters );
+		Statement statement = new Statement( queryAndParams.getKey(), queryAndParams.getValue() );
+		statement.setResultDataContents( Collections.singletonList( Statement.AS_ROW ) );
+		Statements statements = new Statements();
+		statements.addStatement( statement );
+		Long txId = transactionId( tupleContext.getTransactionContext() );
+		StatementsResponse response = client.executeQueriesInOpenTransaction( txId, statements );
+		if ( !response.getErrors().isEmpty() ) {
+			ErrorResponse errorResponse = response.getErrors().get( 0 );
+			switch ( errorResponse.getCode() ) {
+				case BaseNeo4jDialect.PROCEDURE_CALL_FAILED_CODE:
+					throw log.cannotExecuteStoredProcedure( storedProcedureName, null );
+				case BaseNeo4jDialect.PROCEDURE_NOT_FOUND_CODE:
+					throw log.procedureWithResolvedNameDoesNotExist( storedProcedureName, null );
+				default:
+					throw new HibernateException( errorResponse.getMessage() );
+			}
+		}
+		return new HttpNeo4jMapsTupleIterator( response.getResults().get( 0 ) );
+	}
+
 	private static class HttpTuplesSupplier implements TuplesSupplier {
 
 		private final HttpNeo4jEntityQueries entityQueries;
@@ -530,7 +558,14 @@ public class HttpNeo4jDialect extends BaseNeo4jDialect<HttpNeo4jEntityQueries, H
 			List<Row> rows = results.get( 0 ).getData();
 			EntityKey[] keys = new EntityKey[ rows.size() ];
 			for ( int i = 0; i < rows.size(); i++ ) {
-				Node node = rows.get( i ).getGraph().getNodes().get( 0 );
+				List<Node> nodes = rows.get( i ).getGraph().getNodes();
+
+				if ( nodes.isEmpty() ) {
+					// Projections and addEntities are not allowed in the same query at the same time
+					throw log.addEntityNotAllowedInNativeQueriesUsingProjection( entityKeyMetadata.getTable(), backendQuery.getQuery() );
+				}
+
+				Node node = nodes.get( 0 );
 				Object[] values = columnValues( node, entityKeyMetadata );
 				keys[i] = new EntityKey( entityKeyMetadata, values );
 			}

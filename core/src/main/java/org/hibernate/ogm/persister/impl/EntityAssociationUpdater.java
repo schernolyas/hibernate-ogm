@@ -7,14 +7,17 @@
 package org.hibernate.ogm.persister.impl;
 
 import java.io.Serializable;
+import java.lang.invoke.MethodHandles;
 
 import org.hibernate.Session;
-import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.ogm.dialect.impl.AssociationTypeContextImpl;
+import org.hibernate.ogm.dialect.impl.BatchOperationsDelegator;
 import org.hibernate.ogm.dialect.spi.AssociationTypeContext;
 import org.hibernate.ogm.dialect.spi.GridDialect;
 import org.hibernate.ogm.model.impl.RowKeyBuilder;
 import org.hibernate.ogm.model.key.spi.AssociationKeyMetadata;
+import org.hibernate.ogm.model.key.spi.EntityKey;
 import org.hibernate.ogm.model.key.spi.RowKey;
 import org.hibernate.ogm.model.spi.Association;
 import org.hibernate.ogm.model.spi.Tuple;
@@ -25,7 +28,6 @@ import org.hibernate.ogm.util.impl.AssociationPersister;
 import org.hibernate.ogm.util.impl.CollectionHelper;
 import org.hibernate.ogm.util.impl.Log;
 import org.hibernate.ogm.util.impl.LoggerFactory;
-import java.lang.invoke.MethodHandles;
 import org.hibernate.ogm.util.impl.LogicalPhysicalConverterHelper;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.pretty.MessageHelper;
@@ -49,7 +51,7 @@ class EntityAssociationUpdater {
 	private Tuple resultset;
 	private int tableIndex;
 	private Serializable id;
-	private SessionImplementor session;
+	private SharedSessionContractImplementor session;
 	private boolean[] propertyMightRequireInverseAssociationManagement;
 
 	EntityAssociationUpdater(OgmEntityPersister persister) {
@@ -77,7 +79,7 @@ class EntityAssociationUpdater {
 		return this;
 	}
 
-	public EntityAssociationUpdater session(SessionImplementor session) {
+	public EntityAssociationUpdater session(SharedSessionContractImplementor session) {
 		this.session = session;
 		return this;
 	}
@@ -171,6 +173,13 @@ class EntityAssociationUpdater {
 	}
 
 	private void removeNavigationalInformationFromInverseSide(int propertyIndex, AssociationKeyMetadata associationKeyMetadata, Object[] oldColumnValue) {
+		// If the association involves entities deleted by a previous operation of the current batch,
+		// it does not make sense trying to update association itself
+		EntityKey entityKey = new EntityKey( associationKeyMetadata.getEntityKeyMetadata(), oldColumnValue );
+		if ( gridDialect instanceof BatchOperationsDelegator && ( (BatchOperationsDelegator) gridDialect ).isMarkedForRemoval( entityKey ) ) {
+			return;
+		}
+
 		AssociationPersister associationPersister = createInverseAssociationPersister( propertyIndex, associationKeyMetadata, oldColumnValue );
 
 		Association association = associationPersister.getAssociationOrNull();
@@ -193,8 +202,7 @@ class EntityAssociationUpdater {
 				.context();
 
 		Class<?> entityType = persister.getPropertyTypes()[propertyIndex].getReturnedClass();
-		String entityName = persister.getFactory().getClassMetadata( entityType ).getEntityName();
-		OgmEntityPersister inverseEntityPersister = (OgmEntityPersister) persister.getFactory().getEntityPersister( entityName );
+		OgmEntityPersister inverseEntityPersister = (OgmEntityPersister) persister.getFactory().getMetamodel().entityPersister( entityType );
 
 		String mainSidePropertyName = persister.getPropertyNames()[propertyIndex];
 
@@ -228,8 +236,8 @@ class EntityAssociationUpdater {
 		);
 
 		if ( id != null ) {
-			EntityPersister hostingEntityPersister = session.getFactory().getEntityPersister(
-					propertyType.getReturnedClass().getName()
+			EntityPersister hostingEntityPersister = session.getFactory().getMetamodel().entityPersister(
+					propertyType.getReturnedClass()
 			);
 
 			// OGM-931 Loading the entity through Session#get() to make sure it is fetched from the store if it is

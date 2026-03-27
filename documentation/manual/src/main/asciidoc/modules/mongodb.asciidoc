@@ -106,6 +106,8 @@ Ignored when multiple hosts are defined.
 The default value is `27017`.
 hibernate.ogm.datastore.database::
 The database to connect to. This property has no default value.
+hibernate.connection.resource::
+Alternatively you can lookup datastore client. See <<integration-with-wildfly-nosql>>.
 hibernate.ogm.datastore.create_database::
 If set to true, the database will be created if it doesn't exist.
 This property default value is false.
@@ -471,6 +473,95 @@ setting a value to null is the same as removing the field
 in the corresponding object in the db.
 
 This can have consequences when it comes to queries on null value.
+====
+
+[[mongodb-gridfs-support]]
+==== GridFS Support
+
+This feature is experimental.
+
+GridFS is a specification for storing and retrieving files that
+exceed the BSON-document size limit of 16 MB.
+
+You can find more details about it in
+the https://docs.mongodb.com/manual/core/gridfs/[official MongoDB documentation].
+
+It's possible to store a value as GridFS using the type
+`org.hibernate.ogm.datastore.mongodb.type.GridFS`.
+
+.Field mapped using GridFS
+====
+[source, JAVA]
+----
+import org.hibernate.ogm.datastore.mongodb.type.GridFS;
+
+@Entity
+public class Photo {
+
+    @Id
+    String name;
+
+    GridFS image;
+
+    // ...
+}
+----
+
+----
+> db.Photo.find()
+{ "_id" : "photo.jpg", "image" : ObjectId("5bce7202826ce81d7fe7ebe5") }
+
+> db.Photo_bucket.files.find().pretty()
+{
+        "_id" : ObjectId("5bce7202826ce81d7fe7ebe5"),
+        "filename" : "image_photo.jpg",
+        "length" : NumberLong(30000000),
+        "chunkSize" : 261120,
+        "uploadDate" : ISODate("2018-10-22T20:57:37.047Z"),
+        "md5" : "a08988fc1e3da0e80d2ba7b55599d1f7"
+}
+----
+====
+
+The default bucket name is the name of the class with the suffix `_bucket` while the name
+of the filename is the combination of the field name with the id of the document.
+
+It's possible to select a different bucket name using the annotation `@GridFSBucket`.
+
+.Field mapped using GridFS with custom bucket name
+====
+[source, JAVA]
+----
+import org.hibernate.ogm.datastore.mongodb.type.GridFS;
+import org.hibernate.ogm.datastore.mongodb.options.GridFSBucket;
+
+@Entity
+public class Photo {
+
+    @Id
+    String name;
+
+    @GridFSBucket("PhotoGallery")
+    GridFS image;
+
+    // ...
+}
+----
+
+----
+> db.Photo.find()
+{ "_id" : "photo.jpg", "image" : ObjectId("5bce7202826ce81d7fe7ebe5") }
+
+> db.PhotoGallery.files.find().pretty()
+{
+        "_id" : ObjectId("5bce7202826ce81d7fe7ebe5"),
+        "filename" : "image_photo.jpg",
+        "length" : NumberLong(30000000),
+        "chunkSize" : 261120,
+        "uploadDate" : ISODate("2018-10-22T20:57:37.047Z"),
+        "md5" : "a08988fc1e3da0e80d2ba7b55599d1f7"
+}
+----
 ====
 
 ==== Entities
@@ -1359,7 +1450,7 @@ You can use `@JoinColumn` to change the name of the field that stores the foreig
 [source, JAVA]
 ----
 @Entity
-public class Vehicule {
+public class Vehicle {
 
     @Id
     private String id;
@@ -1377,7 +1468,7 @@ public class Wheel {
     private double diameter;
 
     @OneToOne
-    private Vehicule vehicule;
+    private Vehicle vehicle;
 
     // getters, setters ...
 }
@@ -1398,7 +1489,7 @@ Wheel collection as JSON in MongoDB
 {
   "_id" : "W001",
   "diameter" : 0,
-  "vehicule_id" : "V_01"
+  "vehicle_id" : "V_01"
 }
 ----
 ====
@@ -1409,7 +1500,7 @@ Wheel collection as JSON in MongoDB
 [source, JAVA]
 ----
 @Entity
-public class Vehicule {
+public class Vehicle {
 
     @Id
     private String id;
@@ -1428,7 +1519,7 @@ public class Wheel {
 
     @OneToOne
     @JoinColumn( name = "part_of" )
-    private Vehicule vehicule;
+    private Vehicle vehicle;
 
     // getters, setters ...
 }
@@ -1463,7 +1554,7 @@ the following example:
 [source, JAVA]
 ----
 @Entity
-public class Vehicule {
+public class Vehicle {
 
     @Id
     private String id;
@@ -1482,13 +1573,13 @@ public class Wheel {
     @OneToOne
     @PrimaryKeyJoinColumn
     @MapsId
-    private Vehicule vehicule;
+    private Vehicle vehicle;
 
     // getters, setters ...
 }
 ----
 
-Vehicule collection as JSON in MongoDB
+Vehicle collection as JSON in MongoDB
 
 [source, JSON]
 ----
@@ -1560,6 +1651,37 @@ Wife collection as JSON in MongoDB
   "name" : "Bea",
   "husband" : "alex"
 }
+----
+====
+
+.Bidirectional one-to-one, one-to-many (Mapping to the same Entity)
+====
+[source, JAVA]
+----
+@Entity
+public class Person {
+
+	@Id
+	private String name;
+	@OneToOne
+	private Person spouse;
+	@OneToMany
+	private List<Person> children;
+
+    // getters, setters ...
+}
+----
+
+Person  collection as JSON in MongoDB
+
+[source, JSON]
+----
+{ "_id" : "Nick", "spouse_name" : "Kate", "children" : [ "Louis", "Tom", "Alex" ] }
+{ "_id" : "Tom", "spouse_name" : "Mary" }
+{ "_id" : "Louis" }
+{ "_id" : "Kate", "spouse_name" : "Nick", "children" : [ "Louis", "Tom", "Alex" ] }
+{ "_id" : "Mary", "spouse_name" : "Tom" }
+{ "_id" : "Alex" }
 ----
 ====
 
@@ -3369,11 +3491,6 @@ documents and not managed entities.
 
 ===== CLI Syntax
 
-[WARNING]
-====
-Specifying native MongoDB queries using the CLI syntax is an EXPERIMENTAL feature for the time being.
-====
-
 Hibernate OGM can execute native queries expressed using the MongoDB CLI syntax with some limitations.
 Currently `find()`, `findOne()`, `findAndModify()`, and `count()` queries are supported. Furthermore, three
 types of write queries are supported via the CLI syntax: `insert()`, `remove()`, and `update()`. Other query
@@ -3385,6 +3502,15 @@ As one would expect, `find()`, `findOne()`, `findAndModify()`, `aggregate`,
 `remove()`, and `update()` require using `javax.persistence.Query.executeUpdate()`. Also note that,
 `javax.persistence.Query.executeUpdate()` may return `-1` in case execution of a query was not acknowledged
 relative to the write concern used.
+Via `javax.persistence.Query.executeUpdate()` it is also possible to run `db.Collection.drop()`
+queries.
+
+[NOTE]
+====
+`db.Collection.drop()` will always return 1. This is because the underlying driver we are
+using doesn't return any value after the execution of the operation.
+====
+
 
 The following functions can be used in the provided JSON:
 `BinData`, `Date`, `HexData`, `ISODate`, `NumberLong`, `ObjectId`, `Timestamp`,
@@ -3478,6 +3604,59 @@ List<Poem> result = session.createNativeQuery( nativeQuery ).addEntity( Poem.cla
 ----
 ====
 
+[[ogm-mongodb-stored-proc-native]]
+
+==== Server-side JavaScript and stored procedures
+
+[NOTE]
+====
+This is an experimental feature.
+====
+
+In MongoDB, it is possible to call server-side JavaScript as if it is a stored procedure.
+You can use the existing methods in JPA:
+
+.Calling server-side JavaScript with positional parameters
+====
+[source, JAVA]
+----
+  @Entity
+  public class Car {
+    @Id
+    private Integer id;
+
+    private String brand;
+
+    ...
+  }
+
+  EntityManager em = ...
+  StoredProcedureQuery storedProcedureQuery = em.createStoredProcedureQuery( "findMostExpensiveCars", Car.class );
+  storedProcedureQuery.registerStoredProcedureParameter( "year", Integer.class, ParameterMode.IN );
+  storedProcedureQuery.setParameter( "year", 1995 );
+  List<Car> cars = storedProcedureQuery.getResultList();
+----
+====
+
+This example will work assuming that there is a `findMostExpensiveCars` JavaScript function in MongoDB 
+and that the result of the function is a list of cars that can be mapped to the `Car` entity.
+
+.Calling server-side JavaScript with Hibernate OGM with positional parameters
+====
+[source, JSON]
+----
+{
+  "result" : [
+    { "id":1, "brand":"Bentley" },
+    { "id":2, "brand":"Maserati" },
+  ]
+}
+----
+====
+
+More details about server-side functions can be found in
+https://docs.mongodb.com/manual/core/server-side-JavaScript[the MongoDB reference documentation].
+
 ==== Hibernate Search
 
 You can index your entities using Hibernate Search.
@@ -3489,3 +3668,117 @@ The drawback is that you need to store the Lucene indexes somewhere
 (file system, infinispan grid, etc).
 Have a look at the Infinispan section (<<ogm-infinispan-indexstorage>>)
 for more info on how to use Hibernate Search.
+
+=== Geospatial support
+
+==== Geospatial fields
+
+Our MongoDB integration supports the ability to declare geospatial fields by using specific Java types that will be
+automatically converted to GeoJSON objects stored in MongoDB.
+
+We currently support the following types:
+
+ * `GeoPoint`, stored as a GeoJSON Point
+ * `GeoMultiPoint`, stored as a GeoJSON MultiPoint
+ * `GeoLineString`, stored as a GeoJSON LineString
+ * `GeoMultiLineString`, stored as a GeoJSON MultiLineString
+ * `GeoPolygon`, stored as a GeoJSON Polygon
+ * `GeoMultiPolygon`, stored as a GeoJSON MultiPolygon
+
+You can find more information about these types and their constraints in the
+https://docs.mongodb.com/manual/reference/geojson/[MongoDB documentation].
+
+.Declaring a geospatial field
+====
+[source, JAVA]
+----
+@Entity
+public class Restaurant {
+
+    // [...]
+
+    private GeoPoint location;
+}
+----
+====
+
+These Java types come with handy constructors and helpers to help manipulate them.
+
+.Instantiating a polygon
+====
+[source, JAVA]
+----
+GeoPolygon polygon = new GeoPolygon(
+        new GeoPoint( 4.814922, 45.7753612 ),
+        new GeoPoint( 4.8160825, 45.7327172 ),
+        new GeoPoint( 4.9281299, 45.7211302 ),
+        new GeoPoint( 4.8706127, 45.786724 ),
+        new GeoPoint( 4.814922, 45.7753612 )
+);
+----
+====
+
+==== Geospatial indexes and queries
+
+To be able to run optimized queries on geospatial fields, you need to declare spatial indexes.
+
+You can leverage your usual annotations to declare the indexes directly on your entities.
+
+.Declaring a geospatial index
+====
+[source, JAVA]
+----
+@Entity
+@Table(indexes = {
+		@Index(columnList = "location", name = "location_spatial_idx")
+})
+@IndexOptions(
+		@IndexOption(forIndex = "location_spatial_idx", options = "{ _type: '2dsphere' }")
+)
+public class Restaurant {
+
+    // [...]
+
+    private GeoPoint location;
+}
+----
+====
+
+Note that you need to precise the type of the index using an `@IndexOption` annotation.
+
+The next step is to execute a geospatial query using a native query.
+
+.Finding entities around a point
+====
+[source, JAVA]
+----
+GeoPoint geoPoint = new GeoPoint( 4.8520035, 45.7498209 );
+
+Query query = session
+        .createNativeQuery( "{ location: { $near: { $geometry: " + geoPoint.toBsonDocument() + ", $maxDistance: 500 } } }" )
+        .addEntity( Restaurant.class );
+List<Restaurant> result = query.list();
+----
+====
+
+.Finding entities within a polygon
+====
+[source, JAVA]
+----
+GeoPolygon geoPolygon = new GeoPolygon(
+        new GeoPoint( 4.814922, 45.7753612 ),
+        new GeoPoint( 4.8160825, 45.7327172 ),
+        new GeoPoint( 4.9281299, 45.7211302 ),
+        new GeoPoint( 4.8706127, 45.786724 ),
+        new GeoPoint( 4.814922, 45.7753612 )
+);
+
+Query query = session
+        .createNativeQuery( "{ location: { $geoWithin: { $geometry: " + geoPolygon.toBsonDocument() + " } } }" )
+        .addEntity( Restaurant.class );
+List<Restaurant> result = query.list();
+----
+====
+
+To learn more about MongoDB spatial indexes and queries, please refer to the
+https://docs.mongodb.com/manual/geospatial-queries/[MongoDB documentation].

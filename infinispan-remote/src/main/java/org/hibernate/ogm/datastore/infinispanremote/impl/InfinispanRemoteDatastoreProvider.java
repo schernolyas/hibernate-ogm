@@ -6,13 +6,22 @@
  */
 package org.hibernate.ogm.datastore.infinispanremote.impl;
 
+import java.io.IOException;
+import java.lang.invoke.MethodHandles;
+import java.net.URL;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
+import org.hibernate.boot.model.relational.Sequence;
+import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
 import org.hibernate.ogm.datastore.infinispanremote.InfinispanRemoteDialect;
 import org.hibernate.ogm.datastore.infinispanremote.configuration.impl.InfinispanRemoteConfiguration;
-import org.hibernate.ogm.datastore.infinispanremote.impl.protobuf.SchemaDefinitions;
+import org.hibernate.ogm.datastore.infinispanremote.impl.cachehandler.HotRodCacheCreationHandler;
+import org.hibernate.ogm.datastore.infinispanremote.impl.cachehandler.HotRodCacheHandler;
+import org.hibernate.ogm.datastore.infinispanremote.impl.cachehandler.HotRodCacheValidationHandler;
+import org.hibernate.ogm.datastore.infinispanremote.impl.counter.HotRodSequenceCounterHandler;
+import org.hibernate.ogm.datastore.infinispanremote.impl.protobuf.schema.SchemaDefinitions;
 import org.hibernate.ogm.datastore.infinispanremote.impl.protostream.OgmProtoStreamMarshaller;
 import org.hibernate.ogm.datastore.infinispanremote.impl.protostream.ProtoDataMapper;
 import org.hibernate.ogm.datastore.infinispanremote.impl.protostream.ProtostreamSerializerSetup;
@@ -20,30 +29,38 @@ import org.hibernate.ogm.datastore.infinispanremote.impl.schema.SequenceTableDef
 import org.hibernate.ogm.datastore.infinispanremote.impl.sequences.HotRodSequenceHandler;
 import org.hibernate.ogm.datastore.infinispanremote.logging.impl.Log;
 import org.hibernate.ogm.datastore.infinispanremote.logging.impl.LoggerFactory;
-import java.lang.invoke.MethodHandles;
+import org.hibernate.ogm.datastore.infinispanremote.query.parsing.impl.InfinispanRemoteBasedQueryParserService;
 import org.hibernate.ogm.datastore.infinispanremote.schema.spi.SchemaCapture;
 import org.hibernate.ogm.datastore.infinispanremote.schema.spi.SchemaOverride;
 import org.hibernate.ogm.datastore.spi.BaseDatastoreProvider;
 import org.hibernate.ogm.datastore.spi.SchemaDefiner;
 import org.hibernate.ogm.dialect.spi.GridDialect;
+import org.hibernate.ogm.query.spi.QueryParserService;
 import org.hibernate.ogm.util.impl.EffectivelyFinal;
 import org.hibernate.service.spi.Configurable;
 import org.hibernate.service.spi.ServiceRegistryAwareService;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.service.spi.Startable;
 import org.hibernate.service.spi.Stoppable;
+
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
-import org.infinispan.protostream.SerializationContext;
+import org.infinispan.client.hotrod.configuration.TransactionMode;
+import org.infinispan.client.hotrod.exceptions.HotRodClientException;
+import org.infinispan.commons.marshall.jboss.GenericJBossMarshaller;
+import org.infinispan.protostream.DescriptorParserException;
 import org.infinispan.query.remote.client.ProtobufMetadataManagerConstants;
 
 /**
  * @author Sanne Grinovero
+ * @author Fabio Massimo Ercoli
  */
 public class InfinispanRemoteDatastoreProvider extends BaseDatastoreProvider
 				implements Startable, Stoppable, Configurable, ServiceRegistryAwareService {
 
 	private static final Log log = LoggerFactory.make( MethodHandles.lookup() );
+
+	private static final String SCRIPT_CACHE_NAME = "___script_cache";
 
 	/**
 	 * The org.infinispan.commons.marshall.Marshaller instance which shall be used
@@ -51,14 +68,22 @@ public class InfinispanRemoteDatastoreProvider extends BaseDatastoreProvider
 	 */
 	private final OgmProtoStreamMarshaller marshaller = new OgmProtoStreamMarshaller();
 
+	private JtaPlatform jtaPlatform;
+
 	// Only available during configuration
 	private InfinispanRemoteConfiguration config;
 
 	private boolean createCachesEnabled = false;
 
+	@EffectivelyFinal
+	private String cacheConfiguration;
+
 	// The Hot Rod client; maintains TCP connections to the datagrid.
 	@EffectivelyFinal
 	private RemoteCacheManager hotrodClient;
+
+	@EffectivelyFinal
+	private RemoteCacheManager scriptManager;
 
 	//Useful to allow people to dump the generated schema,
 	//we use it to capture the schema in tests too.
@@ -72,20 +97,29 @@ public class InfinispanRemoteDatastoreProvider extends BaseDatastoreProvider
 	private SchemaOverride schemaOverrideService;
 
 	@EffectivelyFinal
-	private Set<String> mappedCacheNames;
+	private URL schemaOverrideResource;
 
 	//For each cache we have a schema and a set of encoders/decoders to the generated protobuf schema
 	@EffectivelyFinal
 	private Map<String,ProtoDataMapper> perCacheSchemaMappers;
 
 	@EffectivelyFinal
-	private HotRodSequenceHandler sequences;
+	private HotRodSequenceCounterHandler sequences;
+
+	@EffectivelyFinal
+	private HotRodCacheHandler cacheHandler;
 
 	@EffectivelyFinal
 	private SchemaDefinitions sd;
 
 	@EffectivelyFinal
 	private String schemaPackageName;
+
+	@EffectivelyFinal
+	private String schemaFileName;
+
+	@EffectivelyFinal
+	private TransactionMode transactionMode;
 
 	@Override
 	public Class<? extends GridDialect> getDefaultDialect() {
@@ -94,13 +128,14 @@ public class InfinispanRemoteDatastoreProvider extends BaseDatastoreProvider
 
 	@Override
 	public void start() {
-		hotrodClient = HotRodClientBuilder.builder().withConfiguration( config, marshaller ).build();
-		hotrodClient.start();
-		config = null; //no longer needed
-	}
+		hotrodClient = HotRodClientBuilder.builder()
+				.withConfiguration( config, marshaller )
+				.withTransactionMode( transactionMode, jtaPlatform ).build();
 
-	public RemoteCacheManager getRemoteCacheManager() {
-		return hotrodClient;
+		// TODO temporary create another cache manager to handle remote script registration and invocation due to incompatibility of ProtoStreamMarshaller.
+		// When https://issues.jboss.org/browse/ISPN-8020 is closed, we could remove it and reuse the common hotrodClient.
+		scriptManager = HotRodClientBuilder.builder().withConfiguration( config, new GenericJBossMarshaller() ).build();
+		config = null; //no longer needed
 	}
 
 	@Override
@@ -114,13 +149,18 @@ public class InfinispanRemoteDatastoreProvider extends BaseDatastoreProvider
 		this.config.initConfiguration( configurationValues, serviceRegistry );
 		this.schemaCapture = config.getSchemaCaptureService();
 		this.schemaOverrideService = config.getSchemaOverrideService();
+		this.schemaOverrideResource = config.getSchemaOverrideResource();
 		this.schemaPackageName = config.getSchemaPackageName();
+		this.schemaFileName = config.getSchemaFileName();
 		this.createCachesEnabled = config.isCreateCachesEnabled();
+		this.cacheConfiguration = config.getCacheConfiguration();
+		this.transactionMode = config.getTransactionMode();
 	}
 
 	@Override
 	public void injectServices(ServiceRegistryImplementor serviceRegistry) {
 		this.serviceRegistry = serviceRegistry;
+		this.jtaPlatform = serviceRegistry.getService( JtaPlatform.class );
 	}
 
 	@Override
@@ -128,59 +168,81 @@ public class InfinispanRemoteDatastoreProvider extends BaseDatastoreProvider
 		return ProtobufSchemaInitializer.class;
 	}
 
-	public void registerSchemaDefinitions(SchemaDefinitions sd) {
+	public void registerSchemaDefinitions(SchemaDefinitions sd, Set<Sequence> sequences) {
 		this.sd = sd;
-		sd.validateSchema();
-		RemoteCache<String,String> protobufCache = getProtobufCache();
-		//FIXME make this name configurable & give it a sensible default:
-		final String generatedProtobufName = "Hibernate_OGM_Generated_schema.proto";
-		sd.deploySchema( generatedProtobufName, protobufCache, schemaCapture, schemaOverrideService );
-		this.sequences = new HotRodSequenceHandler( this, marshaller, sd.getSequenceDefinitions() );
-		setMappedCacheNames( sd );
-		startAndValidateCaches();
-		perCacheSchemaMappers = sd.generateSchemaMappingAdapters( this, sd, marshaller );
+		this.sd.validateSchema();
+		RemoteCache<String, String> protobufCache = getProtobufCache();
+		this.sd.deploySchema( schemaFileName, protobufCache, schemaCapture, schemaOverrideService, schemaOverrideResource );
+
+		// register proto schema also to global serialization context used for unmarshalling
+		registerProtoFiles( marshaller, sd );
+
+		this.cacheHandler = createCacheHandler( sd );
+
+		this.sequences = new HotRodSequenceCounterHandler( this, marshaller, sd.getSequenceDefinitions(), sequences );
+		for ( SequenceTableDefinition std : sd.getSequenceDefinitions().values() ) {
+			ProtostreamSerializerSetup.registerSequenceMarshaller( std, marshaller );
+		}
+
+		startCaches( cacheHandler, hotrodClient );
+
+		this.perCacheSchemaMappers = sd.generateSchemaMappingAdapters( this, sd, marshaller );
 	}
 
-	private void startAndValidateCaches() {
-		Set<String> failedCacheNames = new TreeSet<String>();
-		mappedCacheNames.forEach( cacheName -> {
-			RemoteCache<?,?> cache = hotrodClient.getCache( cacheName );
-			if ( cache == null && createCachesEnabled ) {
-				hotrodClient.administration().createCache( cacheName, null );
-				cache = hotrodClient.getCache( cacheName );
-			}
-			if ( cache == null ) {
-				failedCacheNames.add( cacheName );
-			}
-		} );
-		if ( failedCacheNames.size() > 1 ) {
-			throw log.expectedCachesNotDefined( failedCacheNames );
+	private void registerProtoFiles(OgmProtoStreamMarshaller marshaller, SchemaDefinitions sd) {
+		try {
+			marshaller.getSerializationContext().registerProtoFiles( sd.asFileDescriptorSource() );
 		}
-		else if ( failedCacheNames.size() == 1 ) {
-			throw log.expectedCacheNotDefined( failedCacheNames.iterator().next() );
+		catch (DescriptorParserException | IOException e) {
+			throw log.errorAtProtobufParsing( e );
 		}
 	}
 
-	private void setMappedCacheNames(SchemaDefinitions sd) {
-		this.mappedCacheNames = sd.getTableNames();
+	private void startCaches(HotRodCacheHandler cacheHandler, RemoteCacheManager hotrodClient) {
+		try {
+			cacheHandler.startAndValidateCaches( hotrodClient );
+		}
+		catch (HotRodClientException ex) {
+			throw log.errorAtCachesStart( ex );
+		}
+	}
+
+	private HotRodCacheHandler createCacheHandler(SchemaDefinitions sd) {
+		if ( createCachesEnabled ) {
+			return new HotRodCacheCreationHandler( cacheConfiguration, sd.getCacheConfigurationByName(), transactionMode );
+		}
+		else {
+			return new HotRodCacheValidationHandler( sd.getCacheConfigurationByName().keySet() );
+		}
 	}
 
 	private RemoteCache<String, String> getProtobufCache() {
-		return getCache( ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME );
+		return hotrodClient.getCache( ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME, TransactionMode.NONE );
 	}
 
 	@Override
-	public boolean allowsTransactionEmulation() {
-		// Hot Rod doesn't support "true" transaction yet
-		return true;
+	public Class<? extends QueryParserService> getDefaultQueryParserServiceType() {
+		return InfinispanRemoteBasedQueryParserService.class;
+	}
+
+	public URL getSchemaOverrideResource() {
+		return schemaOverrideResource;
 	}
 
 	public String getProtobufPackageName() {
 		return schemaPackageName;
 	}
 
+	public String getSchemaFileName() {
+		return schemaFileName;
+	}
+
+	public String getConfiguration(String cacheName) {
+		return cacheHandler.getConfiguration( cacheName );
+	}
+
 	public Set<String> getMappedCacheNames() {
-		return mappedCacheNames;
+		return cacheHandler.getCaches();
 	}
 
 	public ProtoStreamMappingAdapter getDataMapperForCache(String cacheName) {
@@ -195,17 +257,27 @@ public class InfinispanRemoteDatastoreProvider extends BaseDatastoreProvider
 		return this.sequences;
 	}
 
-	public SerializationContext getSerializationContextForSequences(SequenceTableDefinition std) {
-		//This method is here so that we can cache / reuse these contexts ?
-		return ProtostreamSerializerSetup.buildSerializationContextForSequences( sd, std );
-	}
-
 	public <K, V> RemoteCache<K, V> getCache(String cacheName) {
 		RemoteCache<K,V> cache = hotrodClient.getCache( cacheName );
 		if ( cache == null ) {
-			throw log.expectedCacheNotDefined( cacheName );
+			throw log.expectedCachesNotDefined( Collections.singleton( cacheName ) );
 		}
 		return cache;
 	}
 
+	public <K, V> RemoteCache<K, V> getScriptCache() {
+		return scriptManager.getCache( SCRIPT_CACHE_NAME );
+	}
+
+	public <K, V> RemoteCache<K, V> getScriptExecutorCache() {
+		return scriptManager.getCache();
+	}
+
+	public RemoteCacheManager getManager() {
+		return hotrodClient;
+	}
+
+	public String getEntityType(RemoteCache<?,?> c) {
+		return getProtobufPackageName() + "." + c.getName();
+	}
 }

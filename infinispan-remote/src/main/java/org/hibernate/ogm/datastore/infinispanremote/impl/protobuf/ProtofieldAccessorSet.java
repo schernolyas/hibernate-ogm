@@ -33,6 +33,9 @@ import org.hibernate.ogm.type.impl.EntityType;
 import org.hibernate.ogm.type.impl.EnumType;
 import org.hibernate.ogm.type.impl.FloatType;
 import org.hibernate.ogm.type.impl.IntegerType;
+import org.hibernate.ogm.type.impl.LocalDateTimeType;
+import org.hibernate.ogm.type.impl.LocalDateType;
+import org.hibernate.ogm.type.impl.LocalTimeType;
 import org.hibernate.ogm.type.impl.LongType;
 import org.hibernate.ogm.type.impl.NumericBooleanType;
 import org.hibernate.ogm.type.impl.PrimitiveByteArrayType;
@@ -47,6 +50,9 @@ import org.hibernate.ogm.type.impl.UrlType;
 import org.hibernate.ogm.type.impl.YesNoType;
 import org.hibernate.ogm.type.spi.GridType;
 import org.hibernate.type.Type;
+
+import org.infinispan.protostream.descriptors.Descriptor;
+import org.infinispan.protostream.descriptors.FieldDescriptor;
 
 public class ProtofieldAccessorSet {
 
@@ -86,8 +92,7 @@ public class ProtofieldAccessorSet {
 			add( new DateProtofieldAccessor( uniqueTagAssigningCounter, name, nullable, ormMappedName ) );
 		}
 		else if ( gridType instanceof TimestampType ) {
-			//TODO same as DateType?
-			add( new DateProtofieldAccessor( uniqueTagAssigningCounter, name, nullable, ormMappedName ) );
+			add( new TimestampProtofieldAccessor( uniqueTagAssigningCounter, name, nullable, ormMappedName ) );
 		}
 		else if ( gridType instanceof TimeType ) {
 			//TODO same as DateType?
@@ -132,6 +137,15 @@ public class ProtofieldAccessorSet {
 		}
 		else if ( gridType instanceof FloatType ) {
 			add( new FloatProtofieldAccessor( uniqueTagAssigningCounter, name, nullable, ormMappedName ) );
+		}
+		else if ( gridType instanceof LocalDateType ) {
+			add( new LocalDateProtofieldAccessor( uniqueTagAssigningCounter, name, nullable, ormMappedName ) );
+		}
+		else if ( gridType instanceof LocalDateTimeType ) {
+			add( new LocalDateTimeProtofieldAccessor( uniqueTagAssigningCounter, name, nullable, ormMappedName ) );
+		}
+		else if ( gridType instanceof LocalTimeType ) {
+			add( new TimeProtofieldAccessor( uniqueTagAssigningCounter, name, nullable, ormMappedName ) );
 		}
 		else if ( gridType instanceof EnumType ) {
 			EnumType etype = (EnumType) gridType;
@@ -185,7 +199,7 @@ public class ProtofieldAccessorSet {
 		orderedFields.forEach( action );
 	}
 
-	private void add(ProtofieldAccessor unsafeWriter) {
+	private void add(BaseProtofieldAccessor unsafeWriter) {
 		UnsafeProtofield wrapped = new UnsafeProtofield( unsafeWriter );
 		UnsafeProtofield previous = fieldsPerORMName.put( unsafeWriter.getColumnName(), wrapped );
 		if ( previous != null ) {
@@ -219,4 +233,23 @@ public class ProtofieldAccessorSet {
 		return fieldsPerORMName.keySet().toArray( new String[0] );
 	}
 
+	public boolean isDescribedIn(Descriptor descriptor) {
+		for ( UnsafeProtofield<?> field : orderedFields ) {
+			// if any field is not present the field set is not described
+			if ( !fieldIsDescribedIn( field, descriptor ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean fieldIsDescribedIn(UnsafeProtofield<?> field, Descriptor descriptor) {
+		for ( FieldDescriptor fieldDescriptor : descriptor.getFields() ) {
+			// find at least one match
+			if ( field.isDescribedIn( fieldDescriptor ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.hibernate.ogm</groupId>
         <artifactId>hibernate-ogm-parent</artifactId>
-        <version>5.2.0-SNAPSHOT</version>
+        <version>5.4.2-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -21,6 +21,10 @@
 
     <name>JipiJapa integration for Hibernate OGM</name>
     <description>A JipiJapa adaptor to integrate Hibernate OGM in WildFly</description>
+
+    <properties>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -66,7 +70,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <showWarnings>true</showWarnings>
-                    <!-- WildFly 10 requires Java8, which means we can require it too. -->
+                    <!-- WildFly requires Java8, which means we can require it too. -->
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>

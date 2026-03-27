@@ -10,7 +10,7 @@
     <parent>
         <groupId>org.hibernate.ogm</groupId>
         <artifactId>hibernate-ogm-parent</artifactId>
-        <version>5.2.0-SNAPSHOT</version>
+        <version>5.4.2-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -23,19 +23,18 @@
     <properties>
         <assembly.name>hibernate-ogm-${project.version}</assembly.name>
         <maven.deploy.skip>true</maven.deploy.skip>
+
+        <!-- Skipping enforcer dependency convergence check because neo4j uses a different Lucene version -->
+        <enforcer.dependencyconvergence.skip>true</enforcer.dependencyconvergence.skip>
     </properties>
 
     <build>
         <plugins>
             <plugin>
-                <artifactId>maven-enforcer-plugin</artifactId>
-                <configuration>
-                    <!-- Skipping it because neo4j uses a different Lucene version -->
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
-            <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <outputDirectory>${project.build.directory}/dist/</outputDirectory>
+                </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-dependency-plugin</artifactId>
@@ -51,7 +50,7 @@
                                 <artifactItem>
                                     <groupId>org.apache.lucene</groupId>
                                     <artifactId>lucene-core</artifactId>
-                                    <version>${luceneVersion}</version>
+                                    <version>${version.org.apache.lucene}</version>
                                     <type>jar</type>
                                 </artifactItem>
                            </artifactItems>
@@ -70,7 +69,7 @@
         </dependency>
         <dependency>
             <groupId>org.hibernate.ogm</groupId>
-            <artifactId>hibernate-ogm-infinispan</artifactId>
+            <artifactId>hibernate-ogm-infinispan-embedded</artifactId>
             <exclusions>
                 <exclusion>
                     <artifactId>jboss-logging</artifactId>
@@ -155,6 +154,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
     </dependencies>
 
     <profiles>

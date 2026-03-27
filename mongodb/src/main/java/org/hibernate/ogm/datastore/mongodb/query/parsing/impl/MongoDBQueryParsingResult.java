@@ -10,11 +10,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.bson.Document;
 import org.hibernate.ogm.datastore.mongodb.query.impl.MongoDBQueryDescriptor;
 import org.hibernate.ogm.datastore.mongodb.query.impl.MongoDBQueryDescriptor.Operation;
 import org.hibernate.ogm.query.spi.QueryParsingResult;
-
-import org.bson.Document;
 
 /**
  * The result of walking a query parse tree using a {@link MongoDBQueryRendererDelegate}.
@@ -29,14 +28,18 @@ public class MongoDBQueryParsingResult implements QueryParsingResult {
 	private final Document projection;
 	private final Document orderBy;
 	private final List<String> unwinds;
+	private final Operation operation;
+	private final AggregationRenderer aggregation;
 
-	public MongoDBQueryParsingResult(Class<?> entityType, String collectionName, Document query, Document projection, Document orderBy, List<String> unwinds) {
+	public MongoDBQueryParsingResult(Class<?> entityType, String collectionName, Document query, Document projection, Document orderBy, List<String> unwinds, Operation operation, AggregationRenderer aggregation) {
 		this.entityType = entityType;
 		this.collectionName = collectionName;
 		this.query = query;
 		this.projection = projection;
 		this.orderBy = orderBy;
 		this.unwinds = unwinds;
+		this.operation = operation;
+		this.aggregation = aggregation;
 	}
 
 	public Document getQuery() {
@@ -63,7 +66,7 @@ public class MongoDBQueryParsingResult implements QueryParsingResult {
 	public Object getQueryObject() {
 		return new MongoDBQueryDescriptor(
 			collectionName,
-			unwinds == null ? Operation.FIND : Operation.AGGREGATE,
+			operation,
 			query,
 			projection,
 			orderBy,
@@ -73,13 +76,13 @@ public class MongoDBQueryParsingResult implements QueryParsingResult {
 			unwinds,
 			null,
 			null,
-			null
+			null,
+			aggregation
 		);
 	}
 
 	@Override
 	public List<String> getColumnNames() {
-		//TODO Non-scalar case
 		return projection != null ? new ArrayList<>( projection.keySet() ) : Collections.<String>emptyList();
 	}
 

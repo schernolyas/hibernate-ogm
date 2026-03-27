@@ -6,7 +6,9 @@
  */
 package org.hibernate.ogm.datastore.mongodb.impl;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -26,10 +28,13 @@ import org.hibernate.mapping.Index;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.UniqueKey;
 import org.hibernate.ogm.datastore.mongodb.MongoDBDialect;
+import org.hibernate.ogm.datastore.mongodb.binarystorage.GridFSFields;
 import org.hibernate.ogm.datastore.mongodb.index.impl.MongoDBIndexSpec;
+import org.hibernate.ogm.datastore.mongodb.index.impl.MongoDBIndexType;
 import org.hibernate.ogm.datastore.mongodb.logging.impl.Log;
 import org.hibernate.ogm.datastore.mongodb.logging.impl.LoggerFactory;
 import java.lang.invoke.MethodHandles;
+import org.hibernate.ogm.datastore.mongodb.type.GridFS;
 import org.hibernate.ogm.datastore.spi.BaseSchemaDefiner;
 import org.hibernate.ogm.datastore.spi.DatastoreProvider;
 import org.hibernate.ogm.model.key.spi.AssociationKeyMetadata;
@@ -73,7 +78,7 @@ public class MongoDBSchemaDefiner extends BaseSchemaDefiner {
 		validateGenerators( context.getAllIdSourceKeyMetadata() );
 		validateEntityCollectionNames( context.getAllEntityKeyMetadata() );
 		validateAssociationNames( context.getAllAssociationKeyMetadata() );
-		validateAllPersisters( context.getSessionFactory().getEntityPersisters().values() );
+		validateAllPersisters( context.getSessionFactory().getMetamodel().entityPersisters().values() );
 		validateIndexSpecs( context );
 	}
 
@@ -81,11 +86,32 @@ public class MongoDBSchemaDefiner extends BaseSchemaDefiner {
 	public void initializeSchema( SchemaDefinitionContext context) {
 		SessionFactoryImplementor sessionFactoryImplementor = context.getSessionFactory();
 		ServiceRegistryImplementor registry = sessionFactoryImplementor.getServiceRegistry();
+		OptionsService optionsService = registry.getService( OptionsService.class );
+
 		MongoDBDatastoreProvider provider = (MongoDBDatastoreProvider) registry.getService( DatastoreProvider.class );
+		provider.initializeBinaryStorageManager( optionsService, findBinaryStorageTypeEntities( context.getTableEntityTypeMapping(), optionsService ) );
 
 		for ( MongoDBIndexSpec indexSpec : indexSpecs ) {
 			createIndex( provider.getDatabase(), indexSpec );
 		}
+	}
+
+	private Map<String, GridFSFields> findBinaryStorageTypeEntities(Map<String, Class<?>> tableEntityTypeMapping, OptionsService optionsService) {
+		Map<String, GridFSFields> map = new HashMap<>();
+		for ( Entry<String, Class<?>> entries : tableEntityTypeMapping.entrySet() ) {
+			boolean storageTypeDefined = false;
+			GridFSFields storages = new GridFSFields( entries.getValue() );
+			for ( Field currentField : entries.getValue().getDeclaredFields() ) {
+				if ( currentField.getType() == GridFS.class ) {
+					storageTypeDefined = true;
+					storages.add( currentField, null );
+				}
+			}
+			if ( storageTypeDefined ) {
+				map.put( entries.getKey(), storages );
+			}
+		}
+		return Collections.unmodifiableMap( map );
 	}
 
 	private void validateAllPersisters(Iterable<EntityPersister> persisters) {
@@ -153,10 +179,10 @@ public class MongoDBSchemaDefiner extends BaseSchemaDefiner {
 					IndexOptions indexOptions = getIndexOptions( optionsService, entityType );
 					Set<String> forIndexNotReferenced = new HashSet<>( indexOptions.getReferencedIndexes() );
 
+					// Don't change the order of these validate methods:
+					// UniqueKeys are used to validate normal Indexes
 					validateIndexSpecsForUniqueColumns( table, indexOptions, forIndexNotReferenced, constraintMethod );
-
 					validateIndexSpecsForUniqueKeys( table, indexOptions, forIndexNotReferenced, constraintMethod );
-
 					validateIndexSpecsForIndexes( table, indexOptions, forIndexNotReferenced );
 
 					for ( String forIndex : forIndexNotReferenced ) {
@@ -215,10 +241,24 @@ public class MongoDBSchemaDefiner extends BaseSchemaDefiner {
 			forIndexNotReferenced.remove( index.getName() );
 			MongoDBIndexSpec indexSpec = new MongoDBIndexSpec( index,
 					getIndexOptionDocument( table, indexOptions.getOptionForIndex( index.getName() ) ) );
-			if ( validateIndexSpec( indexSpec ) ) {
+			if ( validateIndexSpec( indexSpec ) && thereIsNoUniqueConstraintOnSameColumns( indexSpec ) ) {
 				indexSpecs.add( indexSpec );
 			}
 		}
+	}
+
+	private boolean thereIsNoUniqueConstraintOnSameColumns(MongoDBIndexSpec indexSpec) {
+		for ( MongoDBIndexSpec otherIndex : indexSpecs ) {
+			boolean hasSameColumns = otherIndex.getIndexKeysDocument().equals( indexSpec.getIndexKeysDocument() );
+			boolean isUniqueConstraint = otherIndex.getOptions().isUnique();
+
+			// Skip index creation if a unique constraint is already present
+			if ( hasSameColumns && isUniqueConstraint ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private Document getIndexOptionDocument(Table table, IndexOption indexOption) {
@@ -266,7 +306,8 @@ public class MongoDBSchemaDefiner extends BaseSchemaDefiner {
 
 		// if a text index already exists in the collection, MongoDB silently ignores the creation of the new text index
 		// so we might as well log a warning about it
-		if ( indexSpec.isTextIndex() && preexistingTextIndex != null && !preexistingTextIndex.equalsIgnoreCase( indexSpec.getIndexName() ) ) {
+		if ( MongoDBIndexType.TEXT.equals( indexSpec.getIndexType() )
+				&& preexistingTextIndex != null && !preexistingTextIndex.equalsIgnoreCase( indexSpec.getIndexName() ) ) {
 			throw log.unableToCreateTextIndex( collection.getNamespace().getCollectionName(), indexSpec.getIndexName(), preexistingTextIndex );
 		}
 

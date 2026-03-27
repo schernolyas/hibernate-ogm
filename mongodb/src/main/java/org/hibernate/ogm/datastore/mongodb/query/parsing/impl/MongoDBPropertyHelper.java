@@ -16,6 +16,7 @@ import org.hibernate.ogm.persister.impl.OgmEntityPersister;
 import org.hibernate.ogm.query.parsing.impl.ParserPropertyHelper;
 import org.hibernate.ogm.type.spi.GridType;
 import org.hibernate.ogm.type.spi.TypeTranslator;
+import org.hibernate.ogm.util.impl.ArrayHelper;
 import org.hibernate.ogm.util.impl.StringHelper;
 import org.hibernate.type.CollectionType;
 import org.hibernate.type.Type;
@@ -36,7 +37,7 @@ public class MongoDBPropertyHelper extends ParserPropertyHelper implements Prope
 	}
 
 	public String getColumnName(Class<?> entityType, List<String> propertyName) {
-		return getColumnName( (OgmEntityPersister) getSessionFactory().getEntityPersister( entityType.getName() ), propertyName );
+		return getColumnName( (OgmEntityPersister) getSessionFactory().getMetamodel().entityPersister( entityType ), propertyName );
 	}
 
 	public String getColumnName(String entityType, List<String> propertyPath) {
@@ -71,9 +72,32 @@ public class MongoDBPropertyHelper extends ParserPropertyHelper implements Prope
 			return MongoDBDialect.ID_FIELDNAME;
 		}
 		String column = getColumn( persister, propertyPath );
-		if ( propertyPath.size() > 1 && propertyPath.get( 0 ).equals( identifierPropertyName ) ) {
-			column = MongoDBDialect.ID_FIELDNAME + "." + column.substring( propertyPath.get( 0 ).length() + 1 );
+		if ( propertyPath.size() > 1 ) {
+			String prop = propertyPath.get( 0 );
+			if ( prop.equals( identifierPropertyName ) ) {
+				if ( column.startsWith( identifierPropertyName + "." ) ) {
+					column = column.substring( prop.length() + 1 );
+				}
+				column = MongoDBDialect.ID_FIELDNAME + "." + column;
+			}
 		}
 		return column;
 	}
+
+	public boolean isIdProperty(OgmEntityPersister persister, List<String> namesWithoutAlias) {
+		String join = StringHelper.join( namesWithoutAlias, "." );
+		org.hibernate.type.Type propertyType = persister.getPropertyType( namesWithoutAlias.get( 0 ) );
+		String[] identifierColumnNames = persister.getIdentifierColumnNames();
+		if ( propertyType.isComponentType() ) {
+			String[] embeddedColumnNames = persister.getPropertyColumnNames( join );
+			for ( String embeddedColumn : embeddedColumnNames ) {
+				if ( !ArrayHelper.contains( identifierColumnNames, embeddedColumn ) ) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return ArrayHelper.contains( identifierColumnNames, join );
+	}
+
 }

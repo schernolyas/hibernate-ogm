@@ -9,9 +9,16 @@ package org.hibernate.ogm.datastore.neo4j.dialect.impl;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.hibernate.ogm.type.impl.LocalDateAsStringType;
+import org.hibernate.ogm.type.impl.LocalDateTimeAsStringType;
+import org.hibernate.ogm.type.impl.LocalTimeAsStringType;
 import org.hibernate.ogm.type.impl.StringCalendarDateType;
 import org.hibernate.ogm.type.impl.StringDateTypeDescriptor;
+import org.hibernate.ogm.type.impl.StringTimestampTypeDescriptor;
 import org.hibernate.ogm.type.spi.GridType;
+import org.hibernate.type.LocalDateTimeType;
+import org.hibernate.type.LocalDateType;
+import org.hibernate.type.LocalTimeType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 
@@ -30,7 +37,10 @@ public abstract class BaseNeo4jTypeConverter {
 		conversion.put( StandardBasicTypes.CALENDAR_DATE, StringCalendarDateType.INSTANCE );
 		conversion.put( StandardBasicTypes.DATE, StringDateTypeDescriptor.INSTANCE );
 		conversion.put( StandardBasicTypes.TIME, StringDateTypeDescriptor.INSTANCE );
-		conversion.put( StandardBasicTypes.TIMESTAMP, StringDateTypeDescriptor.INSTANCE );
+		conversion.put( StandardBasicTypes.TIMESTAMP, StringTimestampTypeDescriptor.INSTANCE );
+		conversion.put( LocalDateType.INSTANCE, LocalDateAsStringType.INSTANCE );
+		conversion.put( LocalDateTimeType.INSTANCE, LocalDateTimeAsStringType.INSTANCE );
+		conversion.put( LocalTimeType.INSTANCE, LocalTimeAsStringType.INSTANCE );
 		return conversion;
 	}
 

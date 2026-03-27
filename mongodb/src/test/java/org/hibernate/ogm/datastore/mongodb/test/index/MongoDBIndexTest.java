@@ -25,14 +25,15 @@ import org.junit.Test;
  */
 public class MongoDBIndexTest extends OgmTestCase {
 
-	private static final String COLLECTION_NAME = "T_POEM";
-
 	@Test
 	public void testSuccessfulIndexCreation() throws Exception {
 		OgmSession session = openSession();
 
-		Map<String, Document> indexMap = getIndexes( session.getSessionFactory(), COLLECTION_NAME );
-		assertThat( indexMap.size() ).isEqualTo( 6 );
+		Map<String, Document> indexMap = getIndexes( session.getSessionFactory(), Poem.COLLECTION_NAME );
+		// Skip creation of @Index(columnList = "name, author")
+		// because author_name_idx is defined as unique
+		// on same field set
+		assertThat( indexMap.size() ).isEqualTo( 5 );
 
 		assertJsonEquals( "{ 'v' : 2 , 'key' : { 'author' : 1} , 'name' : 'author_idx' , 'ns' : 'ogm_test_database.T_POEM' , 'background' : true , 'partialFilterExpression' : { 'author' : 'Verlaine'}}",
 				indexMap.get( "author_idx" ).toJson() );
@@ -41,8 +42,6 @@ public class MongoDBIndexTest extends OgmTestCase {
 				indexMap.get( "name_idx" ).toJson() );
 		assertJsonEquals( "{ 'v' : 2 , 'unique' : true , 'key' : { 'author' : 1 , 'name' : 1} , 'name' : 'author_name_idx' , 'ns' : 'ogm_test_database.T_POEM' , 'sparse' : true}",
 				indexMap.get( "author_name_idx" ).toJson() );
-		assertJsonEquals( "{ 'v' : 2 , 'key' : { 'name' : 1 , 'author' : 1} , 'name' : 'IDXjo3qu8pkq9vsofgrq58pacxfq' , 'ns' : 'ogm_test_database.T_POEM' }",
-				indexMap.get( "IDXjo3qu8pkq9vsofgrq58pacxfq" ).toJson() );
 
 		session.close();
 	}
@@ -51,8 +50,11 @@ public class MongoDBIndexTest extends OgmTestCase {
 	public void testSuccessfulTextIndexCreation() throws Exception {
 		OgmSession session = openSession();
 
-		Map<String, Document> indexMap = getIndexes( session.getSessionFactory(), COLLECTION_NAME );
-		assertThat( indexMap.size() ).isEqualTo( 6 );
+		Map<String, Document> indexMap = getIndexes( session.getSessionFactory(), Poem.COLLECTION_NAME );
+		// Skip creation of @Index(columnList = "name, author")
+		// because author_name_idx is defined as unique
+		// on same field set
+		assertThat( indexMap.size() ).isEqualTo( 5 );
 
 		assertJsonEquals( "{ 'v' : 2 , 'key' : { '_fts' : 'text' , '_ftsx' : 1} , 'name' : 'author_name_text_idx' , 'ns' : 'ogm_test_database.T_POEM' , 'weights' : { 'author' : 2, 'name' : 5} , 'default_language' : 'fr' , 'language_override' : 'language' , 'textIndexVersion' : 3}",
 				indexMap.get( "author_name_text_idx" ).toJson() );
@@ -60,8 +62,34 @@ public class MongoDBIndexTest extends OgmTestCase {
 		session.close();
 	}
 
+	@Test
+	public void testSuccessfulTextIndexWithTypeCreation() throws Exception {
+		OgmSession session = openSession();
+
+		Map<String, Document> indexMap = getIndexes( session.getSessionFactory(), OscarWildePoem.COLLECTION_NAME );
+		assertThat( indexMap.size() ).isEqualTo( 3 );
+
+		assertJsonEquals( "{ 'v' : 2 , 'key' : { '_fts' : 'text' , '_ftsx' : 1} , 'name' : 'name_text_idx' , 'ns' : 'ogm_test_database.T_OSCAR_WILDE_POEM', 'default_language' : 'fr' , 'language_override' : 'language' , weights : { name: 5 } , 'textIndexVersion' : 3}",
+				indexMap.get( "name_text_idx" ).toJson() );
+
+		session.close();
+	}
+
+	@Test
+	public void testSuccessfulSpatialIndexCreation() throws Exception {
+		OgmSession session = openSession();
+
+		Map<String, Document> indexMap = getIndexes( session.getSessionFactory(), Restaurant.COLLECTION_NAME );
+		assertThat( indexMap.size() ).isEqualTo( 2 );
+
+		assertJsonEquals( "{ 'v' : 2 , 'key' : { 'location' : '2dsphere'} , 'name' : 'location_spatial_idx' , 'ns' : 'ogm_test_database.T_RESTAURANT' , 2dsphereIndexVersion=3}",
+				indexMap.get( "location_spatial_idx" ).toJson() );
+
+		session.close();
+	}
+
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
-		return new Class<?>[] { Poem.class };
+		return new Class<?>[] { Poem.class, OscarWildePoem.class, Restaurant.class };
 	}
 }

@@ -1,6 +1,6 @@
 # Hibernate OGM
 
-*Version: 5.2.0.Beta1 - 12-10-2017*
+*Version: 5.4.1.Final - 18-12-2018*
 
 ## Description
 
@@ -46,7 +46,7 @@ Bug Reports:
 Support:
 
  * The hibernate-ogm tag on Stackoverflow: <http://stackoverflow.com/questions/tagged/hibernate-ogm>
- * Our forum: <https://forum.hibernate.org/viewforum.php?f=31>
+ * Our forum: <https://discourse.hibernate.org/c/hibernate-ogm>
 
 ## Build instructions
 
@@ -121,9 +121,9 @@ and the target directory for the extracted binary (defaults to _${project.build.
 
     mvn clean install -s settings-example.xml -DembeddedMongoDbTempDir=<my-temp-dir> -DembeddedMongoDbPort=<my-port>
 
-To work with a separately installed MongoDB instance instead, specify the property `-DmongodbProvider=external`:
+To work with a separately installed MongoDB instance instead, specify the property `-DuseExternalMongoDb`:
 
-    mvn clean install -s settings-example.xml -DmongodbProvider=external
+    mvn clean install -s settings-example.xml -DuseExternalMongoDb
 
 This assumes MongoDB to be installed on `localhost`, using the default port and no authentication.
 If you work with different settings, configure the required properties in hibernate.properties (for the tests in _mongodb_)
@@ -134,16 +134,21 @@ prior to running the tests:
     export MONGODB_PORT=1234
     export MONGODB_USERNAME=someUsername
     export MONGODB_PASSWORD=someP@ssw0rd
-    mvn clean install -s settings-example.xml -DmongodbProvider=external
+    mvn clean install -s settings-example.xml -DuseExternalMongoDb
 
 ### Neo4j
 
 For running the tests in the _neo4j_ and _integrationtest/neo4j_ modules, by default the
 embedded Neo4j configuration is used.
 
-If you want to run the tests on a remote server, you need to specify the profile `neo4j-remote`
+Hibernate OGM can connect to a Neo4j server remotely via the Bolt protocol or via HTTP.
+These tests are not executed by default, you can run them using the following commands:
 
-    mvn clean install -s settings-example.xml -Pneo4j-remote
+    mvn clean install -s settings-example.xml -Pneo4j-http
+
+or
+
+    mvn clean install -s settings-example.xml -Pneo4j-bolt
 
 This assumes Neo4j to be installed on `localhost`, using the default port and no authentication.
 If you work with different settings, configure the required properties in hibernate.properties

@@ -19,7 +19,6 @@ import javax.persistence.Persistence;
 import javax.transaction.TransactionManager;
 
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.jpa.HibernateEntityManagerFactory;
 import org.hibernate.ogm.cfg.OgmProperties;
 import org.hibernate.ogm.compensation.ErrorHandler.RollbackContext;
 import org.hibernate.ogm.compensation.operation.CreateTupleWithKey;
@@ -54,8 +53,8 @@ public class CompensationSpiJpaTest  extends OgmJpaTestCase {
 	public PackagingRule packaging = new PackagingRule( "persistencexml/transaction-type-jta.xml", Shipment.class );
 
 	@Test
-	@SkipByGridDialect(value = { GridDialectType.MONGODB, GridDialectType.INFINISPAN_REMOTE },
-		comment = "MongoDB and Infinispan Remote tests runs w/o transaction manager")
+	@SkipByGridDialect(value = { GridDialectType.MONGODB },
+		comment = "MongoDB tests runs w/o transaction manager")
 	public void onRollbackTriggeredThroughJtaPresentsAppliedInsertOperations() throws Exception {
 		Map<String, Object> settings = new HashMap<>();
 		settings.putAll( TestHelper.getDefaultTestSettings() );
@@ -224,13 +223,13 @@ public class CompensationSpiJpaTest  extends OgmJpaTestCase {
 	}
 
 	private boolean currentDialectHasFacet(Class<? extends GridDialect> facet) {
-		SessionFactoryImplementor sfi = (SessionFactoryImplementor) ( (HibernateEntityManagerFactory) getFactory() ).getSessionFactory();
+		SessionFactoryImplementor sfi = (SessionFactoryImplementor) getFactory();
 		GridDialect gridDialect = sfi.getServiceRegistry().getService( GridDialect.class );
 		return GridDialects.hasFacet( gridDialect, facet );
 	}
 
 	private boolean currentDialectUsesLookupDuplicatePreventionStrategy() {
-		SessionFactoryImplementor sfi = (SessionFactoryImplementor) ( (HibernateEntityManagerFactory) getFactory() ).getSessionFactory();
+		SessionFactoryImplementor sfi = (SessionFactoryImplementor) getFactory();
 		GridDialect gridDialect = sfi.getServiceRegistry().getService( GridDialect.class );
 		DefaultEntityKeyMetadata ekm = new DefaultEntityKeyMetadata( "Shipment", new String[]{"id"} );
 

@@ -1,0 +1,17 @@
+package HibernateOGMGenerated;
+
+/**
+ * @Indexed
+ */
+message TableWithSequenceGenerator {
+	required int32 id = 1;
+
+	/**
+     * @IndexedField(index=true, store=false)
+     */
+	optional string type = 2;
+}
+
+message TableWithSequenceGenerator_id {
+	required int32 id = 1;
+}

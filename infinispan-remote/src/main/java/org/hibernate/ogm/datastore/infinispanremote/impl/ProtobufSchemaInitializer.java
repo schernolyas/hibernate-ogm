@@ -6,18 +6,25 @@
  */
 package org.hibernate.ogm.datastore.infinispanremote.impl;
 
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.hibernate.boot.model.relational.Namespace;
+import org.hibernate.boot.model.relational.Sequence;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
-import org.hibernate.ogm.datastore.infinispanremote.impl.protobuf.SchemaDefinitions;
+import org.hibernate.ogm.datastore.infinispanremote.impl.counter.HotRodSequenceCounterHandler;
+import org.hibernate.ogm.datastore.infinispanremote.impl.protobuf.schema.SchemaDefinitions;
 import org.hibernate.ogm.datastore.infinispanremote.impl.schema.TableDefinition;
+import org.hibernate.ogm.datastore.infinispanremote.options.cache.CacheConfiguration;
+import org.hibernate.ogm.datastore.infinispanremote.options.cache.impl.CacheConfigurationOption;
 import org.hibernate.ogm.datastore.spi.BaseSchemaDefiner;
 import org.hibernate.ogm.datastore.spi.DatastoreProvider;
 import org.hibernate.ogm.model.key.spi.IdSourceKeyMetadata;
+import org.hibernate.ogm.options.spi.OptionsService;
 import org.hibernate.ogm.type.spi.GridType;
 import org.hibernate.ogm.type.spi.TypeTranslator;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
@@ -32,26 +39,55 @@ public class ProtobufSchemaInitializer extends BaseSchemaDefiner {
 	public void initializeSchema(SchemaDefinitionContext context) {
 		ServiceRegistryImplementor serviceRegistry = context.getSessionFactory().getServiceRegistry();
 		TypeTranslator typeTranslator = serviceRegistry.getService( TypeTranslator.class );
+		OptionsService optionsService = serviceRegistry.getService( OptionsService.class );
+		Map tableEntityTypeMapping = context.getTableEntityTypeMapping();
 		InfinispanRemoteDatastoreProvider datastoreProvider = (InfinispanRemoteDatastoreProvider) serviceRegistry.getService( DatastoreProvider.class );
 		String protobufPackageName = datastoreProvider.getProtobufPackageName();
 		SchemaDefinitions sd = new SchemaDefinitions( protobufPackageName );
+
+		HashSet<Sequence> sequences = new HashSet<>();
 		for ( Namespace namespace : context.getDatabase().getNamespaces() ) {
+			for ( Sequence sequence : namespace.getSequences() ) {
+				sequences.add( sequence );
+			}
 			for ( Table table : namespace.getTables() ) {
 				if ( table.isPhysicalTable() ) {
-					createTableDefinition( context.getSessionFactory(), sd, table, typeTranslator, protobufPackageName );
+					createTableDefinition( context.getSessionFactory(), sd, table, typeTranslator, protobufPackageName,
+						getCacheConfiguration( tableEntityTypeMapping, optionsService, table.getName() )
+					);
 				}
 			}
 		}
 		for ( IdSourceKeyMetadata iddSourceKeyMetadata : context.getAllIdSourceKeyMetadata() ) {
-			sd.createSequenceSchemaDefinition( iddSourceKeyMetadata, datastoreProvider.getProtobufPackageName() );
+			if ( !HotRodSequenceCounterHandler.isSequenceGeneratorId( iddSourceKeyMetadata ) ) {
+				sd.createSequenceSchemaDefinition( iddSourceKeyMetadata, datastoreProvider.getProtobufPackageName() );
+			}
 		}
-		datastoreProvider.registerSchemaDefinitions( sd );
+		datastoreProvider.registerSchemaDefinitions( sd, sequences );
+	}
+
+	private String getCacheConfiguration(Map tableEntityTypeMapping, OptionsService optionsService, String tableName) {
+		Class<?> entity = (Class<?>) tableEntityTypeMapping.get( tableName );
+		if ( entity == null ) {
+			return null;
+		}
+		CacheConfiguration cacheConfiguration = optionsService.context().getEntityOptions( entity )
+				.getUnique( CacheConfigurationOption.class );
+		if ( cacheConfiguration == null ) {
+			return null;
+		}
+		return cacheConfiguration.value();
 	}
 
 	private void createTableDefinition(SessionFactoryImplementor sessionFactory, SchemaDefinitions sd,
-			Table table, TypeTranslator typeTranslator, String protobufPackageName) {
-		TableDefinition td = new TableDefinition( table.getName(), protobufPackageName );
-		if ( table.hasPrimaryKey() ) {
+			Table table, TypeTranslator typeTranslator, String protobufPackageName, String cacheConfiguration ) {
+		TableDefinition td = new TableDefinition( table.getName(), protobufPackageName, cacheConfiguration );
+
+		// some tables are defined without primary key,
+		// for these cases the key will be composed by all fields
+		boolean hasPrimaryKey = table.hasPrimaryKey();
+
+		if ( hasPrimaryKey ) {
 			for ( Column pkColumn : table.getPrimaryKey().getColumns() ) {
 				String name = pkColumn.getName();
 				//We only collect the column names, as the Type assigned to PrimaryKey columns
@@ -64,6 +100,10 @@ public class ProtobufSchemaInitializer extends BaseSchemaDefiner {
 		Iterator<Column> columnIterator = table.getColumnIterator();
 		while ( columnIterator.hasNext() ) {
 			Column column = columnIterator.next();
+			if ( !hasPrimaryKey ) {
+				td.markAsPrimaryKey( column.getName() );
+			}
+
 			Value value = column.getValue();
 			Type type = value.getType();
 			if ( type.isAssociationType() ) {

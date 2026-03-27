@@ -304,4 +304,40 @@ public interface Log extends BasicLogger {
 
 	@Message(id = 89, value = "%1$s does not support queries on polymorphic entities using TABLE_PER_CLASS inheritance strategy. You should try using SINGLE_TABLE instead. Entities: %2$s")
 	HibernateException queriesOnPolymorphicEntitiesAreNotSupportedWithTablePerClass( String datastore, Collection<String> subclassEntityNames );
+
+	@Message(id = 90, value = "Returning multiple entities is not supported. Procedure '%1$s' expects results of type %2$s")
+	HibernateException multipleEntitiesOutputNotSupported(String procedureName, Collection<?> synchronizedQuerySpaces);
+
+	@Message(id = 91, value = "Projection and addEntity are not allowed in the same query on <%1$s> %2$s")
+	HibernateException addEntityNotAllowedInNativeQueriesUsingProjection( String table, String query );
+
+	@Message(id = 92, value = "Cannot execute stored procedure '%s'.")
+	HibernateException cannotExecuteStoredProcedure(String storedProcedureName, @Cause Throwable e);
+
+	@Message(id = 93, value = "Procedure with resolved name '%s' does not exist.")
+	HibernateException procedureWithResolvedNameDoesNotExist(String procedureName, @Cause Exception e );
+
+	@Message(id = 94, value = "Dialect %s does not support positional parameters when calling stored procedures")
+	HibernateException dialectDoesNotSupportPositionalParametersForStoredProcedures( @FormatWith(ClassObjectFormatter.class) Class<?> dialectClass );
+
+	@Message(id = 95, value = "Cannot set stored procedure '%s' parameter '%s' with value '%s'.")
+	HibernateException cannotSetStoredProcedureParameter(String storedProcedureName, String param, Object value, @Cause Exception e);
+
+	@Message(id = 96, value = "Cannot extract stored procedure '%s' result set '%s'.")
+	HibernateException cannotExtractStoredProcedureResultSet(String storedProcedureName, Object resultSet, @Cause Exception e);
+
+	@Message(id = 97, value = "Cannot extract tuple from value '%s'.")
+	HibernateException cannotExtractTupleFromObject(Object value, @Cause Exception e);
+
+	@Message(id = 98, value = "Error on fetch property " + OgmProperties.NATIVE_CLIENT_RESOURCE + ": '%s'.")
+	HibernateException errorOnFetchJndiClientProperty(String nativeClientResource);
+
+	@Message(id = 99, value = "Unable to parse order-by fragment: '%s'.")
+	HibernateException unableToParseOrderByFragment(String queryFragment, @Cause Throwable e);
+
+	@Message(id = 100, value = "Unable to render order-by fragment: '%s'.")
+	HibernateException unableToRenderOrderByFragment(String queryFragment, @Cause Exception e);
+
+	@Message(id = 101, value = "Error introspecting an object instance.")
+	HibernateException errorIntrospectingObject(@Cause Exception e);
 }

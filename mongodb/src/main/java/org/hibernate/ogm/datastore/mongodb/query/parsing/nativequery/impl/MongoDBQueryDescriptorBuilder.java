@@ -13,11 +13,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.bson.Document;
+import org.bson.json.JsonParseException;
 import org.hibernate.ogm.datastore.mongodb.query.impl.MongoDBQueryDescriptor;
 import org.hibernate.ogm.datastore.mongodb.query.impl.MongoDBQueryDescriptor.Operation;
 import org.hibernate.ogm.util.impl.StringHelper;
-
-import org.bson.Document;
 
 /**
  * Builder for {@link MongoDBQueryDescriptor}s.
@@ -30,6 +30,16 @@ public class MongoDBQueryDescriptorBuilder {
 
 	private String collection;
 	private Operation operation;
+
+	/**
+	 * Helper fields for recording the states of the parser
+	 */
+	private boolean isCliQuery;
+	private String invalidJsonParameter;
+	private boolean areParametersValid;
+	private String operationName;
+	private boolean isQueryValid;
+
 	/**
 	 * Overloaded to be the 'document' for a FINDANDMODIFY query (which is a kind of criteria),
 	 */
@@ -102,6 +112,35 @@ public class MongoDBQueryDescriptorBuilder {
 		return true;
 	}
 
+	public boolean isCliQuery() {
+		return isCliQuery;
+	}
+
+	public boolean setCliQuery(boolean isCliQuery) {
+		this.isCliQuery = isCliQuery;
+		return true;
+	}
+
+	public boolean setInvalidJsonParameter(String invalidJsonParameter) {
+		this.invalidJsonParameter = invalidJsonParameter;
+		return true;
+	}
+
+	public boolean setParametersValid(boolean areParametersValid) {
+		this.areParametersValid = areParametersValid;
+		return true;
+	}
+
+	public boolean setOperationName(String operationName) {
+		this.operationName = operationName;
+		return true;
+	}
+
+	public boolean setQueryValid(boolean isQueryValid) {
+		this.isQueryValid = isQueryValid;
+		return true;
+	}
+
 	public boolean setCriteria(String criteria) {
 		this.criteria = criteria;
 		return true;
@@ -142,7 +181,48 @@ public class MongoDBQueryDescriptorBuilder {
 		return true;
 	}
 
-	public MongoDBQueryDescriptor build() {
+	public MongoDBQueryDescriptor build() throws NativeQueryParseException {
+		if ( !isQueryValid ) {
+			// the input is CLI query: it starts with 'db'
+			if ( isCliQuery ) {
+				// db ???
+				if ( collection == null ) {
+					throw new NativeQueryParseException( "Cli query should match the format db.collection.operation(<arguments>)" );
+				}
+				// db . collection ???
+				if ( operation == null && operationName == null ) {
+					throw new NativeQueryParseException( "Cli query should match the format db.collection.operation(<arguments>)" );
+				}
+				// db . collection . UNSUPPORTED
+				if ( operation == null ) {
+					throw new NativeQueryParseException( "Operation '" + operationName + "' is unsupported" );
+				}
+				// db . collection . operation ( ???
+				if ( invalidJsonParameter != null ) {
+					try {
+						Document.parse( invalidJsonParameter );
+					}
+					catch (JsonParseException e ) {
+						throw new NativeQueryParseException( e );
+					}
+				}
+				// db . collection . operation ( ???
+				if ( !areParametersValid ) {
+					throw new NativeQueryParseException( "Parameters are invalid for " + operationName );
+				}
+				else {
+					throw new NativeQueryParseException( "Missing ')'" );
+				}
+			}
+			// the input is not a json object: might be error in { ... } or does not start with '{'
+			try {
+				Document.parse( invalidJsonParameter );
+			}
+			catch (JsonParseException e ) {
+				throw new NativeQueryParseException( e );
+			}
+		}
+
 		//@todo refactor the spaghetti!
 		if ( operation != Operation.AGGREGATE_PIPELINE ) {
 			MongoDBQueryDescriptor descriptor = null;
@@ -160,6 +240,7 @@ public class MongoDBQueryDescriptorBuilder {
 						parse( options ),
 						null,
 						documents,
+						null,
 						null,
 						null,
 						null,
@@ -183,6 +264,7 @@ public class MongoDBQueryDescriptorBuilder {
 							null,
 							null,
 							null,
+							null,
 							null
 					);
 				}
@@ -196,6 +278,7 @@ public class MongoDBQueryDescriptorBuilder {
 							parse( orderBy ),
 							parse( options ),
 							(Document) anyDocs,
+							null,
 							null,
 							null,
 							null,
@@ -217,7 +300,8 @@ public class MongoDBQueryDescriptorBuilder {
 						null,
 						distinctFieldName,
 						mapFunction,
-						reduceFunction
+						reduceFunction,
+						null
 				);
 			}
 			return descriptor;

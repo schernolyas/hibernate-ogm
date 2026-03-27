@@ -1,6 +1,298 @@
 Hibernate OGM Changelog
 =======================
 
+5.4.1.Final (18-12-2018)
+-------------------------
+
+** Bug
+    * OGM-1544 - mongodb     - MongoDBDialect uses shared Parboiled parser across multiple threads, while the parser is NOT thread safe
+    * OGM-1542 - mongodb     - Distinct count works as count(*)
+
+** Improvement
+    * OGM-1550 - mongodb     - Update MongoDB java driver to version 3.9.1
+    * OGM-1549 - neo4j       - Upgrade Neo4j java driver to version 1.7.2
+    * OGM-1548 - neo4j       - Upgrade Neo4j to version 3.4.10
+    * OGM-1482 - neo4j       - Upgrade to Neo4j 3.4.1
+    * OGM-1439 - build       - Provide a way to build a WildFly server containing OGM
+
+** New Feature
+    * OGM-1406 - build       - Create feature pack for Hibernate OGM 
+
+** Task
+    * OGM-1541 - neo4j       - Upgrade Jackson to 2.9.5
+    * OGM-1538 -             - Support @OrderBy qualifier
+    * OGM-1523 - build, core - Upgrade integration tests to WildFly 14.0.0.Final
+    * OGM-1504 - build       - Remove usage of the groovy-maven-plugin
+    * OGM-1488 - core        - Review strategies for loading of enhanced classes in ConfigurationContextImpl
+    * OGM-1477 - build       - Update integration tests to use WildFly 13.0.0.Beta1
+
+5.4.0.Final (29-10-2018)
+-------------------------
+
+** Bug
+    * OGM-534 -                   - Add support for count() function in JP-QL on MongoDB
+
+** Improvement
+    * OGM-1536 - infinispan        - Rename property hibernate.ogm.datastore.cache_configuration
+    * OGM-1533 - neo4j             - Update MongoDB java driver to version 3.8.2
+    * OGM-1532 - neo4j             - Update Neo4j driver to version 1.6.3
+    * OGM-1531 - neo4j             - Update Neo4j to version 3.4.8
+    * OGM-1425 - mongodb           - Mapping tests for TABLE_PER_CLASS inheritance type in MongoDB
+    * OGM-1419 - documentation     - Update infinispan documentation about selecting template for the cache configuration
+
+** New Feature
+    * OGM-1349 - neo4j             - Support stored procedures for Neo4J
+    * OGM-786 - mongodb           - Investigate usage of MongoDB's GridFS for storing large binary data
+
+** Sub-task
+    * OGM-1097 - neo4j             - Have the Neo4J integration build and tested on Java 9
+
+** Task
+    * OGM-1529 - infinispan, tests - Enable TCK query with parameters test for Infinispan remote
+    * OGM-1528 - infinispan        - Upgrade to Infinispan 9.4.0.Final
+
+5.4.0.CR1 (01-10-2018)
+-------------------------
+
+** Bug
+    * OGM-1513 - infinispan, mongodb        - Join columns might keep reference to some previously associated, but then deleted, entities
+    * OGM-1512 - infinispan                 - Flush operation after a cascade delete could prejudice commit 
+
+** Improvement
+    * OGM-1521 - documentation              - Removed redundant double quote from HQL query example
+    * OGM-1520 - infinispan, tests          - Enable tests for Infinispan Remote dialect requiring tx
+    * OGM-1494 - infinispan                 - Infinispan Remote: support local HotRod transaction
+    * OGM-1458 -                            - Infinispan Remote Query: support query on Byte field
+    * OGM-1408 -                            - Review the Infinispan chapter in Hibernate OGM manual
+
+** New Feature
+    * OGM-1515 - core                       - Support Java 8 LocalDate and LocalDateTime
+    * OGM-1501 - mongodb                    - Add support for ReadConcern
+
+** Task
+    * OGM-1526 - infinispan                 - Upgrade to Infinispan 9.3.3
+    * OGM-1525 - core                       - Upgrade to Hibernate Search 5.10.4.Final
+    * OGM-1522 - build, core                - Upgrade to Hibernate ORM 5.3.6.Final (and related dependencies)
+    * OGM-1519 - infinispan, mongodb, neo4j - Test java.time fields are mapped to the correct type
+    * OGM-1518 - infinispan                 - Provide a default for most of HotRod properties
+    * OGM-1517 - core, tests                - Run Hibernate OGM without its provider persistence property
+    * OGM-1516 - infinispan                 - Provide a default value for HotRod configuration_resource_name
+    * OGM-1514 - documentation, infinispan  - Document the remote task feature
+    * OGM-1511 - infinispan                 - Infinispan Remote: remove thread local serializzation context
+
+5.4.0.Beta2 (05-07-2018)
+-------------------------
+
+** Bug
+    * OGM-1510 -             - Remove references to org.infinispan.protostream.impl package
+    * OGM-1222 - mongodb     - Duplicate insert on mutate within entitymanager lifecycle
+
+** Improvement
+    * OGM-1505 - neo4j       - Allow building and testing the Neo4J integration on JDK9
+    * OGM-1496 - mongodb     - Improve the message to user when MongoDB does not like index and unique constraint on field.
+    * OGM-1485 - infinispan  - Infinispan Remote support all JoinTable association type use cases
+    * OGM-1484 - ignite      - Support of property selections (projection queries) in JPQL for Apache Ignite
+    * OGM-1442 - infinispan  - Remove temporary Infinispan client WF feature pack redistribution module
+    * OGM-1427 - infinispan  - Infinispan remote stored procedure (Remote Task) support
+    * OGM-1420 - mongodb     - @ElementCollection - doesn't retrieve MongoDB array  
+
+** New Feature
+    * OGM-1478 - core        - Throw proper exception when EntityManager#getCriteriaBuilder() is called
+    * OGM-1462 - neo4j       - Support indexes in Neo4j
+    * OGM-1346 - mongodb     - MongoDB - Add GeometryCollection to spatial support
+    * OGM-1287 -             - Create a property to look up native nosql connection via JNDI
+
+** Sub-task
+    * OGM-1431 - infinispan  - Support server tasks for Infinispan remote
+    * OGM-1430 -             - Support scripting for remote mode
+
+** Task
+    * OGM-1506 - build       - Introduce a Maven profile to test on JDK10
+    * OGM-1503 - build       - Remove deprecated dependencies hibernate-java8 ad hibernate-entitymanager
+    * OGM-1502 - infinispan  - Upgrade Infinispan to 9.3.0.Final
+    * OGM-1499 - tests       - Update integration tests to use WildFly 13.0.0.Final
+    * OGM-1495 - infinispan  - Use Infinispan remote clustered counters to implement @SequenceGenerator.
+    * OGM-1493 - infinispan  - Upgrade Infinispan to 9.3.0.CR1
+    * OGM-1491 - tests       - Provide a test using custom Identity Generator in core TCK
+    * OGM-1490 - core        - Upgrade to Hibernate Search 5.10.2.Final
+    * OGM-1489 - core        - Upgrade to Hibernate ORM 5.3.2.Final
+    * OGM-1483 - infinispan  - Define Infinispan Remote Protobuf schema providing the final file
+    * OGM-1480 - infinispan  - Upgrade Infinispan to 9.3.0.Beta1
+    * OGM-1479 - build, core - Remove dependency to Javassist
+
+5.4.0.Beta1 (24-05-2018)
+-------------------------
+
+** Bug
+    * OGM-1469 - ignite        - Wrong type resolution for association keys and embedded on cache init
+
+** Improvement
+    * OGM-1481 - neo4j         - Update Neo4j Java Driver to version 1.6.1
+    * OGM-1476 - build         - Update JBoss Logging to 3.3.2.Final
+    * OGM-1475 - build         - Update the links to the ORM, Search and Lucene javadocs
+    * OGM-1473 - build         - Make our pom files more consistent with WildFly and JBoss parent pom files
+    * OGM-1468 - core          - Support merge and refresh loaders in OgmEntityPersister
+    * OGM-1465 - tests         - We should always run tests in the same order
+    * OGM-1463 - infinispan    - Infinispan Remote: support Native query
+    * OGM-1460 - core, neo4j   - Remove calls to getTransaction() in tests for JTA environment
+    * OGM-1457 -               - Infinispan remote query: support Character and Boolean as parameters
+    * OGM-1454 - neo4j         - Upgrade to Neo4j java driver 1.5.2
+    * OGM-1426 - infinispan    - Infinispan remote: enable support to JPQL
+    * OGM-1391 - build         - Upgrade to Hibernate Search 5.10.0.Final
+    * OGM-1326 - documentation - Add example of associations between entities of the same class
+
+** New Feature
+    * OGM-1474 - neo4j         - Cypher operator CREATE UNIQUE is deprecated
+    * OGM-1407 - core, neo4j   - Support Cypher queries with positional parameters for Neo4j or throw a clear exception when the user tries to run it
+    * OGM-1376 - infinispan    - Use counters for sequences with local caches in Infinispan embedded
+
+** Task
+    * OGM-1471 - tests         - Use the isActive() method to check if a transaction is still active
+    * OGM-1461 -               - Avoid RemoteHotRodServerRule to corrupt Maven's STDOUT by directly writing to native stream
+    * OGM-1459 - build, core   - Upgrade to Hibernate ORM 5.3.0.Final
+
+5.4.0.Alpha1 (16-04-2018)
+-------------------------
+
+** Bug
+    * OGM-1416 -                            - org.hibernate.PropertyAccessException with MongoDB Native Query. Null assigned to primitve 
+    * OGM-1411 - mongodb, tests             - MongoDB native query with pagination on aggregate: empty-results for subsequent runs
+    * OGM-1375 - core, mongodb              - We shouldn't create partial entities from a native query
+    * OGM-614 - infinispan, mongodb, neo4j - Add support for java.sql.Timestamp
+
+** Improvement
+    * OGM-1453 - neo4j                      - Upgrade to Neo4j 3.3.5
+    * OGM-1450 -                            - Upgrade to Hibernate Search 5.10.0.Beta2
+    * OGM-1437 - build                      - Upgrade to Hibernate Commons Annotations 5.0.3.Final
+    * OGM-1434 - mongodb, tests             - Create a test case for MongoDB to check that we can pass ObjectId as parameter for JPQL queries
+    * OGM-1428 - build                      - Feature pack distribution for Hibernate OGM WildFly modules
+    * OGM-1424 - infinispan                 - Infinispan remote: avoid word "Template" in favour of "Cache Configuration" in dialect properties and annotations
+    * OGM-1423 - infinispan                 - Infinispan remote: default Hibernate OGM cache configuration for created client side caches 
+    * OGM-1422 - documentation              - Typo in examples, tests and documentation: Vehicule should be Vehicle
+    * OGM-1418 - documentation              - Fix README.md about running the tests with a Neo4j server
+    * OGM-1414 - documentation              - Documentation states it's about WildFly 10, whereas it's about 11 (and soon 12)
+    * OGM-1413 -                            - Upgrade WildFly distribution used for integration tests to 12.0
+    * OGM-1412 - infinispan                 - Upgrade Infinispan to 9.2.0.Final
+    * OGM-1390 - build                      - Upgrade to Hibernate ORM 5.3 and JPA 2.2
+
+** New Feature
+    * OGM-1433 - mongodb                    - We should support db.Collection.drop() for MongoDB with native queries
+    * OGM-1405 - infinispan                 - Choosing a default template configuration for new caches in Infinispan Remote dialect
+    * OGM-1347 - infinispan                 - Add configuration option for generated protobuf file in Infinispan Remote
+    * OGM-1329 - infinispan                 - Add annotation to select the template configuration for a cache
+    * OGM-359 - core, mongodb              - Support stored procedures with positional parameters for MongoDB
+
+** Sub-task
+    * OGM-1429 -                            - Support run java code for embedded mode
+
+5.3.0.Final (20-02-2018)
+-------------------------
+
+** Improvement
+    * OGM-1404 - neo4j         - Update Neo4j Driver to version 1.5.1
+    * OGM-1403 - infinispan    - Update to Infinispan 9.1.6
+    * OGM-1402 - mongodb       - Upgrade MongoDB driver to 3.6.3 and MongoDB test instance to 3.6.2
+    * OGM-1399 - neo4j         - Upgrade Neo4j to 3.3.3
+
+** Task
+    * OGM-1401 - build, core   - Upgrade to Hibernate Commons Annotations 5.0.2.Final
+    * OGM-1400 - documentation - Update address of Free Software Foundation
+
+5.3.0.CR1 (12-02-2018)
+-------------------------
+
+** Bug
+    * OGM-1397 - infinispan        - Counter name should also contain the table and not only the columname in InfinispanEmbedded
+
+** Improvement
+    * OGM-1398 - build             - Move slots properties outside the BOM
+    * OGM-1389 - build             - Upgrade Hibernate Search to 5.9.0.Final
+    * OGM-1388 - infinispan, tests - Rename package infinispan to infinispanembedded in integrationtest module
+    * OGM-1387 - infinispan, tests - Integration test with Infinispan embedded is not using the Infinispan configuration file
+    * OGM-1380 - infinispan        - Create the counters at start up in Infinispan Embedded
+    * OGM-1229 - core              - Upgrade ORM to version 5.2
+
+** Task
+    * OGM-1395 - build             - Upgrade the WildFly Provisioning maven plugin to 1.2.7.Final
+    * OGM-1330 - build             - Update dependencies aligned with WildFly version to the versions shipped with WildFly 11
+    * OGM-1320 - core              - Upgrade Hibernate Search to 5.8.2.Final
+    * OGM-1319 - core              - Upgrade HQL Parser to 1.5.0.Final
+
+5.2.0.Final (05-02-2018)
+-------------------------
+
+** Bug
+    * OGM-1384 - infinispan                - Storage of Infinispan counters need to be Storage.PERSISTENT
+
+** Improvement
+    * OGM-1386 - mongodb                   - Upgrade MongoDB driver to 3.6.2
+    * OGM-1385 - documentation, infinispan - Add paragraph about counters in the Infinispan dialect
+    * OGM-1262 - documentation             - Remove from the documentation everything that is not experimental anymore for 5.2 Final
+
+** New Feature
+    * OGM-983 - ignite                    - Create integration with Apache Ignite (and GridGain)
+
+** Task
+    * OGM-1381 - infinispan                - Upgrade to Infinispan 9.1.5.Final
+    * OGM-1206 - documentation, infinispan - Highlight the referential integrity problem better in the Hot Rod documentation
+
+5.2.0.CR1 (26-01-2018)
+-------------------------
+
+** Bug
+    * OGM-1379 - build, tests                     - RemoteAuthenticationFailureTest doesn't connect to the right port with maven
+    * OGM-1371 - mongodb                          - MongoDB native query parser does not recognize fractional number starting with 0
+    * OGM-1353 - infinispan                       - Infinispan sequence generation is not thread safe
+    * OGM-1340 - core                             - Module 'core' not build by JDK 9
+    * OGM-1212 - infinispan                       - The strategy used by Infinispan Embedded to increment IDs is not safe against concurrent updates
+
+** Improvement
+    * OGM-1378 - neo4j                            - Upgrade Neo4j to 3.3.2
+    * OGM-1377 - neo4j                            - Make RemoteAuthenticationFailureTest failures more informative
+    * OGM-1369 - core                             - Update to Hibernate Search 5.6.4.Final
+    * OGM-1368 - infinispan                       - Update to Infinispan 9.1.4
+    * OGM-1365 - neo4j                            - Update to Neo4j Java Driver 1.5.0
+    * OGM-1364 - mongodb                          - Upgrade to MongoDB Driver 3.6.1
+    * OGM-1356 - infinispan                       - Upgrade to protostream 4.1.3
+    * OGM-1355 - infinispan                       - Upgrade to Infinispan 9.1.3
+    * OGM-1354 - mongodb                          - Upgrade MongoDB Driver to version 3.6.0
+    * OGM-1351 - infinispan, mongodb, neo4j       - Upgrade Neo4j to version 3.3.1
+    * OGM-1345 - mongodb                          - Make the MongoDB native query parser stateless
+    * OGM-1344 - neo4j                            - Inefficient query for retrieving embedded nodes in Neo4j
+    * OGM-1338 - core, infinispan, mongodb, neo4j - Avoid high initialization cost of static logger instances
+    * OGM-1301 - mongodb                          - Improve error reporting of the MongoDB NativeQueryParser
+    * OGM-1172 -                                  - Decide whether to default the package name in ISPN Remote or not
+    * OGM-1073 - neo4j                            - Make the Http connection pool configurable for Neo4j remote
+
+** New Feature
+    * OGM-1339 - mongodb                          - Provide a way to define Geospatial indexes for MongoDB
+    * OGM-1265 - mongodb                          - Add new operations to native CLI in MongoDB
+
+** Sub-task
+    * OGM-1341 -                                  - Upgrade to latest Byteman 4.x so we can test on JDK9
+    * OGM-1317 -                                  - Add support of operation 'replaceOne'
+    * OGM-1316 -                                  - Add support of operation 'updateMany'
+    * OGM-1315 -                                  - Add support of operation 'updateOne'
+    * OGM-1314 -                                  - Add support of operation 'deleteMany'
+    * OGM-1313 -                                  - Add support of operation 'deleteOne'
+    * OGM-1311 -                                  - Add support of operation 'insertMany'
+    * OGM-1310 -                                  - Add support of operation 'insertOne'
+
+** Task
+    * OGM-1374 - build, infinispan                - Use Server Provisioning plugin to setup Infinispan Server instances for integration tests
+    * OGM-1373 - build                            - Use Server Provisioning plugin to setup WildFly based integration tests
+    * OGM-1372 - build                            - Put the distribution files to upload into distribution/target/dir so that release scripts find them
+    * OGM-1370 - build                            - Upgrade to Apache Lucene 5.5.5
+    * OGM-1363 - build                            - Remove internal classes from the Javadoc
+    * OGM-1362 - build                            - Generate the javadoc per module and then aggregate it, instead of doing everything in the javadoc module
+    * OGM-1361 - build                            - Build the modules for WildFly 11
+    * OGM-1360 - build                            - Optimize the Travis build (caching, unnecessary plugin executions)
+    * OGM-1359 - build                            - Clarify the build output in the Travis build
+    * OGM-1348 - build                            - Various adjusments to the Javadoc
+    * OGM-1342 - build                            - Update Maven plugins to be compatible with JDK9
+    * OGM-1202 -                                  - Deprecate and rename the hibernate-ogm-infinispan Maven id
+    * OGM-946 - core                             - Test all the Entity listeners and Callback methods annotation
+
 5.2.0.Beta1 (12-10-2017)
 -------------------------
 
